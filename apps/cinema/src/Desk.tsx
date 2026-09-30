@@ -20,6 +20,8 @@ interface InboxItem {
   hops?: number;
 }
 interface Item {
+  /** stable key: the same scene can be used twice in one episode */
+  uid: string;
   id: string;
   sha: string;
   url: string;
@@ -81,6 +83,7 @@ export function Desk() {
     setItems((xs) => [
       ...xs,
       {
+        uid: crypto.randomUUID(),
         id: s.id,
         sha: s.video_sha,
         url: src(s),
@@ -234,10 +237,10 @@ export function Desk() {
         <p className="muted">Add scenes above, then drag to reorder and set trims.</p>
       )}
       <div className="row" style={{ alignItems: "flex-start" }}>
-        <div style={{ flex: 2, minWidth: 280 }}>
+        <ul style={{ flex: 2, minWidth: 280, listStyle: "none", padding: 0, margin: 0 }}>
           {items.map((it, i) => (
-            <div
-              key={`${it.id}-${i}`}
+            <li
+              key={it.uid}
               className="card"
               style={{ marginBottom: 8, opacity: drag === i ? 0.5 : 1 }}
               draggable
@@ -310,9 +313,9 @@ export function Desk() {
                   />
                 </div>
               </div>
-            </div>
+            </li>
           ))}
-        </div>
+        </ul>
         <TimelinePreview
           clips={items.map((i) => ({ src: i.url, inSec: i.inSec, outSec: i.outSec }))}
         />

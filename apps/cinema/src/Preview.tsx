@@ -85,7 +85,9 @@ export function TimelinePreview({ clips }: { clips: Clip[] }) {
   });
   return (
     <div style={{ maxWidth: 260 }}>
+      {/* biome-ignore lint/a11y/useMediaCaption: editing preview of uncaptioned raw scenes */}
       <video ref={a} playsInline muted={false} style={style(0)} onTimeUpdate={tick} />
+      {/* biome-ignore lint/a11y/useMediaCaption: editing preview of uncaptioned raw scenes */}
       <video ref={b} playsInline muted={false} style={style(1)} onTimeUpdate={tick} />
       <p>
         <button type="button" className="ghost" onClick={toggle}>

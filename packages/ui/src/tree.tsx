@@ -23,7 +23,7 @@ export function TreeView({
   for (const n of nodes) byDepth.set(n.depth, [...(byDepth.get(n.depth) ?? []), n]);
   const pos = new Map<string, { x: number; y: number }>();
   for (const [d, list] of byDepth)
-    list.forEach((n, i) => pos.set(n.id, { x: 20 + d * col, y: 20 + i * row }));
+    for (const [i, n] of list.entries()) pos.set(n.id, { x: 20 + d * col, y: 20 + i * row });
   const width = 40 + (Math.max(0, ...nodes.map((n) => n.depth)) + 1) * col;
   const height = 40 + Math.max(1, ...[...byDepth.values()].map((l) => l.length)) * row;
   return (
@@ -43,9 +43,11 @@ export function TreeView({
         const p = pos.get(n.id);
         if (!p) return null;
         return (
+          // biome-ignore lint/a11y/useSemanticElements: an SVG <g> has no semantic element; it is keyboard-operable via tabIndex + Enter
           <g
             key={n.id}
             transform={`translate(${p.x} ${p.y})`}
+            role="button"
             onClick={() => onSelect(n)}
             className={`node${n.used ? " used" : ""}${selected === n.id ? " sel" : ""}`}
             tabIndex={0}

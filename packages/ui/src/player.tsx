@@ -9,6 +9,7 @@ export function HlsPlayer({
   onProgress,
   autoPlay = true,
   keyHeaders,
+  captions = [],
 }: {
   src: string;
   startAt?: number;
@@ -17,6 +18,8 @@ export function HlsPlayer({
   autoPlay?: boolean;
   /** headers for the AES key request (unlock token) */
   keyHeaders?: Record<string, string>;
+  /** WebVTT captions (NIP-71 text-track); required for curated episodes from R2 */
+  captions?: { src: string; lang: string; label: string }[];
 }) {
   const ref = useRef<HTMLVideoElement>(null);
   useEffect(() => {
@@ -45,6 +48,7 @@ export function HlsPlayer({
     return () => hls?.destroy();
   }, [src, startAt, autoPlay, keyHeaders]);
   return (
+    // biome-ignore lint/a11y/useMediaCaption: captions are rendered from the `captions` prop below
     <video
       ref={ref}
       className="player"
@@ -52,6 +56,17 @@ export function HlsPlayer({
       controls
       onEnded={onEnded}
       onTimeUpdate={(e) => onProgress?.(e.currentTarget.currentTime, e.currentTarget.duration)}
-    />
+    >
+      {captions.map((c, i) => (
+        <track
+          key={c.src}
+          kind="captions"
+          src={c.src}
+          srcLang={c.lang}
+          label={c.label}
+          default={i === 0}
+        />
+      ))}
+    </video>
   );
 }

@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 
 /** Tiny hash router: "#/story/abc" -> ["story", "abc"]. */
+const readRoute = () =>
+  window.location.hash.replace(/^#\/?/, "").split("/").filter(Boolean).map(decodeURIComponent);
+
 export function useRoute(): string[] {
-  const read = () =>
-    window.location.hash.replace(/^#\/?/, "").split("/").filter(Boolean).map(decodeURIComponent);
-  const [r, setR] = useState(read);
+  const [r, setR] = useState(readRoute);
   useEffect(() => {
-    const f = () => setR(read());
+    const f = () => setR(readRoute());
     window.addEventListener("hashchange", f);
     return () => window.removeEventListener("hashchange", f);
   }, []);

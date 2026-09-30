@@ -177,6 +177,7 @@ export function StoryPage({ coord }: { coord: string }) {
                 Fork / continue from here
               </button>
             </div>
+            {/* biome-ignore lint/a11y/useMediaCaption: raw scenes have no transcript; curated episodes get captions in the player */}
             <video
               className="player"
               style={{ maxWidth: 240 }}

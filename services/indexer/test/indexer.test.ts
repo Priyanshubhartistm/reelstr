@@ -5,7 +5,6 @@ import { RelayPool } from "@reelstr/nostr";
 import {
   buildCut,
   buildScene,
-  buildSeries,
   buildStory,
   type CutScene,
   coordinate,
@@ -247,7 +246,10 @@ describe("graph queries", () => {
 describe("web of trust (BE-5)", () => {
   // deterministic PRNG so the spam test is reproducible
   let seed = 42;
-  const rnd = () => (seed = (seed * 1664525 + 1013904223) % 2 ** 32) / 2 ** 32;
+  const rnd = () => {
+    seed = (seed * 1664525 + 1013904223) % 2 ** 32;
+    return seed / 2 ** 32;
+  };
   const hex = (n: number) => n.toString(16).padStart(64, "0");
 
   test("seeded spam test: 900 unknown spammers + 3 with PoW vs 100 trusted authors -> spam rate < 5%", () => {

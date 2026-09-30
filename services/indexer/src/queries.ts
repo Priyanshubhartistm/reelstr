@@ -92,8 +92,8 @@ export async function followGraph(db: Db): Promise<FollowGraph> {
   for (const r of await db.query<{ pubkey: string; followed: string }>(
     "select pubkey, followed from follows",
   )) {
-    let s = g.get(r.pubkey);
-    if (!s) g.set(r.pubkey, (s = new Set()));
+    const s = g.get(r.pubkey) ?? new Set<string>();
+    g.set(r.pubkey, s);
     s.add(r.followed);
   }
   return g;

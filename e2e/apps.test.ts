@@ -6,7 +6,7 @@ import { createApi } from "@reelstr/indexer/src/server";
 import { ingestScene, renderAndPublish } from "@reelstr/media-service";
 import { createMediaServer } from "@reelstr/media-service/src/server";
 import { LocalSigner } from "@reelstr/nostr";
-import { cleanup, freePort, startBlossom, startRelay, tempDir } from "@reelstr/testkit";
+import { cleanup, startBlossom, startRelay, tempDir } from "@reelstr/testkit";
 import { type Browser, type BrowserContext, chromium, type Page } from "playwright-core";
 import { makeClip } from "../packages/media/test/helpers";
 
