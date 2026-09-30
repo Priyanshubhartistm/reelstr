@@ -38,6 +38,23 @@
         "nostr-tools": "2.25.2",
       },
     },
+    "packages/testkit": {
+      "name": "@reelstr/testkit",
+      "version": "0.1.0",
+    },
+    "services/media": {
+      "name": "@reelstr/media-service",
+      "version": "0.1.0",
+      "dependencies": {
+        "@reelstr/blossom": "workspace:*",
+        "@reelstr/media": "workspace:*",
+        "@reelstr/nostr": "workspace:*",
+        "@reelstr/protocol": "workspace:*",
+      },
+      "devDependencies": {
+        "@reelstr/testkit": "workspace:*",
+      },
+    },
     "services/relay": {
       "name": "@reelstr/relay",
     },
@@ -71,11 +88,15 @@
 
     "@reelstr/media": ["@reelstr/media@workspace:packages/media"],
 
+    "@reelstr/media-service": ["@reelstr/media-service@workspace:services/media"],
+
     "@reelstr/nostr": ["@reelstr/nostr@workspace:packages/nostr"],
 
     "@reelstr/protocol": ["@reelstr/protocol@workspace:packages/protocol"],
 
     "@reelstr/relay": ["@reelstr/relay@workspace:services/relay"],
+
+    "@reelstr/testkit": ["@reelstr/testkit@workspace:packages/testkit"],
 
     "@scure/base": ["@scure/base@2.0.0", "", {}, "sha512-3E1kpuZginKkek01ovG8krQ0Z44E3DHPjc5S2rjJw9lZn3KSQOs8S7wqikF/AH7iRanHypj85uGyxk0XAyC37w=="],
 

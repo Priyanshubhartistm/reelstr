@@ -1,0 +1,19 @@
+{
+  "name": "@reelstr/media-service",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "start": "bun src/server.ts"
+  },
+  "dependencies": {
+    "@reelstr/blossom": "workspace:*",
+    "@reelstr/media": "workspace:*",
+    "@reelstr/nostr": "workspace:*",
+    "@reelstr/protocol": "workspace:*"
+  },
+  "devDependencies": {
+    "@reelstr/testkit": "workspace:*"
+  }
+}

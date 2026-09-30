@@ -12,6 +12,12 @@
     },
     {
       "path": "packages/media"
+    },
+    {
+      "path": "packages/testkit"
+    },
+    {
+      "path": "services/media"
     }
   ]
 }

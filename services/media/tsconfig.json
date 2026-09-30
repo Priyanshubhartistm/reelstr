@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": { "outDir": "dist", "rootDir": "." },
+  "include": ["src", "test"],
+  "references": [
+    { "path": "../../packages/protocol" },
+    { "path": "../../packages/nostr" },
+    { "path": "../../packages/blossom" },
+    { "path": "../../packages/media" },
+    { "path": "../../packages/testkit" }
+  ]
+}
