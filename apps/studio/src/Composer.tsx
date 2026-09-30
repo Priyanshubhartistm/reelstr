@@ -1,3 +1,4 @@
+import { CrewRoom } from "@reelstr/app-core";
 import type { NostrEvent } from "@reelstr/nostr";
 import { useAsync, useSession } from "@reelstr/ui";
 import { useState } from "react";
@@ -36,6 +37,14 @@ export function Composer({
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
+  const [draftTo, setDraftTo] = useState("");
+  const crewUrl = (() => {
+    try {
+      return localStorage.getItem("reelstr.crewRelay") || "ws://127.0.0.1:3335";
+    } catch {
+      return "ws://127.0.0.1:3335";
+    }
+  })();
   const root = coord.split(":");
   const hashes = (s: string) =>
     s
@@ -64,15 +73,27 @@ export function Composer({
         prompt: f.prompt,
         fit: f.fit,
       };
-      if (parentEv.data)
-        await c.forkScene(parentEv.data, { ...base, gen: gen.model ? gen : undefined });
-      else
-        await c.publishScene({
-          ...base,
-          story: { pubkey: root[1] as string, d: root.slice(2).join(":") },
-          license: f.license,
-          gen,
-        });
+      const input = parentEv.data
+        ? c.forkInput(parentEv.data, { ...base, gen: gen.model ? gen : undefined })
+        : {
+            ...base,
+            story: { pubkey: root[1] as string, d: root.slice(2).join(":") },
+            license: f.license,
+            gen,
+          };
+      if (draftTo) {
+        // crew draft: blobs go to Blossom, the signed event goes only to the private room
+        const { template } = await c.prepareScene(input);
+        const room = await CrewRoom.join(crewUrl, draftTo, c.cfg.signer);
+        try {
+          await room.postDraft(template);
+        } finally {
+          room.close();
+        }
+        setMsg(`Posted to crew room "${draftTo}". It is not public until you release it.`);
+        return;
+      }
+      await c.publishScene(input);
       setMsg("Published.");
       setTimeout(onDone, 600);
     } catch (e) {
@@ -189,13 +210,29 @@ export function Composer({
             </p>
           </>
         )}
+        <label htmlFor="c-draft">Crew room (optional)</label>
+        <input
+          id="c-draft"
+          placeholder="leave empty to publish publicly"
+          value={draftTo}
+          onChange={(e) => setDraftTo(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-"))}
+        />
+        <p className="muted">
+          Fill this to post the scene as a private draft in your crew room instead of publishing it.
+        </p>
         <p>
           <button
             type="button"
             disabled={busy || !file || !f.title || !f.prompt || (!!parent && !parentEv.data)}
             onClick={publish}
           >
-            {busy ? "Working…" : parent ? "Publish fork" : "Publish scene"}
+            {busy
+              ? "Working…"
+              : draftTo
+                ? "Post as crew draft"
+                : parent
+                  ? "Publish fork"
+                  : "Publish scene"}
           </button>
         </p>
         {msg && <p className="ok">{msg}</p>}

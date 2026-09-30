@@ -1,5 +1,6 @@
 import { go, LoginGate, useRoute, useSession } from "@reelstr/ui";
 import { Composer } from "./Composer";
+import { Crew } from "./Crew";
 import { Earnings } from "./Earnings";
 import { StoriesList, StoryPage } from "./Stories";
 
@@ -21,6 +22,7 @@ function Shell() {
         <strong>Reelstr Studio</strong>
         <nav>
           <a href="#/">Stories</a>
+          <a href="#/crew">Crew</a>
           <a href="#/earnings">Earnings</a>
         </nav>
         <span className="grow" />
@@ -37,6 +39,7 @@ function Shell() {
           <Composer coord={arg} parent={route[2]} onDone={() => go("story", arg)} />
         ) : null}
         {page === "earnings" ? <Earnings /> : null}
+        {page === "crew" ? <Crew /> : null}
         {!page ? <StoriesList /> : null}
       </div>
     </>

@@ -154,24 +154,26 @@ export class ReelstrClient {
     return { template: tpl, ingest: r };
   }
 
-  /** Fork or continue: same story, parent set, manifest and license carried over. Refuses unforkable licenses. */
-  async forkScene(
+  /** Scene input for a fork: same story, parent set, manifest and license carried over. Refuses unforkable licenses. */
+  forkInput(
     parent: NostrEvent,
-    o: Omit<
-      Parameters<ReelstrClient["publishScene"]>[0],
-      "story" | "parent" | "gen" | "license"
-    > & { gen?: SceneParams["gen"] },
-  ) {
+    o: Omit<SceneInput, "story" | "parent" | "gen" | "license"> & { gen?: SceneParams["gen"] },
+  ): SceneInput {
     const s = parseScene(parent);
     if (!isForkable(s.license)) throw new Error(`license ${s.license} does not allow forking`);
     const root = s.storyCoord.split(":");
-    return this.publishScene({
+    return {
       ...o,
       story: { pubkey: root[1] as string, d: root.slice(2).join(":") },
       parent: { id: parent.id },
       license: s.license,
       gen: o.gen ?? { model: s.gen.model, refs: s.gen.refs, loras: s.gen.loras },
-    });
+    };
+  }
+
+  /** Fork or continue and publish. */
+  forkScene(parent: NostrEvent, o: Parameters<ReelstrClient["forkInput"]>[1]) {
+    return this.publishScene(this.forkInput(parent, o));
   }
 
   /** Split a curator would publish, for the preview (FE-6). */

@@ -12,6 +12,7 @@ import {
   cleanup,
   FakeLightning,
   startBlossom,
+  startCrewRelay,
   startFakeMint,
   startRelay,
   tempDir,
@@ -28,6 +29,8 @@ let cinemaUrl: string;
 let endpoints: Record<string, unknown>;
 let keys: Awaited<ReturnType<typeof createKeyServer>>;
 let mintUrl: string;
+let crewUrl: string;
+let publicRelay: string;
 const procs: Bun.Subprocess[] = [];
 const stops: (() => void | Promise<void>)[] = [];
 const dir = tempDir();
@@ -53,6 +56,8 @@ async function serveApp(app: "studio" | "cinema") {
 
 beforeAll(async () => {
   const relay = await startRelay();
+  publicRelay = relay.url;
+  crewUrl = (await startCrewRelay()).url;
   const A = await startBlossom();
   const B = await startBlossom();
   const svc = LocalSigner.generate();
@@ -114,21 +119,29 @@ async function newUser(
 ): Promise<{ page: Page; ctx: BrowserContext; errors: string[] }> {
   const ctx = await browser.newContext({ viewport: { width: 1000, height: 900 } });
   await ctx.addInitScript(
-    ([e, m]) => {
+    ([e, m, c]) => {
       localStorage.setItem("reelstr.endpoints", JSON.stringify(e));
       localStorage.setItem("reelstr.mint", m as string);
+      localStorage.setItem("reelstr.crewRelay", c as string);
     },
-    [endpoints, mintUrl] as const,
+    [endpoints, mintUrl, crewUrl] as const,
   );
   const page = await ctx.newPage();
   const errors: string[] = [];
-  page.on("pageerror", (e) => errors.push(e.message));
+  // nostr-tools rejects pending requests with "closed by us" when we leave a crew room on purpose
+  page.on(
+    "pageerror",
+    (e) => !/relay connection closed by us/.test(e.message) && errors.push(e.message),
+  );
   page.on(
     "console",
     (m) =>
       m.type() === "error" &&
-      // a 402 is the paywall answering the first key probe: expected, and logged by Chrome as a failed load
-      !/favicon|ERR_CONNECTION_REFUSED|status of 402 \(Payment Required\)/.test(m.text()) &&
+      // a 402 is the paywall answering the first key probe (Chrome logs it as a failed load);
+      // "closed by us" is nostr-tools noting we left a crew room on purpose
+      !/favicon|ERR_CONNECTION_REFUSED|status of 402 \(Payment Required\)|relay connection closed by us/.test(
+        m.text(),
+      ) &&
       errors.push(m.text()),
   );
   await page.goto(url);
@@ -401,4 +414,93 @@ describe("Studio and Cinema in a real browser", () => {
     await viewer.ctx.close();
     await broke.ctx.close();
   }, 900_000);
+
+  test("crew room in Studio: private draft and chat, invited member sees them, nothing public until release", async () => {
+    const clip = await makeClip(join(dir, "crew.mp4"), {
+      size: "360x640",
+      fps: 30,
+      sec: 12,
+      freq: 420,
+      gainDb: -20,
+    });
+    const pool = new (await import("@reelstr/nostr")).RelayPool();
+    const alice = await newUser(studioUrl);
+    // a story to attach the draft to
+    await alice.page.getByLabel("Title").first().fill("Crew Story");
+    await alice.page.getByLabel("Logline").fill("Made in private.");
+    await alice.page.getByRole("button", { name: "Create story" }).click();
+    await alice.page.getByRole("link", { name: /Crew Story/ }).waitFor({ timeout: T });
+    // the room must exist before drafts can be posted to it
+    await alice.page.locator("header.bar").getByRole("link", { name: "Crew", exact: true }).click();
+    await alice.page.locator("#cr-group").fill("back-room");
+    await alice.page.getByRole("button", { name: "Create room" }).click();
+    await alice.page.getByRole("heading", { name: "back-room" }).waitFor({ timeout: 30_000 });
+    await alice.page
+      .locator("header.bar")
+      .getByRole("link", { name: "Stories", exact: true })
+      .click();
+    await alice.page.getByRole("link", { name: /Crew Story/ }).click({ timeout: T });
+    await alice.page.getByRole("button", { name: "Add the first scene" }).click();
+    await alice.page.locator("#c-file").setInputFiles(clip);
+    await alice.page.locator("#c-title").fill("Secret scene");
+    await alice.page.locator("#c-prompt").fill("not yet");
+    await alice.page.locator("#c-draft").fill("back-room");
+    await diagnose(alice, async () => {
+      await alice.page.getByRole("button", { name: "Post as crew draft" }).click();
+      await alice.page.getByText(/Posted to crew room/).waitFor({ timeout: 90_000 });
+    });
+    expect(
+      (await pool.query([publicRelay], { kinds: [34236] })).filter((e) =>
+        e.tags.some((t) => t[0] === "title" && t[1] === "Secret scene"),
+      ),
+    ).toEqual([]);
+
+    await alice.page.locator("header.bar").getByRole("link", { name: "Crew", exact: true }).click();
+    await alice.page.locator("#cr-group").fill("back-room");
+    await alice.page.getByRole("button", { name: "Open room" }).click();
+    await diagnose(alice, () =>
+      alice.page.getByTestId("drafts").getByText("Secret scene").waitFor({ timeout: 30_000 }),
+    );
+    const alicePk = await alice.page.evaluate(
+      () => document.querySelector("code[title]")?.getAttribute("title") ?? "",
+    );
+    expect(alicePk).toHaveLength(64);
+
+    // bob joins once alice invites him
+    const bob = await newUser(studioUrl);
+    await bob.page.locator("header.bar").getByRole("link", { name: "Crew", exact: true }).click();
+    const bobPk = await bob.page.evaluate(
+      () => document.querySelector("span.muted[title]")?.getAttribute("title") ?? "",
+    );
+    await alice.page.locator("#cr-inv").fill(bobPk);
+    await alice.page.getByRole("button", { name: "Add to crew" }).click();
+    await alice.page.getByText("Invited.").waitFor({ timeout: 30_000 });
+    await alice.page.getByLabel("Message").fill("welcome, bob");
+    await alice.page.getByRole("button", { name: "Send" }).click();
+    await alice.page.getByTestId("chat").getByText("welcome, bob").waitFor({ timeout: 30_000 });
+
+    await bob.page.locator("#cr-group").fill("back-room");
+    await bob.page.getByRole("button", { name: "Open room" }).click();
+    await diagnose(bob, () =>
+      bob.page.getByTestId("chat").getByText("welcome, bob").waitFor({ timeout: 30_000 }),
+    );
+    await bob.page.getByTestId("drafts").getByText("Secret scene").waitFor({ timeout: 30_000 });
+    // bob is not the author, so he cannot release it
+    expect(await bob.page.getByRole("button", { name: "Release publicly" }).count()).toBe(0);
+    await bob.page.getByText("only the author can release").waitFor();
+
+    // alice releases: a clean copy appears on the public relay, without the room tag
+    await alice.page.getByRole("button", { name: "Release publicly" }).click();
+    await alice.page.getByText(/Released "Secret scene"/).waitFor({ timeout: 30_000 });
+    const pub = (await pool.query([publicRelay], { kinds: [34236] })).filter((e) =>
+      e.tags.some((t) => t[0] === "title" && t[1] === "Secret scene"),
+    );
+    expect(pub).toHaveLength(1);
+    expect(pub[0]?.tags.some((t) => t[0] === "h")).toBe(false);
+
+    for (const u of [alice, bob]) expect(u.errors).toEqual([]);
+    pool.close([publicRelay]);
+    await alice.ctx.close();
+    await bob.ctx.close();
+  }, 600_000);
 });
