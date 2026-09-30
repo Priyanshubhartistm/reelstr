@@ -1,0 +1,21 @@
+{
+  "name": "@reelstr/indexer",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "start": "bun src/server.ts"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "0.5.8",
+    "@reelstr/nostr": "workspace:*",
+    "@reelstr/protocol": "workspace:*",
+    "pg": "8.23.1"
+  },
+  "devDependencies": {
+    "@reelstr/testkit": "workspace:*",
+    "@types/pg": "latest",
+    "nostr-tools": "2.25.2"
+  }
+}

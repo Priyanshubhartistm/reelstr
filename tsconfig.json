@@ -18,6 +18,9 @@
     },
     {
       "path": "services/media"
+    },
+    {
+      "path": "services/indexer"
     }
   ]
 }

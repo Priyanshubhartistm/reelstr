@@ -32,22 +32,27 @@ export function validateEvent(e: EventLike, opts: { verifySig?: boolean } = {}):
       r = c.result();
     }
   }
-  if (opts.verifySig) {
-    let good = false;
-    try {
-      // verifyEvent caches its result on a hidden symbol that object spread copies, so a tampered
-      // copy of a verified event would pass. Verify a clean copy instead.
-      const { id, pubkey, created_at, kind, tags, content, sig } = e;
-      good = verifyEvent({ id, pubkey, created_at, kind, tags, content, sig } as Parameters<
-        typeof verifyEvent
-      >[0]);
-    } catch {}
-    if (!good)
-      return {
-        ok: false,
-        errors: ["invalid event id or signature", ...r.errors],
-        warnings: r.warnings,
-      };
+  if (opts.verifySig && !verifySignature(e)) {
+    return {
+      ok: false,
+      errors: ["invalid event id or signature", ...r.errors],
+      warnings: r.warnings,
+    };
   }
   return r;
+}
+
+/**
+ * Verify event id and signature. Works on a clean copy: verifyEvent caches its result on a hidden
+ * symbol that object spread copies, so a tampered copy of a verified event would otherwise pass.
+ */
+export function verifySignature(e: EventLike): boolean {
+  try {
+    const { id, pubkey, created_at, kind, tags, content, sig } = e;
+    return verifyEvent({ id, pubkey, created_at, kind, tags, content, sig } as Parameters<
+      typeof verifyEvent
+    >[0]);
+  } catch {
+    return false;
+  }
 }
