@@ -9,6 +9,9 @@
     },
     {
       "path": "packages/blossom"
+    },
+    {
+      "path": "packages/media"
     }
   ]
 }

@@ -11,7 +11,8 @@
     "check": "biome check . && tsc -b && bun test",
     "test": "bun test",
     "lint": "biome check .",
-    "fix": "biome check --write ."
+    "fix": "biome check --write .",
+    "test:fast": "bun test packages/protocol packages/nostr packages/blossom"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",

@@ -17,6 +17,14 @@ Nothing from PRD section 6 is dropped. Where the research (`docs/research.md`, 2
 | Open-weight default model | Wan 2.2 (Apache-2.0). LTX-2.x behind a revenue-cap warning. MiniMax H3 excluded. | License terms verified against primary sources. |
 | cashu-ts 5.0.0-rc.11 | cashu-ts 4.11.0 (npm `latest`) until 5.0 is stable. | RC needed spec changes against current Nutshell. |
 
+## Media pipeline choices
+
+- **Audio joins are a ~80 ms dip (40 ms fade-out + 40 ms fade-in), not an overlapping crossfade.** An overlap shortens the audio and desyncs it from the hard video cut; a dip keeps timing exact.
+- **Audio is cut sample-exactly in code, not with ffmpeg's `concat`/`atrim`.** Measured: the concat filter sequenced whatever each segment decoded to and lost ~80 ms per join (0.17 s over 2 scenes), which would drift lipsync by half a second in a 10-scene episode. Each scene is now decoded to raw float PCM, cut or zero-padded to exactly `(out-in) * 48000` samples, faded and appended. Trims are snapped to the 30 fps frame grid so video and audio lengths agree.
+- **Encrypted episodes use MPEG-TS segments; clear episodes use CMAF fMP4.** ffmpeg 8.1's HLS muxer refuses to encrypt fMP4 ("Encrypted fmp4 not yet supported").
+- Scene normalization uses two-pass loudnorm with `linear=true` (no dynamic compression). Output is bit-stable on the same ffmpeg build (bitexact flags, single-threaded encode), which is what makes a rendition hash reproducible.
+- Audio leads video by one AAC priming frame (~21 ms) in the encoded HLS; this is encoder delay, not drift, and is tested.
+
 ## Protocol choices not in the PRD
 
 - Cut `audio-bed` tag takes an optional 4th element: the bed's share of the creator pool in bps (default 1000). This lets a curator change the default and keeps weights recomputable.

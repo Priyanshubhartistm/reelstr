@@ -18,6 +18,10 @@
         "@reelstr/protocol": "workspace:*",
       },
     },
+    "packages/media": {
+      "name": "@reelstr/media",
+      "version": "0.1.0",
+    },
     "packages/nostr": {
       "name": "@reelstr/nostr",
       "version": "0.1.0",
@@ -64,6 +68,8 @@
     "@noble/hashes": ["@noble/hashes@2.4.0", "", {}, "sha512-X5XaVWZIBCT7HHZGm5I7ZQXDwLG+bGXuSrMQAW+7Zvl87h1kmc1ZB1VSRJcpUfoUrGQp4Fkoxm5kZ+Ms+aW+eA=="],
 
     "@reelstr/blossom": ["@reelstr/blossom@workspace:packages/blossom"],
+
+    "@reelstr/media": ["@reelstr/media@workspace:packages/media"],
 
     "@reelstr/nostr": ["@reelstr/nostr@workspace:packages/nostr"],
 
