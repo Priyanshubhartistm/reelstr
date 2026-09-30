@@ -113,6 +113,18 @@ describe("reference relay (NP-3)", () => {
 });
 
 describe("signers (FE-1)", () => {
+  test("NIP-44: two local signers read each other's messages, a third cannot", async () => {
+    const a = LocalSigner.generate();
+    const b = LocalSigner.generate();
+    const c = LocalSigner.generate();
+    const ct = await a.nip44Encrypt(await b.getPublicKey(), "secret proofs");
+    expect(await b.nip44Decrypt(await a.getPublicKey(), ct)).toBe("secret proofs");
+    await expect(c.nip44Decrypt(await a.getPublicKey(), ct)).rejects.toThrow();
+    // a wallet encrypts to itself
+    const self = await a.getPublicKey();
+    expect(await a.nip44Decrypt(self, await a.nip44Encrypt(self, "me"))).toBe("me");
+  });
+
   test("local key signs a valid event and backup round-trips", async () => {
     const a = LocalSigner.generate();
     const b = LocalSigner.fromNsec(a.backup());

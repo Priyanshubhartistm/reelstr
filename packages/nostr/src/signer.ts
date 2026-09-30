@@ -1,5 +1,6 @@
 import type { EventTemplate } from "@reelstr/protocol";
 import * as nip19 from "nostr-tools/nip19";
+import * as nip44 from "nostr-tools/nip44";
 import { BunkerSigner, parseBunkerInput } from "nostr-tools/nip46";
 import { finalizeEvent, generateSecretKey, getPublicKey, type NostrEvent } from "nostr-tools/pure";
 
@@ -8,6 +9,9 @@ export interface Signer {
   readonly kind: "local" | "nip07" | "nip46";
   getPublicKey(): Promise<string>;
   signEvent(t: EventTemplate): Promise<NostrEvent>;
+  /** NIP-44 v2, needed by NIP-60 wallet storage and NIP-47 wallet connect */
+  nip44Encrypt(peer: string, plaintext: string): Promise<string>;
+  nip44Decrypt(peer: string, ciphertext: string): Promise<string>;
   close?(): Promise<void>;
 }
 
@@ -34,11 +38,21 @@ export class LocalSigner implements Signer {
   async signEvent(t: EventTemplate) {
     return finalizeEvent(t, this.sk);
   }
+  async nip44Encrypt(peer: string, plaintext: string) {
+    return nip44.encrypt(plaintext, nip44.getConversationKey(this.sk, peer));
+  }
+  async nip44Decrypt(peer: string, ciphertext: string) {
+    return nip44.decrypt(ciphertext, nip44.getConversationKey(this.sk, peer));
+  }
 }
 
 interface Nip07 {
   getPublicKey(): Promise<string>;
   signEvent(t: EventTemplate): Promise<NostrEvent>;
+  nip44?: {
+    encrypt(peer: string, plaintext: string): Promise<string>;
+    decrypt(peer: string, ciphertext: string): Promise<string>;
+  };
 }
 
 export class Nip07Signer implements Signer {
@@ -51,6 +65,14 @@ export class Nip07Signer implements Signer {
   }
   signEvent(t: EventTemplate) {
     return this.ext.signEvent(t);
+  }
+  nip44Encrypt(peer: string, plaintext: string) {
+    if (!this.ext.nip44) throw new Error("this extension does not support NIP-44");
+    return this.ext.nip44.encrypt(peer, plaintext);
+  }
+  nip44Decrypt(peer: string, ciphertext: string) {
+    if (!this.ext.nip44) throw new Error("this extension does not support NIP-44");
+    return this.ext.nip44.decrypt(peer, ciphertext);
   }
 }
 
@@ -72,6 +94,12 @@ export class Nip46Signer implements Signer {
   }
   signEvent(t: EventTemplate) {
     return this.bunker.signEvent(t);
+  }
+  nip44Encrypt(peer: string, plaintext: string) {
+    return this.bunker.nip44Encrypt(peer, plaintext);
+  }
+  nip44Decrypt(peer: string, ciphertext: string) {
+    return this.bunker.nip44Decrypt(peer, ciphertext);
   }
   close() {
     return this.bunker.close();
