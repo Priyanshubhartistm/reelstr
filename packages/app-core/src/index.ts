@@ -42,6 +42,19 @@ const randomHex = (bytes: number) => {
   return Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("");
 };
 
+export interface SceneInput {
+  bytes: Uint8Array;
+  contentType?: string;
+  title: string;
+  prompt: string;
+  story: { pubkey: string; d: string };
+  parent?: { id: string };
+  license?: string;
+  gen?: SceneParams["gen"];
+  commissioner?: { pubkey: string };
+  fit?: "crop" | "letterbox";
+}
+
 export interface IngestOut {
   original: BlobDescriptor;
   normalized: BlobDescriptor;
@@ -104,18 +117,16 @@ export class ReelstrClient {
    * Upload a clip and publish it as a Scene: store the original, have the media service
    * normalize it, pin the normalized blob, sign and publish.
    */
-  async publishScene(o: {
-    bytes: Uint8Array;
-    contentType?: string;
-    title: string;
-    prompt: string;
-    story: { pubkey: string; d: string };
-    parent?: { id: string };
-    license?: string;
-    gen?: SceneParams["gen"];
-    commissioner?: { pubkey: string };
-    fit?: "crop" | "letterbox";
-  }) {
+  async publishScene(o: SceneInput) {
+    const { template, ingest } = await this.prepareScene(o);
+    return { event: await this.publish(template), ingest };
+  }
+
+  /**
+   * Upload and normalize a clip and build the Scene template, without publishing it. Used for
+   * crew-room drafts: the blobs go to Blossom, the event goes only where the caller sends it.
+   */
+  async prepareScene(o: SceneInput) {
     const orig = await this.blossom.upload(o.bytes, o.contentType ?? "video/mp4");
     const r = await this.mediaJob<IngestOut>("/ingest", {
       sha256: orig.sha256,
@@ -140,7 +151,7 @@ export class ReelstrClient {
       commissioner: o.commissioner,
     });
     if (this.cfg.powBits) tpl = withPow(tpl, this.cfg.powBits, pk);
-    return { event: await this.publish(tpl), ingest: r };
+    return { template: tpl, ingest: r };
   }
 
   /** Fork or continue: same story, parent set, manifest and license carried over. Refuses unforkable licenses. */
@@ -264,5 +275,6 @@ export class ReelstrClient {
   }
 }
 
+export * from "./crew";
 export type { CutScene };
 export { coordinate, cutD, KIND };

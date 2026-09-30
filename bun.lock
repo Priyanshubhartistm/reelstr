@@ -69,6 +69,7 @@
         "@reelstr/blossom": "workspace:*",
         "@reelstr/nostr": "workspace:*",
         "@reelstr/protocol": "workspace:*",
+        "nostr-tools": "2.25.2",
       },
       "devDependencies": {
         "@reelstr/indexer": "workspace:*",
@@ -156,6 +157,9 @@
       "devDependencies": {
         "@reelstr/testkit": "workspace:*",
       },
+    },
+    "services/crew": {
+      "name": "@reelstr/crew",
     },
     "services/indexer": {
       "name": "@reelstr/indexer",
@@ -259,6 +263,8 @@
     "@reelstr/bolt11": ["@reelstr/bolt11@workspace:packages/bolt11"],
 
     "@reelstr/cinema": ["@reelstr/cinema@workspace:apps/cinema"],
+
+    "@reelstr/crew": ["@reelstr/crew@workspace:services/crew"],
 
     "@reelstr/e2e": ["@reelstr/e2e@workspace:e2e"],
 

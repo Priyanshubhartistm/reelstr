@@ -57,6 +57,33 @@ export async function startRelay(opts: { powBits?: number; port?: number } = {})
   return { url: `ws://127.0.0.1:${port}`, port };
 }
 
+/** Start the NIP-29 crew relay (builds it first). Returns its ws:// URL. */
+export async function startCrewRelay(opts: { port?: number } = {}) {
+  const dir = join(ROOT, "services/crew");
+  const b = Bun.spawnSync(["go", "build", "-o", "bin/crew", "."], { cwd: dir });
+  if (b.exitCode !== 0) throw new Error(`crew relay build failed: ${b.stderr.toString()}`);
+  const port = opts.port ?? freePort();
+  procs.push(
+    Bun.spawn([join(dir, "bin/crew")], {
+      env: {
+        ...process.env,
+        PORT: String(port),
+        DB_PATH: tempDir("reelstr-crew-"),
+        DOMAIN: "localhost",
+      },
+      stdout: "ignore",
+      stderr: "ignore",
+    }),
+  );
+  await waitFor(
+    async () =>
+      (await fetch(`http://127.0.0.1:${port}`, { headers: { Accept: "application/nostr+json" } }))
+        .ok,
+    "crew relay",
+  );
+  return { url: `ws://127.0.0.1:${port}`, port };
+}
+
 /** Start a native blossom-server-ts. Returns { url, stop }. */
 export async function startBlossom(opts: { port?: number } = {}) {
   const port = opts.port ?? freePort();

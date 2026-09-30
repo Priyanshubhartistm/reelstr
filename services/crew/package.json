@@ -1,0 +1,8 @@
+{
+  "name": "@reelstr/crew",
+  "private": true,
+  "scripts": {
+    "build": "go build -o bin/crew .",
+    "start": "go build -o bin/crew . && ./bin/crew"
+  }
+}
