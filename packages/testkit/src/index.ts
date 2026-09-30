@@ -22,8 +22,13 @@ async function waitFor(ready: () => Promise<boolean>, what: string, tries = 100)
   throw new Error(`${what} did not start`);
 }
 
-let basePort = 36000 + Math.floor(Math.random() * 2000);
-export const freePort = () => basePort++;
+/** Ask the OS for a free port (bind to 0, read it, release it) instead of guessing a range. */
+export const freePort = (): number => {
+  const s = Bun.serve({ port: 0, fetch: () => new Response("") });
+  const port = s.port as number;
+  s.stop(true);
+  return port;
+};
 
 /** Start the Go reference relay (builds it first). Returns its ws:// URL. */
 export async function startRelay(opts: { powBits?: number; port?: number } = {}) {

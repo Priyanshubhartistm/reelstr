@@ -6,6 +6,14 @@ import { LocalSigner } from "@reelstr/nostr";
 import { sha256Hex } from "@reelstr/protocol";
 import { authHeader, BlossomClient, fetchVerified, uploadAndMirror } from "../src";
 
+/** Ask the OS for a free port rather than guessing a range (testkit can't be imported here: it depends on this package). */
+const freePort = (): number => {
+  const s = Bun.serve({ port: 0, fetch: () => new Response("") });
+  const port = s.port as number;
+  s.stop(true);
+  return port;
+};
+
 const INFRA = join(import.meta.dir, "../../../infra/blossom");
 const procs: Bun.Subprocess[] = [];
 const dirs: string[] = [];
@@ -30,7 +38,7 @@ async function startBlossom(port: number) {
   throw new Error(`blossom on ${port} did not start`);
 }
 
-const P = 35000 + Math.floor(Math.random() * 900);
+const P = freePort();
 const signer = LocalSigner.generate();
 let A: BlossomClient;
 let B: BlossomClient;
@@ -39,7 +47,7 @@ const sha = sha256Hex(bytes);
 
 beforeAll(async () => {
   A = new BlossomClient(await startBlossom(P), signer);
-  B = new BlossomClient(await startBlossom(P + 1), signer);
+  B = new BlossomClient(await startBlossom(freePort()), signer);
 }, 60_000);
 
 afterAll(() => {

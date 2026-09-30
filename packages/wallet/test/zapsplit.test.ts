@@ -27,7 +27,7 @@ const srv: ReturnType<typeof Bun.serve> = Bun.serve({
     if (u.pathname.startsWith("/cb/")) {
       const amount = Number(u.searchParams.get("amount"));
       const zr = JSON.parse(u.searchParams.get("nostr") ?? "null");
-      if (!zr || zr.kind !== 9734 || !verifySignature(zr))
+      if (!zr?.kind || zr.kind !== 9734 || !verifySignature(zr))
         return Response.json({ status: "ERROR", reason: "bad zap request" }, { status: 400 });
       if (Number(zr.tags.find((t: string[]) => t[0] === "amount")?.[1]) !== amount)
         return Response.json({ status: "ERROR", reason: "amount mismatch" }, { status: 400 });

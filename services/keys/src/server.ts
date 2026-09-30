@@ -65,7 +65,10 @@ export async function createKeyServer(o: KeyServerOpts) {
   const wallets = new Map<string, CashuWallet>();
   const walletFor = async (mint: string) => {
     let w = wallets.get(mint);
-    if (!w) wallets.set(mint, (w = await CashuWallet.open(mint, ledger.proofStore(mint))));
+    if (!w) {
+      w = await CashuWallet.open(mint, ledger.proofStore(mint));
+      wallets.set(mint, w);
+    }
     return w;
   };
 

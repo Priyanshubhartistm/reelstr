@@ -6,6 +6,14 @@ import { buildScene, KIND, validateEvent } from "@reelstr/protocol";
 import { finalizeEvent } from "nostr-tools/pure";
 import { LocalSigner, RelayPool, withPow } from "../src";
 
+/** Ask the OS for a free port rather than guessing a range (testkit can't be imported here: it depends on this package). */
+const freePort = (): number => {
+  const s = Bun.serve({ port: 0, fetch: () => new Response("") });
+  const port = s.port as number;
+  s.stop(true);
+  return port;
+};
+
 const RELAY_DIR = join(import.meta.dir, "../../../services/relay");
 const BIN = join(RELAY_DIR, "bin/relay");
 const FIX = join(import.meta.dir, "../../protocol/fixtures/valid");
@@ -36,7 +44,7 @@ async function startRelay(port: number, powBits: number) {
   throw new Error("relay did not start");
 }
 
-const P = 34000 + Math.floor(Math.random() * 1000);
+const P = freePort();
 let open: string;
 let gated: string;
 const pool = new RelayPool();
@@ -45,7 +53,7 @@ beforeAll(async () => {
   const b = Bun.spawnSync(["go", "build", "-o", "bin/relay", "."], { cwd: RELAY_DIR });
   if (b.exitCode !== 0) throw new Error(`relay build failed: ${b.stderr.toString()}`);
   open = await startRelay(P, 0);
-  gated = await startRelay(P + 1, 8);
+  gated = await startRelay(freePort(), 8);
 }, 120_000);
 
 afterAll(() => {

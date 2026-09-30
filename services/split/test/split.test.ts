@@ -1,16 +1,9 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { getPubKeyFromPrivKey } from "@cashu/cashu-ts";
 import { bytesToHex, hexToBytes, randomBytes } from "@noble/hashes/utils.js";
-import { createKeyServer, type LnBackend, openLedger } from "@reelstr/keys";
+import { type LnBackend, openLedger } from "@reelstr/keys";
 import { LocalSigner, RelayPool } from "@reelstr/nostr";
-import {
-  buildCut,
-  type CutScene,
-  cutWeights,
-  KIND,
-  parseCut,
-  validateEvent,
-} from "@reelstr/protocol";
+import { buildCut, type CutScene, KIND, validateEvent } from "@reelstr/protocol";
 import { cleanup, FakeLightning, startFakeMint, startRelay } from "@reelstr/testkit";
 import { buildNutzapInfo, CashuWallet, redeemNutzap } from "@reelstr/wallet";
 import { runPayouts } from "../src";
@@ -138,7 +131,10 @@ async function world() {
   const wallets = new Map<string, CashuWallet>();
   const walletFor = async (m: string) => {
     let w = wallets.get(m);
-    if (!w) wallets.set(m, (w = await CashuWallet.open(m, ledger.proofStore(m))));
+    if (!w) {
+      w = await CashuWallet.open(m, ledger.proofStore(m));
+      wallets.set(m, w);
+    }
     return w;
   };
   await (await walletFor(mint.url)).topUp(5000, settle);
