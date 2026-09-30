@@ -1,13 +1,12 @@
 {
-  "name": "@reelstr/testkit",
+  "name": "@reelstr/bolt11",
   "version": "0.1.0",
-  "private": true,
   "type": "module",
   "main": "src/index.ts",
   "types": "src/index.ts",
   "dependencies": {
-    "@cashu/cashu-ts": "4.11.0",
+    "@noble/curves": "latest",
     "@noble/hashes": "latest",
-    "@reelstr/bolt11": "workspace:*"
+    "@scure/base": "latest"
   }
 }

@@ -36,6 +36,9 @@
     },
     {
       "path": "e2e"
+    },
+    {
+      "path": "packages/bolt11"
     }
   ]
 }

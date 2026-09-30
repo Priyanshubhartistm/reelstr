@@ -70,3 +70,6 @@ export function cleanup() {
   for (const p of procs.splice(0)) p.kill();
   for (const d of dirs.splice(0)) rmSync(d, { recursive: true, force: true });
 }
+
+export { FakeLightning } from "./fake-ln";
+export { startFakeMint } from "./fake-mint";

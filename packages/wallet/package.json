@@ -1,0 +1,17 @@
+{
+  "name": "@reelstr/wallet",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "dependencies": {
+    "@cashu/cashu-ts": "4.11.0",
+    "@reelstr/nostr": "workspace:*",
+    "@reelstr/protocol": "workspace:*",
+    "nostr-tools": "2.25.2",
+    "@noble/hashes": "latest"
+  },
+  "devDependencies": {
+    "@reelstr/testkit": "workspace:*"
+  }
+}
