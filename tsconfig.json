@@ -39,6 +39,9 @@
     },
     {
       "path": "packages/bolt11"
+    },
+    {
+      "path": "services/keys"
     }
   ]
 }

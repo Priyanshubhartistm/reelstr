@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": { "outDir": "dist", "rootDir": "." },
+  "include": ["src", "test"],
+  "references": [
+    { "path": "../../packages/bolt11" },
+    { "path": "../../packages/nostr" },
+    { "path": "../../packages/protocol" },
+    { "path": "../../packages/wallet" },
+    { "path": "../../packages/testkit" }
+  ]
+}

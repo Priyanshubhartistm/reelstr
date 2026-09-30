@@ -167,6 +167,22 @@
         "nostr-tools": "2.25.2",
       },
     },
+    "services/keys": {
+      "name": "@reelstr/keys",
+      "version": "0.1.0",
+      "dependencies": {
+        "@cashu/cashu-ts": "4.11.0",
+        "@noble/hashes": "latest",
+        "@reelstr/bolt11": "workspace:*",
+        "@reelstr/nostr": "workspace:*",
+        "@reelstr/protocol": "workspace:*",
+        "@reelstr/wallet": "workspace:*",
+        "nostr-tools": "2.25.2",
+      },
+      "devDependencies": {
+        "@reelstr/testkit": "workspace:*",
+      },
+    },
     "services/media": {
       "name": "@reelstr/media-service",
       "version": "0.1.0",
@@ -226,6 +242,8 @@
     "@reelstr/e2e": ["@reelstr/e2e@workspace:e2e"],
 
     "@reelstr/indexer": ["@reelstr/indexer@workspace:services/indexer"],
+
+    "@reelstr/keys": ["@reelstr/keys@workspace:services/keys"],
 
     "@reelstr/media": ["@reelstr/media@workspace:packages/media"],
 

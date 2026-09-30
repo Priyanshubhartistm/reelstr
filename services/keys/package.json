@@ -1,0 +1,22 @@
+{
+  "name": "@reelstr/keys",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "start": "bun src/server.ts"
+  },
+  "dependencies": {
+    "@noble/hashes": "latest",
+    "@reelstr/bolt11": "workspace:*",
+    "@reelstr/nostr": "workspace:*",
+    "@reelstr/protocol": "workspace:*",
+    "@reelstr/wallet": "workspace:*",
+    "nostr-tools": "2.25.2",
+    "@cashu/cashu-ts": "4.11.0"
+  },
+  "devDependencies": {
+    "@reelstr/testkit": "workspace:*"
+  }
+}
