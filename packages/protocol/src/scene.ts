@@ -1,7 +1,7 @@
 import { coordinate, parseCoordinate } from "./coords";
 import { DEFAULT_LICENSE, KIND, REELSTR_TAG } from "./kinds";
 import { Collector, type EventLike, type EventTemplate, type Validation } from "./result";
-import { imetaTag, isHex64, parseImeta, tagsOf, tagValue } from "./tags";
+import { imetaTag, isHex64, parseImeta, secs, tagsOf, tagValue } from "./tags";
 
 /** Licenses that allow forking in Studio. Anything else can be watched but not forked. */
 const FORK_FRIENDLY = /^(CC0-1\.0|CC-BY-4\.0|CC-BY-SA-4\.0|MIT|Apache-2\.0)$/;
@@ -46,7 +46,7 @@ export function buildScene(p: SceneParams): EventTemplate {
       x: p.video.sha256,
       m: "video/mp4",
       dim: p.video.dim ?? "1080x1920",
-      duration: p.video.duration,
+      duration: secs(p.video.duration),
       fallback: p.video.fallback?.join(" "),
     }),
   ];
@@ -57,7 +57,7 @@ export function buildScene(p: SceneParams): EventTemplate {
         x: p.audio.sha256,
         m: "audio/mp4",
         l: p.audio.lang ? `${p.audio.lang} ISO-639-1 ov` : undefined,
-        duration: p.audio.duration,
+        duration: p.audio.duration === undefined ? undefined : secs(p.audio.duration),
       }),
     );
   if (p.original)

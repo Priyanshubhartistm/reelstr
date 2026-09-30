@@ -63,6 +63,13 @@
         "playwright-core": "latest",
       },
     },
+    "interop": {
+      "name": "@reelstr/interop",
+      "dependencies": {
+        "@reelstr/protocol": "workspace:*",
+        "nostr-tools": "2.25.2",
+      },
+    },
     "packages/app-core": {
       "name": "@reelstr/app-core",
       "version": "0.1.0",
@@ -292,6 +299,8 @@
     "@reelstr/e2e": ["@reelstr/e2e@workspace:e2e"],
 
     "@reelstr/indexer": ["@reelstr/indexer@workspace:services/indexer"],
+
+    "@reelstr/interop": ["@reelstr/interop@workspace:interop"],
 
     "@reelstr/keys": ["@reelstr/keys@workspace:services/keys"],
 

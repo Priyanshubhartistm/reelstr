@@ -2,7 +2,7 @@ import { coordinate, parseCoordinate } from "./coords";
 import { KIND, WEIGHT_TOTAL } from "./kinds";
 import { Collector, type EventLike, type EventTemplate, type Validation } from "./result";
 import { computeWeights, DEFAULT_AUDIO_BED_BPS, type Weight } from "./split";
-import { imetaTag, isHex64, isSeconds, parseImeta, tagsOf, tagValue, toMs } from "./tags";
+import { imetaTag, isHex64, isSeconds, parseImeta, secs, tagsOf, tagValue, toMs } from "./tags";
 
 export const EPISODE_TARGET_SEC: [number, number] = [60, 120];
 const ROLES = new Set(["creator", "audio", "curator", "host"]);
@@ -58,7 +58,7 @@ export function buildCut(p: CutParams): EventTemplate {
     ["episode", String(p.episode)],
   ];
   for (const s of p.scenes)
-    tags.push(["scene", s.id, s.sha256, String(s.inSec), String(s.outSec), s.payee]);
+    tags.push(["scene", s.id, s.sha256, secs(s.inSec), secs(s.outSec), s.payee]);
   if (p.audioBed) {
     const t = ["audio-bed", p.audioBed.sha256, p.audioBed.payee];
     if (p.audioBed.poolBps !== undefined) t.push(String(p.audioBed.poolBps));
@@ -70,7 +70,7 @@ export function buildCut(p: CutParams): EventTemplate {
         url: p.hls.url,
         m: "application/x-mpegURL",
         x: p.hls.sha256,
-        duration: p.hls.duration,
+        duration: secs(p.hls.duration),
       }),
     );
   if (p.contentWarning) tags.push(["content-warning", p.contentWarning]);

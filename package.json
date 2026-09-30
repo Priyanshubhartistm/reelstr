@@ -6,11 +6,12 @@
     "packages/*",
     "apps/*",
     "services/*",
-    "e2e"
+    "e2e",
+    "interop"
   ],
   "scripts": {
-    "check": "biome check . && tsc -b && bun test packages services",
-    "test": "bun test packages services",
+    "check": "biome check . && tsc -b && bun test packages services interop",
+    "test": "bun test packages services interop",
     "lint": "biome check .",
     "fix": "biome check --write .",
     "test:fast": "bun test packages/protocol packages/nostr packages/blossom",

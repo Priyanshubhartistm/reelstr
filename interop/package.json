@@ -1,0 +1,9 @@
+{
+  "name": "@reelstr/interop",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@reelstr/protocol": "workspace:*",
+    "nostr-tools": "2.25.2"
+  }
+}

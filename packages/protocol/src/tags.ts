@@ -32,3 +32,13 @@ export function imetaTag(fields: Record<string, string | number | undefined>): s
 /** Durations/trims are decimal seconds with at most 3 decimals; convert to integer ms. */
 export const toMs = (s: string | number): number => Math.round(Number(s) * 1000);
 export const isSeconds = (s: string): boolean => /^\d+(\.\d{1,3})?$/.test(s);
+
+/**
+ * Canonical decimal seconds for a tag: rounded to whole milliseconds, at most 3 decimals, no
+ * float noise (6.755999999999999 -> "6.756"). Every signed time value goes through this, so other
+ * implementations that read the decimal string get exactly the number we computed with.
+ */
+export const secs = (s: number): string => {
+  if (!Number.isFinite(s) || s < 0) throw new Error(`invalid seconds: ${s}`);
+  return String(Math.round(s * 1000) / 1000);
+};

@@ -373,3 +373,62 @@ describe("agent jobs (NP-5, NP-6)", () => {
     ).toBeNull();
   });
 });
+
+import { buildCut as buildCutC, buildScene as buildSceneC, secs, validateCut } from "../src";
+
+describe("canonical seconds", () => {
+  test("secs() removes float noise and rounds to milliseconds", () => {
+    expect(secs(6.755999999999999)).toBe("6.756");
+    expect(secs(0.1 + 0.2)).toBe("0.3");
+    expect(secs(12)).toBe("12");
+    expect(secs(1.0005)).toBe("1.001");
+    expect(() => secs(-1)).toThrow();
+    expect(() => secs(Number.NaN)).toThrow();
+  });
+  test("a Cut built from noisy floats validates and its weights use the rounded values", () => {
+    const scenes = [
+      {
+        id: "1".repeat(64),
+        sha256: "a".repeat(64),
+        inSec: 1.744,
+        outSec: 6.755999999999999,
+        payee: A,
+      },
+      {
+        id: "2".repeat(64),
+        sha256: "b".repeat(64),
+        inSec: 2.376,
+        outSec: 3.1319999999999997,
+        payee: B,
+      },
+    ];
+    const tpl = buildCutC({
+      curator: CUR,
+      seriesSlug: "s",
+      episode: 1,
+      title: "t",
+      synopsis: "s",
+      scenes,
+      price: { amount: 10 },
+      curatorBps: 1000,
+      hostBps: 500,
+      host: HOST,
+    });
+    const st = tpl.tags.filter((t) => t[0] === "scene");
+    expect(st.map((t) => [t[3], t[4]])).toEqual([
+      ["1.744", "6.756"],
+      ["2.376", "3.132"],
+    ]);
+    const v = validateCut({ ...tpl, pubkey: CUR });
+    expect(v.errors).toEqual([]);
+  });
+  test("a scene's duration is canonical too", () => {
+    const tpl = buildSceneC({
+      title: "t",
+      content: "c",
+      video: { url: "https://x", sha256: "a".repeat(64), duration: 12.000000000000002 },
+      story: { pubkey: A, d: "s" },
+    });
+    expect(tpl.tags.find((t) => t[0] === "imeta")?.includes("duration 12")).toBe(true);
+  });
+});
