@@ -172,3 +172,41 @@ describe("planPayout", () => {
     expect(planPayout(w2, 100_000).paid).toEqual([{ pubkey: A, msats: 100_000 }]);
   });
 });
+
+import { buildPayout, KIND, validatePayout } from "../src";
+
+describe("payout receipt with carried balances", () => {
+  const w = computeWeights({
+    scenes: [{ payee: A, inSec: 0, outSec: 10 }],
+    curatorBps: 0,
+    hostBps: 0,
+    curator: CUR,
+    host: HOST,
+  });
+  const ev = (over: Partial<Parameters<typeof buildPayout>[0]>) => ({
+    ...buildPayout({
+      cutId: "a".repeat(64),
+      cutCoord: `${KIND.CUT}:${CUR}:s:ep-001`,
+      weights: w,
+      periodStart: 1,
+      periodEnd: 2,
+      totalMsats: 100_000,
+      paid: [],
+      ...over,
+    }),
+    pubkey: CUR,
+  });
+  test("balances with prior_carry and without it only when there is none", () => {
+    // 100_000 new + 50_000 carried = 150_000 paid out
+    const paid = [{ pubkey: A, msats: 150_000, proof: "f".repeat(64), proofType: "ln" as const }];
+    expect(validatePayout(ev({ paid, priorCarryMsats: 50_000 })).ok).toBe(true);
+    const bad = validatePayout(ev({ paid }));
+    expect(bad.ok).toBe(false);
+    expect(bad.errors.join()).toContain("paid+carry+fee");
+  });
+  test("a negative or junk prior_carry is rejected", () => {
+    const e = ev({ paid: [{ pubkey: A, msats: 100_000, proof: "f".repeat(64), proofType: "ln" }] });
+    e.tags.push(["prior_carry", "-5"]);
+    expect(validatePayout(e).errors.join()).toContain("prior_carry");
+  });
+});

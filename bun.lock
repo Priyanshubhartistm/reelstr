@@ -199,6 +199,22 @@
     "services/relay": {
       "name": "@reelstr/relay",
     },
+    "services/split": {
+      "name": "@reelstr/split",
+      "version": "0.1.0",
+      "dependencies": {
+        "@reelstr/bolt11": "workspace:*",
+        "@reelstr/keys": "workspace:*",
+        "@reelstr/nostr": "workspace:*",
+        "@reelstr/protocol": "workspace:*",
+        "@reelstr/wallet": "workspace:*",
+      },
+      "devDependencies": {
+        "@cashu/cashu-ts": "4.11.0",
+        "@noble/hashes": "latest",
+        "@reelstr/testkit": "workspace:*",
+      },
+    },
   },
   "packages": {
     "@biomejs/biome": ["@biomejs/biome@2.5.15", "", { "optionalDependencies": { "@biomejs/cli-darwin-arm64": "2.5.15", "@biomejs/cli-darwin-x64": "2.5.15", "@biomejs/cli-linux-arm64": "2.5.15", "@biomejs/cli-linux-arm64-musl": "2.5.15", "@biomejs/cli-linux-x64": "2.5.15", "@biomejs/cli-linux-x64-musl": "2.5.15", "@biomejs/cli-win32-arm64": "2.5.15", "@biomejs/cli-win32-x64": "2.5.15" }, "bin": { "biome": "bin/biome" } }, "sha512-WZTW4slm/pdkh92K6t/3aEN++44JD1PQ7squ7RCMLI1flHGl43DVOIGXvCjHiZgBMO1V4uYxoFNtqrIA4qGuIQ=="],
@@ -254,6 +270,8 @@
     "@reelstr/protocol": ["@reelstr/protocol@workspace:packages/protocol"],
 
     "@reelstr/relay": ["@reelstr/relay@workspace:services/relay"],
+
+    "@reelstr/split": ["@reelstr/split@workspace:services/split"],
 
     "@reelstr/studio": ["@reelstr/studio@workspace:apps/studio"],
 

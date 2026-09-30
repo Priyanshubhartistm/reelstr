@@ -53,6 +53,8 @@ export interface PayoutParams {
   periodEnd: number;
   totalMsats: number;
   feeMsats?: number;
+  /** carried-forward balances folded into this batch; makes the receipt balance on its own */
+  priorCarryMsats?: number;
   paid: { pubkey: string; msats: number; proof: string; proofType: ProofType }[];
   carry?: { pubkey: string; msats: number }[];
   createdAt?: number;
@@ -66,6 +68,7 @@ export function buildPayout(p: PayoutParams): EventTemplate {
     ["total", String(p.totalMsats)],
     ["fee", String(p.feeMsats ?? 0)],
   ];
+  if (p.priorCarryMsats) tags.push(["prior_carry", String(p.priorCarryMsats)]);
   for (const w of p.weights) tags.push(["zap", w.pubkey, "", String(w.weight), w.role]);
   for (const x of p.paid) tags.push(["paid", x.pubkey, String(x.msats), x.proof, x.proofType]);
   for (const x of p.carry ?? []) tags.push(["carry", x.pubkey, String(x.msats)]);
@@ -78,11 +81,14 @@ export function buildPayout(p: PayoutParams): EventTemplate {
 }
 
 /**
- * `priorCarryMsats` is what the service already owed from earlier batches; the receipt only
- * balances when it is supplied (sum(paid)+sum(carry)+fee == total + priorCarry).
+ * The receipt balances on its own: sum(paid)+sum(carry)+fee == total + prior_carry, where
+ * `prior_carry` is what the service already owed from earlier batches.
  */
-export function validatePayout(e: EventLike, priorCarryMsats = 0): Validation {
+export function validatePayout(e: EventLike): Validation {
   const c = new Collector();
+  const priorCarryMsats = Number(tagValue(e.tags, "prior_carry") ?? 0);
+  if (!Number.isInteger(priorCarryMsats) || priorCarryMsats < 0)
+    c.err("prior_carry must be a non-negative integer");
   if (e.kind !== KIND.PAYOUT) c.err(`kind must be ${KIND.PAYOUT}`);
   if (!isHex64(tagValue(e.tags, "e"))) c.err("missing e tag with the Cut event id");
   const period = tagsOf(e.tags, "period")[0];

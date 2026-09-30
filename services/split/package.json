@@ -1,0 +1,19 @@
+{
+  "name": "@reelstr/split",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "dependencies": {
+    "@reelstr/bolt11": "workspace:*",
+    "@reelstr/keys": "workspace:*",
+    "@reelstr/nostr": "workspace:*",
+    "@reelstr/protocol": "workspace:*",
+    "@reelstr/wallet": "workspace:*"
+  },
+  "devDependencies": {
+    "@reelstr/testkit": "workspace:*",
+    "@cashu/cashu-ts": "4.11.0",
+    "@noble/hashes": "latest"
+  }
+}

@@ -42,6 +42,9 @@
     },
     {
       "path": "services/keys"
+    },
+    {
+      "path": "services/split"
     }
   ]
 }
