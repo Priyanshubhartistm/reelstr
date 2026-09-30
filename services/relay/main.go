@@ -29,7 +29,8 @@ var baseKinds = []int{
 	9734, 9735, // zap request/receipt
 	9321, 10019, // nutzap, nutzap info
 	7375, 7376, 17375, // NIP-60 wallet
-	5, // deletions
+	5,                   // deletions
+	13194, 23194, 23195, // NIP-47 wallet connect (info, request, response)
 }
 
 const sceneKind = 34236

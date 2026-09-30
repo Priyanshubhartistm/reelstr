@@ -9,7 +9,8 @@
     "@reelstr/nostr": "workspace:*",
     "@reelstr/protocol": "workspace:*",
     "nostr-tools": "2.25.2",
-    "@noble/hashes": "latest"
+    "@noble/hashes": "latest",
+    "@reelstr/bolt11": "workspace:*"
   },
   "devDependencies": {
     "@reelstr/testkit": "workspace:*"

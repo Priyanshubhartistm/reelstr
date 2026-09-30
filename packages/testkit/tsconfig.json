@@ -8,6 +8,12 @@
   "references": [
     {
       "path": "../bolt11"
+    },
+    {
+      "path": "../nostr"
+    },
+    {
+      "path": "../protocol"
     }
   ]
 }

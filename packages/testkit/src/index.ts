@@ -73,3 +73,4 @@ export function cleanup() {
 
 export { FakeLightning } from "./fake-ln";
 export { startFakeMint } from "./fake-mint";
+export { startFakeNwc } from "./fake-nwc";

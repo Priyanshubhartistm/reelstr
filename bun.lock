@@ -116,6 +116,9 @@
         "@cashu/cashu-ts": "4.11.0",
         "@noble/hashes": "latest",
         "@reelstr/bolt11": "workspace:*",
+        "@reelstr/nostr": "workspace:*",
+        "@reelstr/protocol": "workspace:*",
+        "nostr-tools": "2.25.2",
       },
     },
     "packages/ui": {
@@ -140,6 +143,7 @@
       "dependencies": {
         "@cashu/cashu-ts": "4.11.0",
         "@noble/hashes": "latest",
+        "@reelstr/bolt11": "workspace:*",
         "@reelstr/nostr": "workspace:*",
         "@reelstr/protocol": "workspace:*",
         "nostr-tools": "2.25.2",
