@@ -63,6 +63,17 @@ export async function migrate(db: Db) {
     create table if not exists payout_paid (payout_id text not null, pubkey text not null, msats bigint not null, proof text not null, proof_type text not null);
     create table if not exists zaps (receipt_id text primary key, recipient text not null, msats bigint not null);
     create table if not exists follows (pubkey text not null, followed text not null, primary key (pubkey, followed));
+    create table if not exists ratings (
+      cut_id text not null, rater text not null, stars int not null, review text not null, created_at bigint not null,
+      primary key (cut_id, rater)
+    );
+    create table if not exists reports (id text primary key, target text not null, reporter text not null, reason text not null, created_at bigint not null);
+    create index if not exists reports_target on reports(target);
+    create table if not exists verifications (
+      id text primary key, scene_id text not null, verifier text not null, verdict text not null,
+      similarity double precision, exact boolean not null, engine text not null, created_at bigint not null
+    );
+    create index if not exists verifications_scene on verifications(scene_id);
     create table if not exists follow_versions (pubkey text primary key, created_at bigint not null);
   `);
 }

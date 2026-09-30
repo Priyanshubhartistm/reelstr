@@ -4,8 +4,12 @@ import {
   type Indexer,
   Indexer as Ix,
   inbox,
+  ratingSummary,
+  reportCounts,
+  reviews,
   seriesEpisodes,
   storyTree,
+  verifications,
 } from "./index";
 
 const CORS = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "*" };
@@ -54,6 +58,29 @@ export function createApi(ix: Indexer, port = Number(process.env.PORT ?? 3300)) 
           return json(await ix.db.query("select * from series order by created_at desc limit 100"));
         if (seg[0] === "series" && seg[2] === "episodes" && seg[1])
           return json(await seriesEpisodes(ix.db, seg[1]));
+        if (seg[0] === "ratings" && !seg[1])
+          return json(
+            await ratingSummary(
+              ix.db,
+              (u.searchParams.get("cuts") ?? "").split(",").filter(Boolean),
+            ),
+          );
+        if (seg[0] === "ratings" && seg[1]) return json(await reviews(ix.db, seg[1]));
+        if (seg[0] === "reports")
+          return json(
+            await reportCounts(
+              ix.db,
+              (u.searchParams.get("targets") ?? "").split(",").filter(Boolean),
+            ),
+          );
+        if (seg[0] === "verifications" && seg[1])
+          return json(
+            await verifications(
+              ix.db,
+              seg[1],
+              u.searchParams.get("trusted")?.split(",").filter(Boolean),
+            ),
+          );
         if (seg[0] === "scenes" && seg[1])
           return json(
             (await ix.db.query("select * from scenes where id = $1", [seg[1]]))[0] ?? null,

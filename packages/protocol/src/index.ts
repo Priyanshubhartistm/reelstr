@@ -2,6 +2,7 @@ export * from "./blob";
 export * from "./coords";
 export * from "./cut";
 export * from "./kinds";
+export * from "./labels";
 export * from "./payout";
 export * from "./result";
 export * from "./scene";

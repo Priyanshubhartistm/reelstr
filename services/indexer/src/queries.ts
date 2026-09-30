@@ -39,6 +39,8 @@ export async function storyTree(db: Db, storyCoord: string): Promise<TreeNode[]>
 
 export interface Credit {
   pubkey: string;
+  /** agent pubkeys that generated this creator's scenes on their behalf (NP-6) */
+  agents: string[];
   role: string;
   weight: number;
   seconds: number;
@@ -60,8 +62,17 @@ export async function credits(db: Db, cutId: string): Promise<Credit[]> {
       where w.cut_id = $1 order by w.weight desc, w.pubkey, w.role`,
     [cutId],
   );
+  const agentRows = await db.query<{ payee: string; author: string }>(
+    `select distinct sc.payee, s.author from cut_scenes cs
+       join scenes s on s.id = cs.scene_id join (select distinct payee from cut_scenes where cut_id = $1) sc on sc.payee = s.payee
+      where cs.cut_id = $1 and s.author <> s.payee`,
+    [cutId],
+  );
+  const agents = new Map<string, string[]>();
+  for (const a of agentRows) agents.set(a.payee, [...(agents.get(a.payee) ?? []), a.author]);
   return rows.map((r) => ({
     pubkey: r.pubkey,
+    agents: r.role === "creator" ? (agents.get(r.pubkey) ?? []) : [],
     role: r.role,
     weight: Number(r.weight),
     seconds: Number(r.secs ?? 0),
@@ -132,5 +143,59 @@ export async function seriesEpisodes(db: Db, seriesCoord: string) {
     `select c.* from series_cuts sc join cuts c on c.coord = sc.cut_coord
       where sc.series_coord = $1 order by sc.pos`,
     [seriesCoord],
+  );
+}
+
+export interface RatingSummary {
+  cut_id: string;
+  count: number;
+  average: number;
+}
+
+/** FE-13: average and count per Cut; one rating per rater (newest wins). */
+export async function ratingSummary(db: Db, cutIds: string[]): Promise<RatingSummary[]> {
+  if (cutIds.length === 0) return [];
+  const rows = await db.query<{ cut_id: string; n: string; avg: number }>(
+    `select cut_id, count(*) as n, avg(stars)::float8 as avg from ratings where cut_id = any($1) group by cut_id`,
+    [cutIds],
+  );
+  return rows.map((r) => ({
+    cut_id: r.cut_id,
+    count: Number(r.n),
+    average: Math.round(Number(r.avg) * 100) / 100,
+  }));
+}
+
+export async function reviews(db: Db, cutId: string) {
+  return db.query(
+    "select rater, stars, review, created_at from ratings where cut_id = $1 order by created_at desc limit 100",
+    [cutId],
+  );
+}
+
+/** Report counts per target. Hiding is each client's decision: the reporter hides at once, others by policy. */
+export async function reportCounts(db: Db, targets: string[]): Promise<Record<string, number>> {
+  if (targets.length === 0) return {};
+  const rows = await db.query<{ target: string; n: string }>(
+    "select target, count(distinct reporter) as n from reports where target = any($1) group by target",
+    [targets],
+  );
+  return Object.fromEntries(rows.map((r) => [r.target, Number(r.n)]));
+}
+
+/** Verification labels for a scene, optionally only from verifiers the caller trusts. */
+export async function verifications(db: Db, sceneId: string, trusted?: string[]) {
+  return db.query(
+    `select verifier, verdict, similarity, exact, engine, created_at from verifications
+      where scene_id = $1 ${trusted ? "and verifier = any($2)" : ""} order by created_at desc`,
+    trusted ? [sceneId, trusted] : [sceneId],
+  );
+}
+
+/** Scenes in a story with their agent (author) and commissioner (payee) when they differ. */
+export async function agentScenes(db: Db, storyCoord: string) {
+  return db.query(
+    "select id, author, payee from scenes where story_coord = $1 and author <> payee",
+    [storyCoord],
   );
 }

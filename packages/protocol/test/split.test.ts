@@ -210,3 +210,66 @@ describe("payout receipt with carried balances", () => {
     expect(validatePayout(e).errors.join()).toContain("prior_carry");
   });
 });
+
+import {
+  buildRating,
+  buildReport,
+  buildVerification,
+  NS_RATING,
+  parseRating,
+  parseVerification,
+  validateEvent as validate,
+} from "../src";
+
+describe("labels: ratings, reports, verifications", () => {
+  const cutId = "a".repeat(64);
+  const cutCoord = `31811:${"b".repeat(64)}:s:ep-001`;
+  const signed = (t: { kind: number; created_at: number; tags: string[][]; content: string }) => ({
+    ...t,
+    pubkey: "c".repeat(64),
+    id: "d".repeat(64),
+    sig: "e".repeat(128),
+  });
+  test("a rating round trips and is validated", () => {
+    const e = signed(buildRating({ stars: 4, cutId, cutCoord, review: "tight pacing" }));
+    expect(parseRating(e)).toMatchObject({ stars: 4, cutId, review: "tight pacing" });
+    expect(validate(e).ok).toBe(true);
+    expect(() => buildRating({ stars: 6, cutId, cutCoord })).toThrow();
+    expect(() => buildRating({ stars: 2.5, cutId, cutCoord })).toThrow();
+    const bad = signed(buildRating({ stars: 3, cutId, cutCoord }));
+    bad.tags = bad.tags.map((t) => (t[0] === "l" ? ["l", "9", NS_RATING] : t));
+    expect(validate(bad).errors.join()).toContain("1 to 5");
+    const long = signed(buildRating({ stars: 3, cutId, cutCoord, review: "x".repeat(2001) }));
+    expect(validate(long).ok).toBe(false);
+  });
+  test("a report needs a known reason; a verification needs a verdict and hash", () => {
+    expect(
+      validate(
+        signed(buildReport({ eventId: cutId, authorPubkey: "b".repeat(64), reason: "spam" })),
+      ).ok,
+    ).toBe(true);
+    expect(() =>
+      buildReport({ eventId: cutId, authorPubkey: "b".repeat(64), reason: "rude" as never }),
+    ).toThrow();
+    const v = signed(
+      buildVerification({
+        sceneId: cutId,
+        sceneSha256: "f".repeat(64),
+        verdict: "verified",
+        similarity: 0.9876,
+        exact: false,
+        engine: "wan-2.2",
+      }),
+    );
+    expect(validate(v).ok).toBe(true);
+    expect(parseVerification(v)).toMatchObject({
+      verdict: "verified",
+      similarity: 0.9876,
+      exact: false,
+      engine: "wan-2.2",
+    });
+    const noHash = { ...v, tags: v.tags.filter((t) => t[0] !== "x") };
+    expect(validate(noHash).errors.join()).toContain("sha256");
+    expect(validate({ ...v, tags: v.tags.filter((t) => t[0] !== "L") }).ok).toBe(false); // label of an unknown namespace
+  });
+});

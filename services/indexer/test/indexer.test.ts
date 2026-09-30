@@ -4,8 +4,11 @@ import { join } from "node:path";
 import { RelayPool } from "@reelstr/nostr";
 import {
   buildCut,
+  buildRating,
+  buildReport,
   buildScene,
   buildStory,
+  buildVerification,
   type CutScene,
   coordinate,
   cutD,
@@ -13,7 +16,19 @@ import {
 } from "@reelstr/protocol";
 import { cleanup, startRelay } from "@reelstr/testkit";
 import { finalizeEvent, generateSecretKey, getPublicKey } from "nostr-tools/pure";
-import { credits, type Ev, earnings, Indexer, inbox, rankInbox, storyTree } from "../src";
+import {
+  credits,
+  type Ev,
+  earnings,
+  Indexer,
+  inbox,
+  rankInbox,
+  ratingSummary,
+  reportCounts,
+  reviews,
+  storyTree,
+  verifications,
+} from "../src";
 
 afterAll(cleanup);
 
@@ -354,5 +369,103 @@ describe("follow relays", () => {
     await one.close();
     await two.close();
     pool.close([relay.url]);
+  }, 60_000);
+});
+
+describe("labels in the index (FE-11, FE-13, Source Verified)", () => {
+  const T2 = 1_790_100_000;
+  test("ratings: one per rater, newest wins, average and count; other apps' labels are ignored", async () => {
+    const ix = await Indexer.open();
+    const cutId = "a".repeat(64);
+    const cutCoord = `31811:${"b".repeat(64)}:s:ep-001`;
+    const [u1, u2, u3] = [sk(), sk(), sk()];
+    const rate = (key: Uint8Array, stars: number, at: number, review = "") =>
+      finalizeEvent(buildRating({ stars, cutId, cutCoord, review, createdAt: at }), key) as Ev;
+    for (const e of [
+      rate(u1, 2, T2),
+      rate(u1, 5, T2 + 10, "changed my mind"),
+      rate(u2, 4, T2),
+      rate(u3, 3, T2),
+    ])
+      await ix.ingest(e);
+    await ix.ingest(rate(u1, 1, T2 - 100)); // an older rating from u1 arriving late must not win
+    const [s] = await ratingSummary(ix.db, [cutId]);
+    expect(s).toEqual({ cut_id: cutId, count: 3, average: 4 });
+    expect((await reviews(ix.db, cutId)).length).toBe(3);
+    expect(
+      ((await reviews(ix.db, cutId)) as { review: string }[]).some(
+        (r) => r.review === "changed my mind",
+      ),
+    ).toBe(true);
+    const foreign = finalizeEvent(
+      {
+        kind: 1985,
+        created_at: T2,
+        tags: [
+          ["L", "ugc"],
+          ["l", "funny", "ugc"],
+          ["e", cutId],
+        ],
+        content: "",
+      },
+      u1,
+    );
+    expect((await ix.ingest(foreign as Ev)).result).not.toBe("stored");
+    const first = rate(u2, 4, T2);
+    expect((await ix.ingest(first)).result).toBe("duplicate");
+    await ix.close();
+  }, 60_000);
+
+  test("reports count distinct reporters; verifications can be filtered to trusted verifiers", async () => {
+    const ix = await Indexer.open();
+    const target = "c".repeat(64);
+    const author = "d".repeat(64);
+    const [r1, r2, v1, v2] = [sk(), sk(), sk(), sk()];
+    for (const k of [r1, r1, r2])
+      await ix.ingest(
+        finalizeEvent(
+          buildReport({
+            eventId: target,
+            authorPubkey: author,
+            reason: "spam",
+            createdAt: T2 + Math.floor(Math.random() * 1000),
+          }),
+          k,
+        ) as Ev,
+      );
+    expect(await reportCounts(ix.db, [target, "e".repeat(64)])).toEqual({ [target]: 2 });
+    const scene = "f".repeat(64);
+    await ix.ingest(
+      finalizeEvent(
+        buildVerification({
+          sceneId: scene,
+          sceneSha256: "1".repeat(64),
+          verdict: "verified",
+          similarity: 0.99,
+          exact: false,
+          engine: "wan-2.2",
+          createdAt: T2,
+        }),
+        v1,
+      ) as Ev,
+    );
+    await ix.ingest(
+      finalizeEvent(
+        buildVerification({
+          sceneId: scene,
+          sceneSha256: "1".repeat(64),
+          verdict: "mismatch",
+          similarity: 0.2,
+          exact: false,
+          engine: "wan-2.2",
+          createdAt: T2,
+        }),
+        v2,
+      ) as Ev,
+    );
+    expect((await verifications(ix.db, scene)).length).toBe(2);
+    const only = (await verifications(ix.db, scene, [getPublicKey(v1)])) as { verdict: string }[];
+    expect(only.map((x) => x.verdict)).toEqual(["verified"]);
+    await ix.close();
   }, 60_000);
 });

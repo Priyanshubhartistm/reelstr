@@ -1,11 +1,24 @@
 import { verifyEvent } from "nostr-tools/pure";
 import { validateCut } from "./cut";
 import { KIND } from "./kinds";
+import {
+  NS_RATING,
+  NS_VERIFIED,
+  validateRating,
+  validateReport,
+  validateVerification,
+} from "./labels";
 import { validatePayout } from "./payout";
 import { Collector, type EventLike, type Validation } from "./result";
 import { validateScene } from "./scene";
 import { validateSeries } from "./series";
 import { validateStory } from "./story";
+
+function unknown(e: EventLike): Validation {
+  const c = new Collector();
+  c.err(`unknown reelstr kind ${e.kind}`);
+  return c.result();
+}
 
 /** Dispatch on kind; optionally verify id+sig. Unknown kinds are an error. */
 export function validateEvent(e: EventLike, opts: { verifySig?: boolean } = {}): Validation {
@@ -25,6 +38,16 @@ export function validateEvent(e: EventLike, opts: { verifySig?: boolean } = {}):
       break;
     case KIND.PAYOUT:
       r = validatePayout(e);
+      break;
+    case KIND.REPORT:
+      r = validateReport(e);
+      break;
+    case KIND.LABEL:
+      r = e.tags.some((t) => t[0] === "L" && t[1] === NS_RATING)
+        ? validateRating(e)
+        : e.tags.some((t) => t[0] === "L" && t[1] === NS_VERIFIED)
+          ? validateVerification(e)
+          : unknown(e);
       break;
     default: {
       const c = new Collector();

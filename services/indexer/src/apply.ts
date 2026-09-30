@@ -3,8 +3,12 @@ import {
   type EventLike,
   KIND,
   manifestEligibleForVerification,
+  NS_RATING,
+  NS_VERIFIED,
   parseCut,
+  parseRating,
   parseScene,
+  parseVerification,
   tagsOf,
   tagValue,
   validateEvent,
@@ -172,6 +176,51 @@ export async function applyDerived(db: Db, e: Ev): Promise<void> {
         ]);
       break;
     }
+    case KIND.LABEL: {
+      if (e.tags.some((t) => t[0] === "L" && t[1] === NS_RATING)) {
+        const r = parseRating(e);
+        const [old] = await db.query<{ created_at: string }>(
+          "select created_at from ratings where cut_id=$1 and rater=$2",
+          [r.cutId, r.rater],
+        );
+        if (old && Number(old.created_at) >= e.created_at) break; // one rating per rater per Cut: the newest wins
+        await db.query("delete from ratings where cut_id=$1 and rater=$2", [r.cutId, r.rater]);
+        await db.query("insert into ratings values ($1,$2,$3,$4,$5)", [
+          r.cutId,
+          r.rater,
+          r.stars,
+          r.review,
+          e.created_at,
+        ]);
+      } else if (e.tags.some((t) => t[0] === "L" && t[1] === NS_VERIFIED)) {
+        const v = parseVerification(e);
+        await db.query(
+          "insert into verifications values ($1,$2,$3,$4,$5,$6,$7,$8) on conflict do nothing",
+          [
+            e.id,
+            v.sceneId,
+            v.verifier,
+            v.verdict,
+            v.similarity ?? null,
+            v.exact,
+            v.engine,
+            e.created_at,
+          ],
+        );
+      }
+      break;
+    }
+    case KIND.REPORT: {
+      const t = tagsOf(e.tags, "e")[0];
+      await db.query("insert into reports values ($1,$2,$3,$4,$5) on conflict do nothing", [
+        e.id,
+        t?.[1],
+        e.pubkey,
+        t?.[2] ?? "other",
+        e.created_at,
+      ]);
+      break;
+    }
     case 9735: {
       // amount comes from the embedded zap request; it is a claim, not proof of payment (NIP-57),
       // so it is only ever a ranking tie-break, never money accounting
@@ -215,6 +264,12 @@ export type IngestResult = "stored" | "duplicate" | "rejected";
 /** Validate, store in `events`, update derived tables. Invalid events never reach the graph. */
 export async function ingest(db: Db, e: Ev): Promise<{ result: IngestResult; reasons?: string[] }> {
   const reelstr = e.kind !== 3 && e.kind !== 9735;
+  // labels other than ours (other apps use kind 1985 too) are not ours to index or reject
+  if (
+    e.kind === KIND.LABEL &&
+    !e.tags.some((t) => t[0] === "L" && (t[1] === NS_RATING || t[1] === NS_VERIFIED))
+  )
+    return { result: "duplicate" };
   const errors = reelstr
     ? validateEvent(e, { verifySig: true }).errors
     : verifySignature(e)
