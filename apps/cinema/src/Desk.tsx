@@ -71,6 +71,7 @@ export function Desk() {
     curatorPct: 20,
     hostPct: 10,
     host: "",
+    warning: "",
   });
   const [bed, setBed] = useState<{ sha: string; poolPct: number } | null>(null);
   const [drag, setDrag] = useState<number | null>(null);
@@ -147,6 +148,7 @@ export function Desk() {
         scenesSources: items.map((i) => ({ sha256: i.sha, urls: [i.url] })),
         audioBed: bed ? { sha256: bed.sha, payee: me, poolBps: bed.poolPct * 100 } : undefined,
         free: episode <= meta.free,
+        contentWarning: meta.warning || undefined,
         price: { amount: meta.price },
         curatorBps: meta.curatorPct * 100,
         hostBps: meta.hostPct * 100,
@@ -419,6 +421,13 @@ export function Desk() {
           id="m-syn"
           value={meta.synopsis}
           onChange={(e) => setMeta({ ...meta, synopsis: e.target.value })}
+        />
+        <label htmlFor="m-cw">Content warning (optional)</label>
+        <input
+          id="m-cw"
+          placeholder="e.g. violence, flashing lights: viewers must opt in to watch"
+          value={meta.warning}
+          onChange={(e) => setMeta({ ...meta, warning: e.target.value })}
         />
         <div className="row">
           <div>

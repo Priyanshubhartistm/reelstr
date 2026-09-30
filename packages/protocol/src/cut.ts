@@ -26,6 +26,8 @@ export interface CutParams {
   audioBed?: { sha256: string; payee: string; poolBps?: number };
   hls?: { url: string; duration: number; sha256?: string };
   price: { amount: number; unit?: "sat" };
+  /** NIP-71 content-warning: clients blur the episode until the viewer opts in */
+  contentWarning?: string;
   curatorBps: number;
   hostBps: number;
   host: string;
@@ -71,6 +73,7 @@ export function buildCut(p: CutParams): EventTemplate {
         duration: p.hls.duration,
       }),
     );
+  if (p.contentWarning) tags.push(["content-warning", p.contentWarning]);
   tags.push(["price", String(p.price.amount), p.price.unit ?? "sat"]);
   for (const w of cutWeights(p)) tags.push(["zap", w.pubkey, relay, String(w.weight), w.role]);
   return {
@@ -92,6 +95,7 @@ export interface Cut {
   scenes: CutScene[];
   audioBed?: { sha256: string; payee: string; poolBps: number };
   hlsUrl?: string;
+  contentWarning?: string;
   price: { amount: number; unit: string };
   weights: Weight[];
   durationSec: number;
@@ -126,6 +130,7 @@ export function parseCut(e: EventLike): Cut {
       poolBps: bed[3] ? Number(bed[3]) : DEFAULT_AUDIO_BED_BPS,
     },
     hlsUrl: hls?.url,
+    contentWarning: tagValue(e.tags, "content-warning"),
     price: { amount: Number(price?.[1]), unit: price?.[2] ?? "" },
     weights: tagsOf(e.tags, "zap").map((t) => ({
       pubkey: t[1] ?? "",

@@ -469,3 +469,60 @@ describe("labels in the index (FE-11, FE-13, Source Verified)", () => {
     await ix.close();
   }, 60_000);
 });
+
+describe("live subscription covers every indexed kind", () => {
+  test("ratings, reports and verifications published to a relay reach a running indexer", async () => {
+    const relay = await startRelay();
+    const pool = new RelayPool();
+    const ix = await Indexer.open();
+    await ix.follow([relay.url]); // subscribed before anything is published
+    const [a, b, c] = [sk(), sk(), sk()];
+    const cutId = "9".repeat(64);
+    const now = Math.floor(Date.now() / 1000);
+    await pool.publish(
+      finalizeEvent(
+        buildRating({
+          stars: 5,
+          cutId,
+          cutCoord: `31811:${"8".repeat(64)}:s:ep-001`,
+          createdAt: now,
+        }),
+        a,
+      ),
+      [relay.url],
+    );
+    await pool.publish(
+      finalizeEvent(
+        buildReport({
+          eventId: cutId,
+          authorPubkey: "8".repeat(64),
+          reason: "spam",
+          createdAt: now,
+        }),
+        b,
+      ),
+      [relay.url],
+    );
+    await pool.publish(
+      finalizeEvent(
+        buildVerification({
+          sceneId: "7".repeat(64),
+          sceneSha256: "6".repeat(64),
+          verdict: "verified",
+          engine: "x",
+          createdAt: now,
+        }),
+        c,
+      ),
+      [relay.url],
+    );
+    for (let i = 0; i < 60 && ix.counts.stored < 3; i++)
+      await new Promise((r) => setTimeout(r, 100));
+    expect(ix.counts.stored).toBe(3);
+    expect((await ratingSummary(ix.db, [cutId]))[0]).toMatchObject({ count: 1, average: 5 });
+    expect(await reportCounts(ix.db, [cutId])).toEqual({ [cutId]: 1 });
+    expect((await verifications(ix.db, "7".repeat(64))).length).toBe(1);
+    await ix.close();
+    pool.close([relay.url]);
+  }, 60_000);
+});

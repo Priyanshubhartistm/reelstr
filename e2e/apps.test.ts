@@ -153,6 +153,16 @@ async function newUser(
 
 const T = 120_000;
 
+const until = async <R>(f: () => Promise<R | undefined>, ms = 30_000): Promise<R> => {
+  const end = Date.now() + ms;
+  for (;;) {
+    const r = await f();
+    if (r) return r;
+    if (Date.now() > end) throw new Error("condition not met in time");
+    await Bun.sleep(200);
+  }
+};
+
 /** Run a wait; on failure throw with what the page was showing and its console errors. */
 async function diagnose(u: { page: Page; errors: string[] }, f: () => Promise<unknown>) {
   try {
@@ -502,5 +512,138 @@ describe("Studio and Cinema in a real browser", () => {
     pool.close([publicRelay]);
     await alice.ctx.close();
     await bob.ctx.close();
+  }, 600_000);
+
+  test("ratings, content warning blur, and report-and-hide", async () => {
+    const mk = (who: LocalSigner) =>
+      new ReelstrClient({
+        signer: who,
+        relays: endpoints.relays as string[],
+        blossom: endpoints.blossom as string,
+        mirrors: endpoints.mirrors as string[],
+        mediaUrl: endpoints.mediaUrl as string,
+        mediaToken: "tok",
+        indexerUrl: endpoints.indexerUrl as string,
+        keysUrl: keys.url,
+      });
+    const creator = mk(LocalSigner.generate());
+    const pk = await creator.me();
+    await creator.createStory({ d: "mod", title: "Mod Story", logline: "x" });
+    const clip = new Uint8Array(
+      await Bun.file(
+        await makeClip(join(dir, "mod.mp4"), {
+          size: "360x640",
+          fps: 30,
+          sec: 12,
+          freq: 350,
+          gainDb: -20,
+        }),
+      ).arrayBuffer(),
+    );
+    const s1 = await creator.publishScene({
+      bytes: clip,
+      title: "M1",
+      prompt: "p",
+      story: { pubkey: pk, d: "mod" },
+    });
+    const base = {
+      seriesSlug: "mod-series",
+      synopsis: "s",
+      scenes: [
+        { id: s1.event.id, sha256: s1.ingest.normalized.sha256, inSec: 0, outSec: 8, payee: pk },
+      ],
+      scenesSources: [{ sha256: s1.ingest.normalized.sha256, urls: [s1.ingest.normalized.url] }],
+      curatorBps: 0,
+      hostBps: 0,
+      host: pk,
+      price: { amount: 0 },
+      free: true,
+    };
+    const e1 = await creator.publishCut({ ...base, episode: 1, title: "Plain" });
+    const e2 = await creator.publishCut({
+      ...base,
+      episode: 2,
+      title: "Flashing",
+      contentWarning: "flashing lights",
+    });
+    await creator.publishSeries({
+      slug: "mod-series",
+      title: "Mod Series",
+      summary: "s",
+      episodes: [1, 2],
+      freeEpisodes: 2,
+    });
+
+    const v = await newUser(cinemaUrl);
+    const playing = () =>
+      v.page.waitForFunction(
+        () => {
+          const x = document.querySelector("video.player") as HTMLVideoElement | null;
+          return !!x && x.readyState >= 3 && x.currentTime > 0.3;
+        },
+        null,
+        { timeout: T },
+      );
+
+    // rate and review episode 1
+    await v.page.goto(`${cinemaUrl}/#/watch/${e1.id}`);
+    await playing();
+    // stop the 8 s clip so auto-next does not navigate away while we rate
+    await v.page.evaluate(() =>
+      (document.querySelector("video.player") as HTMLVideoElement).pause(),
+    );
+    await v.page.getByRole("radio", { name: "4 stars" }).click();
+    await v.page.locator("#rv").fill("great cliffhanger");
+    await v.page.getByRole("button", { name: "Rate this episode" }).click();
+    await v.page.getByText("Thanks, your rating is published.").waitFor({ timeout: 30_000 });
+    await diagnose(v, () =>
+      v.page.waitForFunction(
+        () =>
+          document
+            .querySelector("[data-testid=rating-summary]")
+            ?.textContent?.includes("4.0 from 1 rating"),
+        null,
+        { timeout: 30_000 },
+      ),
+    );
+    await v.page.getByText("great cliffhanger").first().waitFor({ timeout: 30_000 });
+    // the series page shows the average
+    await v.page.goto(`${cinemaUrl}/#/series/${encodeURIComponent(`31812:${pk}:mod-series`)}`);
+    await v.page.getByText("(1)").first().waitFor({ timeout: 30_000 });
+
+    // content warning: blurred (no player) until the viewer opts in
+    await v.page.goto(`${cinemaUrl}/#/watch/${e2.id}`);
+    await v.page.getByTestId("warning").waitFor({ timeout: T });
+    expect(await v.page.getByTestId("warning").innerText()).toContain("flashing lights");
+    expect(await v.page.locator("video.player").count()).toBe(0);
+    await v.page.getByRole("button", { name: "Show anyway" }).click();
+    await playing();
+
+    // report: hidden at once, stays hidden after a reload, and the report reaches the index
+    await v.page.getByRole("button", { name: "Report", exact: true }).click();
+    await v.page.locator("#rp").selectOption("spam");
+    await v.page.getByRole("button", { name: "Report and hide" }).click();
+    await v.page.getByTestId("hidden-notice").waitFor();
+    expect(await v.page.locator("video.player").count()).toBe(0);
+    await v.page.reload();
+    await v.page.getByTestId("hidden-notice").waitFor({ timeout: T });
+    const counts = await creator.api<Record<string, number>>(`/reports?targets=${e2.id}`);
+    await until(
+      async () =>
+        (await creator.api<Record<string, number>>(`/reports?targets=${e2.id}`))[e2.id] === 1 ||
+        undefined,
+    );
+    expect(counts).toBeTruthy();
+    // the episode no longer shows in this viewer's series list
+    await v.page.goto(`${cinemaUrl}/#/series/${encodeURIComponent(`31812:${pk}:mod-series`)}`);
+    await v.page.getByText(/Ep 1/).first().waitFor({ timeout: T });
+    expect(await v.page.getByText(/Ep 2/).count()).toBe(0);
+    // "show it again" restores it
+    await v.page.goto(`${cinemaUrl}/#/watch/${e2.id}`);
+    await v.page.getByRole("button", { name: "Show it again" }).click();
+    await playing();
+
+    expect(v.errors).toEqual([]);
+    await v.ctx.close();
   }, 600_000);
 });

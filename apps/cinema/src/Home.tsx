@@ -1,5 +1,7 @@
 import type { Weight } from "@reelstr/protocol";
 import { go, SplitTable, useAsync, useSession } from "@reelstr/ui";
+import { Stars } from "./Feedback";
+import { hiddenIds } from "./moderation";
 import { loadProgress } from "./progress";
 
 export interface SeriesRow {
@@ -74,6 +76,16 @@ export function SeriesPage({ coord }: { coord: string }) {
     () => api<CutRow[]>(`/series/${encodeURIComponent(coord)}/episodes`),
     [coord],
   );
+  const hidden = hiddenIds();
+  const ratings = useAsync(async () => {
+    const ids = (eps.data ?? []).map((e) => e.id);
+    return ids.length
+      ? await api<{ cut_id: string; count: number; average: number }[]>(
+          `/ratings?cuts=${ids.join(",")}`,
+        )
+      : [];
+  }, [eps.data?.length]);
+  const rated = new Map((ratings.data ?? []).map((r) => [r.cut_id, r]));
   return (
     <>
       <p>
@@ -83,15 +95,25 @@ export function SeriesPage({ coord }: { coord: string }) {
       <p className="muted">{s.data?.summary}</p>
       {eps.error && <p className="error">{eps.error}</p>}
       <div className="card">
-        {eps.data?.map((e, i) => (
-          <div key={e.id} className="row" style={{ alignItems: "center", padding: ".4rem 0" }}>
-            <a href={`#/watch/${e.id}`}>
-              <strong>Ep {e.episode}</strong> · {e.title}
-            </a>
-            <span className="muted">{Math.round(Number(e.duration))} s</span>
-            <span className="pill">{i < (s.data?.free ?? 0) ? "free" : `${e.price} sats`}</span>
-          </div>
-        ))}
+        {eps.data
+          ?.filter((e) => !hidden.has(e.id))
+          .map((e, i) => (
+            <div key={e.id} className="row" style={{ alignItems: "center", padding: ".4rem 0" }}>
+              <a href={`#/watch/${e.id}`}>
+                <strong>Ep {e.episode}</strong> · {e.title}
+              </a>
+              <span className="muted">{Math.round(Number(e.duration))} s</span>
+              {rated.get(e.id) ? (
+                <span>
+                  <Stars value={rated.get(e.id)?.average ?? 0} />{" "}
+                  <span className="muted">({rated.get(e.id)?.count})</span>
+                </span>
+              ) : (
+                <span className="muted">unrated</span>
+              )}
+              <span className="pill">{i < (s.data?.free ?? 0) ? "free" : `${e.price} sats`}</span>
+            </div>
+          ))}
       </div>
       {eps.data?.[0] && <Credits cutId={eps.data[0].id} priceSats={eps.data[0].price} />}
     </>

@@ -7,7 +7,9 @@ import {
   zapSplit,
 } from "@reelstr/wallet";
 import { useRef, useState } from "react";
+import { Ratings, ReportButton } from "./Feedback";
 import { Credits, type CutRow, type SeriesRow } from "./Home";
+import { hiddenIds, isRevealed, reveal } from "./moderation";
 import { usePayments } from "./payments";
 import { loadProgress, saveProgress } from "./progress";
 
@@ -49,8 +51,13 @@ export function Watch({ cutId }: { cutId: string }) {
   const [busy, setBusy] = useState(false);
   const [tip, setTip] = useState(100);
   const [tipMsg, setTipMsg] = useState("");
+  const [hidden, setHidden] = useState(() => hiddenIds().has(cutId));
+  const [, bump] = useState(0);
 
   const c = cut.data?.c;
+  const warning = (c as (CutRow & { content_warning?: string | null }) | undefined)
+    ?.content_warning;
+  const blurred = !!warning && !isRevealed(cutId);
   const paid =
     !!c && Number(c.price) > 0 && (cut.data?.index ?? 0) >= (cut.data?.series?.free ?? 0);
   const d = c?.coord.split(":").slice(2).join(":");
@@ -128,8 +135,40 @@ export function Watch({ cutId }: { cutId: string }) {
         </a>
       </p>
       {cut.error && <p className="error">{cut.error}</p>}
-      {c && !c.hls_url && <p className="muted">This episode has no rendered video yet.</p>}
-      {c?.hls_url && !locked && (
+      {hidden && (
+        <div className="card" data-testid="hidden-notice">
+          <p>You reported this episode, so it is hidden for you.</p>
+          <button
+            type="button"
+            className="ghost"
+            onClick={() => {
+              import("./moderation").then((m) => m.unhide(cutId));
+              setHidden(false);
+            }}
+          >
+            Show it again
+          </button>
+        </div>
+      )}
+      {!hidden && blurred && (
+        <div className="card" data-testid="warning">
+          <h2 style={{ marginTop: 0 }}>Content warning</h2>
+          <p>{warning}</p>
+          <button
+            type="button"
+            onClick={() => {
+              reveal(cutId);
+              bump((n) => n + 1);
+            }}
+          >
+            Show anyway
+          </button>
+        </div>
+      )}
+      {c && !hidden && !blurred && !c.hls_url && (
+        <p className="muted">This episode has no rendered video yet.</p>
+      )}
+      {c?.hls_url && !locked && !hidden && !blurred && (
         <HlsPlayer
           key={`${c.id}-${have?.kind}`}
           src={c.hls_url}
@@ -150,7 +189,7 @@ export function Watch({ cutId }: { cutId: string }) {
           }}
         />
       )}
-      {c && locked && (
+      {c && locked && !hidden && !blurred && (
         <div className="card" role="dialog" aria-label="Unlock episode" data-testid="paywall">
           <h2 style={{ marginTop: 0 }}>Keep watching</h2>
           <p>
@@ -225,7 +264,13 @@ export function Watch({ cutId }: { cutId: string }) {
           {tipMsg && <p className="muted">{tipMsg}</p>}
         </div>
       )}
-      {c && <Credits cutId={c.id} priceSats={c.price} />}
+      {c && !hidden && (
+        <div>
+          <ReportButton eventId={c.id} author={c.curator} onHidden={() => setHidden(true)} />
+        </div>
+      )}
+      {c && !hidden && <Credits cutId={c.id} priceSats={c.price} />}
+      {c && !hidden && <Ratings cutId={c.id} cutCoord={c.coord} />}
     </div>
   );
 }

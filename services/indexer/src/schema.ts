@@ -40,7 +40,8 @@ export async function migrate(db: Db) {
     create table if not exists cuts (
       coord text primary key, id text not null, curator text not null, series_slug text not null,
       episode int not null, title text not null, duration double precision not null,
-      price bigint not null, hls_url text, created_at bigint not null
+      price bigint not null, hls_url text, created_at bigint not null,
+      content_warning text
     );
     create table if not exists cut_scenes (
       cut_id text not null, pos int not null, scene_id text not null, sha text not null,
