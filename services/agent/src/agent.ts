@@ -9,7 +9,6 @@ import {
   parseJobRequest,
   parseScene,
   validateEvent,
-  validateJobRequest,
 } from "@reelstr/protocol";
 import {
   buildNutzapInfo,
@@ -216,7 +215,7 @@ export class Agent {
         return null;
       }
     })();
-    if (!z || !z.eventId || this.redeemed.has(e.id)) return "ignored";
+    if (!z?.eventId || this.redeemed.has(e.id)) return "ignored";
     const result = await this.o.pool.get(this.o.relays, { ids: [z.eventId] });
     if (!result || result.kind !== KIND.JOB_RESULT || result.pubkey !== this.pubkey)
       return "ignored";

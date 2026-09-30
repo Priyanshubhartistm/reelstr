@@ -3,6 +3,9 @@ import { useAsync, useSession } from "@reelstr/ui";
 import { useState } from "react";
 import { hide } from "./moderation";
 
+let starGroup = 0;
+
+/** Read-only stars, or (with `onPick`) a proper radio group so keyboards and screen readers work. */
 export function Stars({
   value,
   onPick,
@@ -12,34 +15,51 @@ export function Stars({
   onPick?: (n: number) => void;
   label?: string;
 }) {
-  return (
-    <span
-      role={onPick ? "radiogroup" : "img"}
-      aria-label={label ?? `${value} out of 5 stars`}
-      style={{ whiteSpace: "nowrap" }}
-    >
-      {[1, 2, 3, 4, 5].map((n) => {
-        const on = n <= Math.round(value);
-        return onPick ? (
-          <button
+  const [group] = useState(() => `stars-${++starGroup}`);
+  if (!onPick)
+    return (
+      <span
+        role="img"
+        aria-label={label ?? `${value} out of 5 stars`}
+        style={{ whiteSpace: "nowrap" }}
+      >
+        {[1, 2, 3, 4, 5].map((n) => (
+          <span
             key={n}
-            type="button"
-            className="ghost"
-            role="radio"
-            aria-checked={n === value}
-            aria-label={`${n} star${n > 1 ? "s" : ""}`}
-            style={{ padding: "0 .15rem", border: 0, color: on ? "var(--accent)" : "var(--muted)" }}
-            onClick={() => onPick(n)}
+            aria-hidden="true"
+            style={{ color: n <= Math.round(value) ? "var(--accent)" : "var(--muted)" }}
           >
-            {on ? "★" : "☆"}
-          </button>
-        ) : (
-          <span key={n} aria-hidden="true" style={{ color: on ? "var(--accent)" : "var(--muted)" }}>
-            {on ? "★" : "☆"}
+            {n <= Math.round(value) ? "★" : "☆"}
           </span>
-        );
-      })}
-    </span>
+        ))}
+      </span>
+    );
+  return (
+    <fieldset style={{ border: 0, padding: 0, margin: 0, whiteSpace: "nowrap" }}>
+      <legend className="sr">{label ?? "Rating"}</legend>
+      {[1, 2, 3, 4, 5].map((n) => (
+        <label
+          key={n}
+          style={{
+            display: "inline-block",
+            margin: 0,
+            cursor: "pointer",
+            color: n <= value ? "var(--accent)" : "var(--muted)",
+            fontSize: "1.3rem",
+          }}
+        >
+          <input
+            className="sr"
+            type="radio"
+            name={group}
+            checked={n === value}
+            onChange={() => onPick(n)}
+          />
+          <span aria-hidden="true">{n <= value ? "★" : "☆"}</span>
+          <span className="sr">{`${n} star${n > 1 ? "s" : ""}`}</span>
+        </label>
+      ))}
+    </fieldset>
   );
 }
 

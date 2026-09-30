@@ -172,7 +172,7 @@ export class ReelstrClient {
   }
 
   /** Fork or continue and publish. */
-  forkScene(parent: NostrEvent, o: Parameters<ReelstrClient["forkInput"]>[1]) {
+  async forkScene(parent: NostrEvent, o: Parameters<ReelstrClient["forkInput"]>[1]) {
     return this.publishScene(this.forkInput(parent, o));
   }
 

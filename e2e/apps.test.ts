@@ -592,7 +592,7 @@ describe("Studio and Cinema in a real browser", () => {
     await v.page.evaluate(() =>
       (document.querySelector("video.player") as HTMLVideoElement).pause(),
     );
-    await v.page.getByRole("radio", { name: "4 stars" }).click();
+    await v.page.locator("label").filter({ hasText: "4 stars" }).click();
     await v.page.locator("#rv").fill("great cliffhanger");
     await v.page.getByRole("button", { name: "Rate this episode" }).click();
     await v.page.getByText("Thanks, your rating is published.").waitFor({ timeout: 30_000 });

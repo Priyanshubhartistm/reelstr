@@ -191,8 +191,8 @@ export function Agents({ coord }: { coord?: string }) {
       {delivery && scene && (
         <div className="card" style={{ marginTop: 12 }} data-testid="delivery">
           <h2 style={{ marginTop: 0 }}>Delivered scene</h2>
-          {/* biome-ignore lint/a11y/useMediaCaption: generated preview without a transcript */}
           {videoUrl && (
+            // biome-ignore lint/a11y/useMediaCaption: generated preview without a transcript
             <video
               className="player"
               style={{ maxWidth: 240 }}

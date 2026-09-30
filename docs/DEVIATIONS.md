@@ -25,6 +25,15 @@ Nothing from PRD section 6 is dropped. Where the research (`docs/research.md`, 2
 - Scene normalization uses two-pass loudnorm with `linear=true` (no dynamic compression). Output is bit-stable on the same ffmpeg build (bitexact flags, single-threaded encode), which is what makes a rendition hash reproducible.
 - Audio leads video by one AAC priming frame (~21 ms) in the encoded HLS; this is encoder delay, not drift, and is tested.
 
+## Found by building it
+
+- **Times in signed tags are canonical decimal seconds** (`secs()`: rounded to whole milliseconds, at most 3 decimals). The builders used to write float noise like `6.755999999999999` into signed Cut tags; our own validator rejected it and an independent Python reader computed a different split. Found by the interop test, fixed in the builders.
+- **Nutzaps carry an `e` tag naming the exact Cut version (unlocks) or job result (agent payment).** The key server refuses a nutzap that names a different Cut version, so a replaced Cut cannot be paid for under an old price.
+- **Agent generation is plain request/response (kinds 9811 and 9812), not NIP-90.** The result carries the agent's signed Scene as a draft; the requester publishes it and pays by nutzap only on acceptance.
+- **Crew rooms release by re-signing.** A draft in a NIP-29 room carries an `h` tag; release strips it and signs a fresh event (new id, same blobs) for the public relays, so the room id never leaks.
+- **The split service refuses to start without `acknowledgeCustody`.** It holds viewers' money between unlock and payout.
+- **Chat in a room has no defined order inside one second** (Nostr timestamps are seconds); clients sort by time then id.
+
 ## Protocol choices not in the PRD
 
 - Cut `audio-bed` tag takes an optional 4th element: the bed's share of the creator pool in bps (default 1000). This lets a curator change the default and keeps weights recomputable.
