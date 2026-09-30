@@ -4,3 +4,7 @@ dist
 .env
 data/
 .DS_Store
+bin/
+services/relay/data/
+infra/blossom/node_modules/
+infra/blossom/data/

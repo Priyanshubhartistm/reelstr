@@ -1,0 +1,19 @@
+# Dev/prod config for blossom-server-ts. Env: BLOSSOM_PUBLIC_URL, BLOSSOM_DATA, PORT, BLOSSOM_CONFIG
+publicDomain: ${BLOSSOM_PUBLIC_URL}
+databasePath: ${BLOSSOM_DATA}/sqlite.db
+storage:
+  backend: local
+  local:
+    dir: ${BLOSSOM_DATA}/blobs
+  # a curator deleting their own blob should really remove it once nobody else owns it
+  removeWhenNoOwners: true
+  rules:
+    # paid episode blobs must be pinned: long retention, unlike free public servers
+    - type: "*"
+      expiration: 100 years
+upload:
+  enabled: true
+  requireAuth: true
+list:
+  requireAuth: false
+  allowListOthers: true

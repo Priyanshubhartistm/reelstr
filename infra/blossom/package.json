@@ -1,0 +1,10 @@
+{
+  "name": "reelstr-blossom-server",
+  "private": true,
+  "dependencies": {
+    "blossom-server-ts": "5.2.0"
+  },
+  "allowScripts": {
+    "better-sqlite3@11.10.0": true
+  }
+}

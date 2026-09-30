@@ -1,0 +1,8 @@
+{
+  "name": "@reelstr/relay",
+  "private": true,
+  "scripts": {
+    "build": "go build -o bin/relay .",
+    "start": "go build -o bin/relay . && ./bin/relay"
+  }
+}

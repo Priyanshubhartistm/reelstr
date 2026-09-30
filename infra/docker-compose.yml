@@ -1,0 +1,50 @@
+# Full stack. Dev on a small machine can run the same pieces natively instead:
+#   relay:    services/relay (go build), Blossom: infra/blossom/run.sh, indexer DB: PGlite (no server).
+# This file is the deployment shape; it has not been exercised on the build machine.
+name: reelstr
+services:
+  relay:
+    build: ../services/relay
+    environment:
+      POW_BITS: "${POW_BITS:-16}"
+    ports: ["3334:3334"]
+    volumes: [relay-data:/data]
+    restart: unless-stopped
+
+  blossom:
+    build: ./blossom
+    environment:
+      BLOSSOM_PUBLIC_URL: "${BLOSSOM_PUBLIC_URL:-http://localhost:3100}"
+    ports: ["3100:3100"]
+    volumes: [blossom-data:/data]
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: reelstr
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-reelstr-dev}"
+      POSTGRES_DB: reelstr
+    ports: ["5432:5432"]
+    volumes: [pg-data:/var/lib/postgresql/data]
+    restart: unless-stopped
+
+  # Cashu mint for development only: FakeWallet mints without real Lightning. Never point real funds at it.
+  mint:
+    image: cashubtc/nutshell:latest
+    command: ["poetry", "run", "mint"]
+    environment:
+      MINT_BACKEND_BOLT11_SAT: FakeWallet
+      MINT_LISTEN_HOST: 0.0.0.0
+      MINT_LISTEN_PORT: "3338"
+      MINT_PRIVATE_KEY: "${MINT_PRIVATE_KEY:-dev-only-change-me}"
+      MINT_INFO_NAME: reelstr-dev-mint
+    ports: ["3338:3338"]
+    volumes: [mint-data:/root/.cashu]
+    profiles: ["mint"]
+
+volumes:
+  relay-data:
+  blossom-data:
+  pg-data:
+  mint-data:

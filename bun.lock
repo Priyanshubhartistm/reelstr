@@ -10,6 +10,22 @@
         "typescript": "7.0.2",
       },
     },
+    "packages/blossom": {
+      "name": "@reelstr/blossom",
+      "version": "0.1.0",
+      "dependencies": {
+        "@reelstr/nostr": "workspace:*",
+        "@reelstr/protocol": "workspace:*",
+      },
+    },
+    "packages/nostr": {
+      "name": "@reelstr/nostr",
+      "version": "0.1.0",
+      "dependencies": {
+        "@reelstr/protocol": "workspace:*",
+        "nostr-tools": "2.25.2",
+      },
+    },
     "packages/protocol": {
       "name": "@reelstr/protocol",
       "version": "0.1.0",
@@ -17,6 +33,9 @@
         "@noble/hashes": "latest",
         "nostr-tools": "2.25.2",
       },
+    },
+    "services/relay": {
+      "name": "@reelstr/relay",
     },
   },
   "packages": {
@@ -44,7 +63,13 @@
 
     "@noble/hashes": ["@noble/hashes@2.4.0", "", {}, "sha512-X5XaVWZIBCT7HHZGm5I7ZQXDwLG+bGXuSrMQAW+7Zvl87h1kmc1ZB1VSRJcpUfoUrGQp4Fkoxm5kZ+Ms+aW+eA=="],
 
+    "@reelstr/blossom": ["@reelstr/blossom@workspace:packages/blossom"],
+
+    "@reelstr/nostr": ["@reelstr/nostr@workspace:packages/nostr"],
+
     "@reelstr/protocol": ["@reelstr/protocol@workspace:packages/protocol"],
+
+    "@reelstr/relay": ["@reelstr/relay@workspace:services/relay"],
 
     "@scure/base": ["@scure/base@2.0.0", "", {}, "sha512-3E1kpuZginKkek01ovG8krQ0Z44E3DHPjc5S2rjJw9lZn3KSQOs8S7wqikF/AH7iRanHypj85uGyxk0XAyC37w=="],
 
