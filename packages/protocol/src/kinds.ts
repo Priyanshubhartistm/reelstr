@@ -9,6 +9,9 @@ export const KIND = {
   CUT: 31811,
   SERIES: 31812,
   PAYOUT: 9810,
+  /** generation job request and result (plain request/response; not a NIP-90 DVM) */
+  JOB_REQUEST: 9811,
+  JOB_RESULT: 9812,
   /** NIP-51 video set; Series is mirrored here for interop */
   VIDEO_SET: 30005,
   /** NIP-56 report, NIP-32 label, NIP-57 zap request, NIP-61 nutzap */

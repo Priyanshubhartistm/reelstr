@@ -1,5 +1,6 @@
 import { verifyEvent } from "nostr-tools/pure";
 import { validateCut } from "./cut";
+import { validateJobRequest, validateJobResult } from "./jobs";
 import { KIND } from "./kinds";
 import {
   NS_RATING,
@@ -38,6 +39,12 @@ export function validateEvent(e: EventLike, opts: { verifySig?: boolean } = {}):
       break;
     case KIND.PAYOUT:
       r = validatePayout(e);
+      break;
+    case KIND.JOB_REQUEST:
+      r = validateJobRequest(e);
+      break;
+    case KIND.JOB_RESULT:
+      r = validateJobResult(e);
       break;
     case KIND.REPORT:
       r = validateReport(e);

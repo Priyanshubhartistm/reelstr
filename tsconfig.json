@@ -45,6 +45,9 @@
     },
     {
       "path": "services/split"
+    },
+    {
+      "path": "services/agent"
     }
   ]
 }

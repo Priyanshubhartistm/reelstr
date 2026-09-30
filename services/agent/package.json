@@ -1,0 +1,25 @@
+{
+  "name": "@reelstr/agent",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "start": "bun src/server.ts"
+  },
+  "dependencies": {
+    "@cashu/cashu-ts": "4.11.0",
+    "@noble/hashes": "latest",
+    "@reelstr/app-core": "workspace:*",
+    "@reelstr/blossom": "workspace:*",
+    "@reelstr/media": "workspace:*",
+    "@reelstr/nostr": "workspace:*",
+    "@reelstr/protocol": "workspace:*",
+    "@reelstr/wallet": "workspace:*"
+  },
+  "devDependencies": {
+    "@reelstr/indexer": "workspace:*",
+    "@reelstr/media-service": "workspace:*",
+    "@reelstr/testkit": "workspace:*"
+  }
+}

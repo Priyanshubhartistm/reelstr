@@ -24,6 +24,7 @@ var baseKinds = []int{
 	0, 3, 10002, // profile, follows, relay list
 	34236,                     // Scene (NIP-71 addressable short video)
 	31810, 31811, 31812, 9810, // Story, Cut, Series, Payout
+	9811, 9812, // generation job request and result
 	30005,      // NIP-51 video set
 	1984, 1985, // reports, labels
 	9734, 9735, // zap request/receipt

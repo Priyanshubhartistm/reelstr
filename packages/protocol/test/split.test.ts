@@ -273,3 +273,103 @@ describe("labels: ratings, reports, verifications", () => {
     expect(validate({ ...v, tags: v.tags.filter((t) => t[0] !== "L") }).ok).toBe(false); // label of an unknown namespace
   });
 });
+
+import {
+  buildAgentProfile,
+  buildJobRequest,
+  buildJobResult,
+  parseAgentProfile,
+  parseJobRequest,
+  validateJobRequest,
+  validateJobResult,
+} from "../src";
+
+describe("agent jobs (NP-5, NP-6)", () => {
+  const agent = "a".repeat(64);
+  const requester = "b".repeat(64);
+  const signed = (
+    t: { kind: number; created_at: number; tags: string[][]; content: string },
+    pubkey = requester,
+  ) => ({ ...t, pubkey, id: "c".repeat(64), sig: "d".repeat(128) });
+  const req = (over = {}) =>
+    buildJobRequest({
+      agent,
+      prompt: "a steel door in rain",
+      story: { pubkey: requester, d: "vault" },
+      model: "wan-2.2-t2v",
+      seed: 7,
+      refs: ["e".repeat(64)],
+      durationSec: 12,
+      bidSats: 500,
+      ...over,
+    });
+
+  test("a request round trips and validates", () => {
+    const e = signed(req());
+    expect(validateJobRequest(e)).toMatchObject({ ok: true });
+    expect(parseJobRequest(e)).toMatchObject({
+      agent,
+      requester,
+      model: "wan-2.2-t2v",
+      seed: "7",
+      durationSec: 12,
+      bidSats: 500,
+      refs: ["e".repeat(64)],
+    });
+  });
+  test("bad requests are rejected with reasons", () => {
+    const errs = (over: object) => validateJobRequest(signed(req(over))).errors.join();
+    expect(errs({ durationSec: 60 })).toContain("duration");
+    expect(errs({ bidSats: -1 })).toContain("bid");
+    expect(errs({ prompt: "  " })).toContain("prompt");
+    expect(errs({ refs: ["nope"] })).toContain("sha256");
+    expect(validateJobRequest(signed(req(), agent)).errors.join()).toContain("commission itself");
+    expect(errs({ parentId: "f".repeat(64), license: "All-Rights-Reserved" })).toContain(
+      "fork-friendly",
+    );
+  });
+  test("results: success must name its scene; agent profile carries the bot flag", () => {
+    const ok = signed(
+      buildJobResult({
+        jobId: "1".repeat(64),
+        requester,
+        status: "success",
+        content: "{}",
+        sceneId: "2".repeat(64),
+      }),
+      agent,
+    );
+    expect(validateJobResult(ok).ok).toBe(true);
+    expect(
+      validateJobResult(
+        signed(
+          buildJobResult({ jobId: "1".repeat(64), requester, status: "success", content: "{}" }),
+          agent,
+        ),
+      ).errors.join(),
+    ).toContain("names its scene");
+    expect(
+      validateJobResult(
+        signed(
+          buildJobResult({ jobId: "1".repeat(64), requester, status: "error", content: "no gpu" }),
+          agent,
+        ),
+      ).ok,
+    ).toBe(true);
+    const prof = buildAgentProfile({
+      name: "wan-bot",
+      about: "makes scenes",
+      models: ["wan-2.2-t2v"],
+      priceSats: 400,
+    });
+    expect(parseAgentProfile(signed(prof, agent))).toEqual({
+      name: "wan-bot",
+      bot: true,
+      models: ["wan-2.2-t2v"],
+      priceSats: 400,
+    });
+    expect(
+      parseAgentProfile({ ...signed(prof, agent), content: JSON.stringify({ name: "human" }) }),
+    ).toBeNull();
+  });
+});

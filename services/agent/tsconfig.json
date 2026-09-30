@@ -1,0 +1,16 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": { "outDir": "dist", "rootDir": "../.." },
+  "include": ["src", "test"],
+  "references": [
+    { "path": "../../packages/app-core" },
+    { "path": "../../packages/blossom" },
+    { "path": "../../packages/media" },
+    { "path": "../../packages/nostr" },
+    { "path": "../../packages/protocol" },
+    { "path": "../../packages/wallet" },
+    { "path": "../../packages/testkit" },
+    { "path": "../media" },
+    { "path": "../indexer" }
+  ]
+}
