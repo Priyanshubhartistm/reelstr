@@ -1,0 +1,18 @@
+{
+  "name": "@reelstr/app-core",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "dependencies": {
+    "@reelstr/blossom": "workspace:*",
+    "@reelstr/nostr": "workspace:*",
+    "@reelstr/protocol": "workspace:*"
+  },
+  "devDependencies": {
+    "@reelstr/testkit": "workspace:*",
+    "@reelstr/media-service": "workspace:*",
+    "@reelstr/indexer": "workspace:*",
+    "@reelstr/media": "workspace:*"
+  }
+}

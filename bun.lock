@@ -10,6 +10,21 @@
         "typescript": "7.0.2",
       },
     },
+    "packages/app-core": {
+      "name": "@reelstr/app-core",
+      "version": "0.1.0",
+      "dependencies": {
+        "@reelstr/blossom": "workspace:*",
+        "@reelstr/nostr": "workspace:*",
+        "@reelstr/protocol": "workspace:*",
+      },
+      "devDependencies": {
+        "@reelstr/indexer": "workspace:*",
+        "@reelstr/media": "workspace:*",
+        "@reelstr/media-service": "workspace:*",
+        "@reelstr/testkit": "workspace:*",
+      },
+    },
     "packages/blossom": {
       "name": "@reelstr/blossom",
       "version": "0.1.0",
@@ -100,6 +115,8 @@
     "@noble/curves": ["@noble/curves@2.0.1", "", { "dependencies": { "@noble/hashes": "2.0.1" } }, "sha512-vs1Az2OOTBiP4q0pwjW5aF0xp9n4MxVrmkFBxc6EKZc6ddYx5gaZiAsZoq0uRRXWbi3AT/sBqn05eRPtn1JCPw=="],
 
     "@noble/hashes": ["@noble/hashes@2.4.0", "", {}, "sha512-X5XaVWZIBCT7HHZGm5I7ZQXDwLG+bGXuSrMQAW+7Zvl87h1kmc1ZB1VSRJcpUfoUrGQp4Fkoxm5kZ+Ms+aW+eA=="],
+
+    "@reelstr/app-core": ["@reelstr/app-core@workspace:packages/app-core"],
 
     "@reelstr/blossom": ["@reelstr/blossom@workspace:packages/blossom"],
 

@@ -21,6 +21,9 @@
     },
     {
       "path": "services/indexer"
+    },
+    {
+      "path": "packages/app-core"
     }
   ]
 }
