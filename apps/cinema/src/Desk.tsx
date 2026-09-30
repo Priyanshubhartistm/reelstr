@@ -1,4 +1,4 @@
-import { computeWeights, cutD, type Weight } from "@reelstr/protocol";
+import { computeWeights, type Weight } from "@reelstr/protocol";
 import { SplitTable, useAsync, useSession } from "@reelstr/ui";
 import { useMemo, useState } from "react";
 import type { CutRow } from "./Home";
@@ -464,12 +464,6 @@ export function Desk() {
       </p>
       {status && <p className="ok">{status}</p>}
       {err && <p className="error">{err}</p>}
-      <p className="muted">
-        Episode id will be{" "}
-        <code>
-          {meta.slug || "series"}:{cutD("", 0).split(":")[1]?.replace("000", "NNN")}
-        </code>
-      </p>
     </>
   );
 }
