@@ -1,4 +1,5 @@
-import { go, LoginGate, useRoute, useSession } from "@reelstr/ui";
+import { go, LoginGate, PaymentsProvider, useRoute, useSession } from "@reelstr/ui";
+import { Agents } from "./Agents";
 import { Composer } from "./Composer";
 import { Crew } from "./Crew";
 import { Earnings } from "./Earnings";
@@ -7,7 +8,9 @@ import { StoriesList, StoryPage } from "./Stories";
 export function App() {
   return (
     <LoginGate title="Reelstr Studio">
-      <Shell />
+      <PaymentsProvider>
+        <Shell />
+      </PaymentsProvider>
     </LoginGate>
   );
 }
@@ -22,6 +25,7 @@ function Shell() {
         <strong>Reelstr Studio</strong>
         <nav>
           <a href="#/">Stories</a>
+          <a href="#/agents">Agents</a>
           <a href="#/crew">Crew</a>
           <a href="#/earnings">Earnings</a>
         </nav>
@@ -40,6 +44,7 @@ function Shell() {
         ) : null}
         {page === "earnings" ? <Earnings /> : null}
         {page === "crew" ? <Crew /> : null}
+        {page === "agents" ? <Agents coord={arg} /> : null}
         {!page ? <StoriesList /> : null}
       </div>
     </>

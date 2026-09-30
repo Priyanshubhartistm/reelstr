@@ -1,4 +1,3 @@
-import { useSession } from "@reelstr/ui";
 import { CashuWallet, MemoryStore, Nip60Store, NwcWallet, SpendGuard } from "@reelstr/wallet";
 import {
   createContext,
@@ -10,6 +9,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { useSession } from "./session";
 
 const get = (k: string) => {
   try {

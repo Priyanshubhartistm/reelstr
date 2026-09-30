@@ -1,7 +1,6 @@
-import { LoginGate, useRoute, useSession } from "@reelstr/ui";
+import { LoginGate, PaymentsProvider, useRoute, useSession } from "@reelstr/ui";
 import { Desk } from "./Desk";
 import { Home, SeriesPage } from "./Home";
-import { PaymentsProvider } from "./payments";
 import { Wallet } from "./Wallet";
 import { Watch } from "./Watch";
 

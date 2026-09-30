@@ -1,4 +1,4 @@
-import { go, HlsPlayer, useAsync, useSession } from "@reelstr/ui";
+import { go, HlsPlayer, useAsync, usePayments, useSession } from "@reelstr/ui";
 import {
   keyHeaders,
   type Unlock,
@@ -10,7 +10,6 @@ import { useRef, useState } from "react";
 import { Ratings, ReportButton } from "./Feedback";
 import { Credits, type CutRow, type SeriesRow } from "./Home";
 import { hiddenIds, isRevealed, reveal } from "./moderation";
-import { usePayments } from "./payments";
 import { loadProgress, saveProgress } from "./progress";
 
 const tokenKey = (keyUrl: string) => `reelstr.unlock.${keyUrl}`;

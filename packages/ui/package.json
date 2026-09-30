@@ -10,7 +10,8 @@
     "@reelstr/protocol": "workspace:*",
     "hls.js": "1.7.3",
     "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react-dom": "19.3.0",
+    "@reelstr/wallet": "workspace:*"
   },
   "devDependencies": {
     "@types/react": "19.3.0",

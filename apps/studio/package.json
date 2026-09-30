@@ -14,7 +14,8 @@
     "@reelstr/ui": "workspace:*",
     "react": "19.3.0",
     "react-dom": "19.3.0",
-    "@reelstr/nostr": "workspace:*"
+    "@reelstr/nostr": "workspace:*",
+    "@reelstr/wallet": "workspace:*"
   },
   "devDependencies": {
     "@types/react": "19.3.0",

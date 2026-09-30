@@ -17,15 +17,12 @@ import {
   validateEvent,
 } from "@reelstr/protocol";
 import { cleanup, FakeLightning, startBlossom, startFakeMint, startRelay } from "@reelstr/testkit";
-import { CashuWallet } from "@reelstr/wallet";
+import { acceptResult, awaitResult, CashuWallet, requestJob } from "@reelstr/wallet";
 import {
   Agent,
-  acceptResult,
-  awaitResult,
   type GenAdapter,
   MockAdapter,
   registry,
-  requestJob,
   verificationTemplate,
   verifyScene,
 } from "../src";

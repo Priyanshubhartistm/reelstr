@@ -1,6 +1,22 @@
 {
   "extends": "../../tsconfig.base.json",
-  "compilerOptions": { "outDir": "dist", "rootDir": "." },
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "."
+  },
   "include": ["src"],
-  "references": [{ "path": "../protocol" }, { "path": "../nostr" }, { "path": "../app-core" }]
+  "references": [
+    {
+      "path": "../protocol"
+    },
+    {
+      "path": "../nostr"
+    },
+    {
+      "path": "../app-core"
+    },
+    {
+      "path": "../wallet"
+    }
+  ]
 }

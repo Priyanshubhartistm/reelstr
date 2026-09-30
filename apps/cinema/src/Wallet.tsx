@@ -1,5 +1,5 @@
+import { usePayments } from "@reelstr/ui";
 import { useState } from "react";
-import { usePayments } from "./payments";
 
 /** FE-9: balance, top-up, spending cap, history. */
 export function Wallet() {

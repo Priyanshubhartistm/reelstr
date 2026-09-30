@@ -8,7 +8,8 @@ import {
   validateEvent,
   validateJobRequest,
 } from "@reelstr/protocol";
-import { buildNutzap, type CashuWallet, parseNutzapInfo } from "@reelstr/wallet";
+import type { CashuWallet } from "./cashu";
+import { buildNutzap, parseNutzapInfo } from "./nutzap";
 
 export interface Requester {
   signer: Signer;
