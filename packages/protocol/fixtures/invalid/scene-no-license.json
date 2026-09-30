@@ -1,0 +1,57 @@
+{
+  "event": {
+    "kind": 34236,
+    "created_at": 1790000001,
+    "tags": [
+      [
+        "d",
+        "d07de91666f7fbf8c01f5638e2206f0b01be2914191f4e586a2acccedacebf58"
+      ],
+      [
+        "title",
+        "bad-base"
+      ],
+      [
+        "imeta",
+        "url https://blossom.example/d07de91666f7fbf8c01f5638e2206f0b01be2914191f4e586a2acccedacebf58.mp4",
+        "x d07de91666f7fbf8c01f5638e2206f0b01be2914191f4e586a2acccedacebf58",
+        "m video/mp4",
+        "dim 1080x1920",
+        "duration 12.4"
+      ],
+      [
+        "a",
+        "31810:1b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f:vault-heist",
+        "",
+        "root"
+      ],
+      [
+        "gen",
+        "model",
+        "wan-2.2-t2v",
+        "open"
+      ],
+      [
+        "gen",
+        "seed",
+        "828341"
+      ],
+      [
+        "gen",
+        "ref",
+        "dc19ae267ce0d8c621fb84efcef27d14763e48adaeffcc88973fc090c7738a87"
+      ],
+      [
+        "t",
+        "reelstr"
+      ]
+    ],
+    "content": "prompt for bad-base",
+    "pubkey": "1b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f",
+    "id": "7172be6657f43e5c8bc965d37bc458ad6682c5a3dfd2361e6a947333132db953",
+    "sig": "cd195116bd964811708011c94f98f64d4913e13fd3f8c7182a484213a250d19f1415674c5c066573b435fb699550f90d22f2969fdbfaaa15752213d946169b88"
+  },
+  "expect": [
+    "license tag is required"
+  ]
+}

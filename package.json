@@ -1,0 +1,21 @@
+{
+  "name": "reelstr",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*",
+    "services/*"
+  ],
+  "scripts": {
+    "check": "biome check . && tsc -b && bun test",
+    "test": "bun test",
+    "lint": "biome check .",
+    "fix": "biome check --write ."
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.15",
+    "@types/bun": "latest",
+    "typescript": "7.0.2"
+  }
+}

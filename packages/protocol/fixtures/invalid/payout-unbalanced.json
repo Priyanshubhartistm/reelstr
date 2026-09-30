@@ -1,0 +1,71 @@
+{
+  "event": {
+    "kind": 9810,
+    "created_at": 1790000000,
+    "tags": [
+      [
+        "e",
+        "89bbcde1fe8184ebd8686bfe395c70b2d6fa7bfc59a33ea69be698b59180cf81"
+      ],
+      [
+        "a",
+        "31811:462779ad4aad39514614751a71085f2f10e1c7a593e4e030efb5b8721ce55b0b:the-vault:ep-003"
+      ],
+      [
+        "period",
+        "1790000000",
+        "1790000001"
+      ],
+      [
+        "total",
+        "1000000"
+      ],
+      [
+        "fee",
+        "0"
+      ],
+      [
+        "zap",
+        "1b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f",
+        "",
+        "4340",
+        "creator"
+      ],
+      [
+        "zap",
+        "4d4b6cd1361032ca9bd2aeb9d900aa4d45d9ead80ac9423374c451a7254d0766",
+        "",
+        "2660",
+        "creator"
+      ],
+      [
+        "zap",
+        "462779ad4aad39514614751a71085f2f10e1c7a593e4e030efb5b8721ce55b0b",
+        "",
+        "2000",
+        "curator"
+      ],
+      [
+        "zap",
+        "62c0a046dacce86ddd0343c6d3c7c79c2208ba0d9c9cf24a6d046d21d21f90f7",
+        "",
+        "1000",
+        "host"
+      ],
+      [
+        "paid",
+        "1b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f",
+        "300000",
+        "148de9c5a7a44d19e56cd9ae1a554bf67847afb0c58f6e12fa29ac7ddfca9940",
+        "ln"
+      ]
+    ],
+    "content": "",
+    "pubkey": "62c0a046dacce86ddd0343c6d3c7c79c2208ba0d9c9cf24a6d046d21d21f90f7",
+    "id": "24bbe6a18e53c0d2fdc4a1478a3a66f71097db54a1e9532c3bc0a25b1d308f07",
+    "sig": "cbf11f3892cc65d5f2717d47ca2dd93fd55b3dfe4e03aff640f9feb4e339a35e8b353c0a98180f5ea9529f0b5d04ba7edb29a7d5f8393b3996475bfe3699808b"
+  },
+  "expect": [
+    "paid+carry+fee"
+  ]
+}

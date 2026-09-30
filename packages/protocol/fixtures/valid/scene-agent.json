@@ -1,0 +1,65 @@
+{
+  "event": {
+    "kind": 34236,
+    "created_at": 1790000001,
+    "tags": [
+      [
+        "d",
+        "2ffdf6c6d735fc3467c469dff659eccea78dac6bffc801d3dc49f404a942e3aa"
+      ],
+      [
+        "title",
+        "ep1-agent"
+      ],
+      [
+        "imeta",
+        "url https://blossom.example/2ffdf6c6d735fc3467c469dff659eccea78dac6bffc801d3dc49f404a942e3aa.mp4",
+        "x 2ffdf6c6d735fc3467c469dff659eccea78dac6bffc801d3dc49f404a942e3aa",
+        "m video/mp4",
+        "dim 1080x1920",
+        "duration 12.4"
+      ],
+      [
+        "a",
+        "31810:1b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f:vault-heist",
+        "",
+        "root"
+      ],
+      [
+        "license",
+        "CC-BY-SA-4.0"
+      ],
+      [
+        "gen",
+        "model",
+        "wan-2.2-t2v",
+        "open"
+      ],
+      [
+        "gen",
+        "seed",
+        "828341"
+      ],
+      [
+        "gen",
+        "ref",
+        "dc19ae267ce0d8c621fb84efcef27d14763e48adaeffcc88973fc090c7738a87"
+      ],
+      [
+        "p",
+        "531fe6068134503d2723133227c867ac8fa6c83c537e9a44c3c5bdbdcb1fe337",
+        "",
+        "commissioner"
+      ],
+      [
+        "t",
+        "reelstr"
+      ]
+    ],
+    "content": "prompt for ep1-agent",
+    "pubkey": "f006a18d5653c4edf5391ff23a61f03ff83d237e880ee61187fa9f379a028e0a",
+    "id": "21fab241fbbe83e92ecb6f2c007bc6b3002c28d0dbf701fa95d41ee64dec5d7b",
+    "sig": "c7edd6050c3bd7c9b99d20ff56d6370646d51d04f4aeaea621e3de4c83bc02caed89b87f757aa6ab54a155110b1ea94df3932fd1a3d61a8966a7d6cf99a0dab9"
+  },
+  "expect": []
+}

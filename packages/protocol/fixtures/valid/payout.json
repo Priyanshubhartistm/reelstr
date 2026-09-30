@@ -1,0 +1,90 @@
+{
+  "event": {
+    "kind": 9810,
+    "created_at": 1790000004,
+    "tags": [
+      [
+        "e",
+        "89bbcde1fe8184ebd8686bfe395c70b2d6fa7bfc59a33ea69be698b59180cf81"
+      ],
+      [
+        "a",
+        "31811:462779ad4aad39514614751a71085f2f10e1c7a593e4e030efb5b8721ce55b0b:the-vault:ep-003"
+      ],
+      [
+        "period",
+        "1790000000",
+        "1790086400"
+      ],
+      [
+        "total",
+        "1000000"
+      ],
+      [
+        "fee",
+        "0"
+      ],
+      [
+        "zap",
+        "1b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f",
+        "",
+        "4340",
+        "creator"
+      ],
+      [
+        "zap",
+        "4d4b6cd1361032ca9bd2aeb9d900aa4d45d9ead80ac9423374c451a7254d0766",
+        "",
+        "2660",
+        "creator"
+      ],
+      [
+        "zap",
+        "462779ad4aad39514614751a71085f2f10e1c7a593e4e030efb5b8721ce55b0b",
+        "",
+        "2000",
+        "curator"
+      ],
+      [
+        "zap",
+        "62c0a046dacce86ddd0343c6d3c7c79c2208ba0d9c9cf24a6d046d21d21f90f7",
+        "",
+        "1000",
+        "host"
+      ],
+      [
+        "paid",
+        "1b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f",
+        "434000",
+        "cceb167e8b1f4c5197bfe60f7fdbda2fcc142b57abf0df48fe251d555d0f26ef",
+        "nutzap"
+      ],
+      [
+        "paid",
+        "4d4b6cd1361032ca9bd2aeb9d900aa4d45d9ead80ac9423374c451a7254d0766",
+        "266000",
+        "a553f5c1d4b4593284074003f2fe227b6b9e56b6eeccdee75267f1cbd904178e",
+        "nutzap"
+      ],
+      [
+        "paid",
+        "462779ad4aad39514614751a71085f2f10e1c7a593e4e030efb5b8721ce55b0b",
+        "200000",
+        "bc48c9e703dbda374ae8cdee62e2a2bf2eac28f51a4b8d2f8e6738d0fd909532",
+        "nutzap"
+      ],
+      [
+        "paid",
+        "62c0a046dacce86ddd0343c6d3c7c79c2208ba0d9c9cf24a6d046d21d21f90f7",
+        "100000",
+        "fe0bd8209208805a91d17ec1417de9d7cf3d10146ab3a508fa2f5308a88b653c",
+        "nutzap"
+      ]
+    ],
+    "content": "",
+    "pubkey": "62c0a046dacce86ddd0343c6d3c7c79c2208ba0d9c9cf24a6d046d21d21f90f7",
+    "id": "8c01fadf812ffb792fe7d6fffc81fe376cabad56ecd143e57ded1a8207e068a6",
+    "sig": "fc18eef4a1a38101c0593ee640b1635c8c433cd8e4cc646d34cb514945201c256c594f813d931fd63e0e3c614c07de44ec3d11d302decb4067a110d470a970b0"
+  },
+  "expect": []
+}

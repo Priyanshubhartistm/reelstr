@@ -1,0 +1,49 @@
+{
+  "event": {
+    "kind": 34236,
+    "created_at": 1790000001,
+    "tags": [
+      [
+        "d",
+        "84683602da034055ff62a740b31b55f52fb6affb13f22c196a5f893fb0bab30c"
+      ],
+      [
+        "title",
+        "ep1-kling"
+      ],
+      [
+        "imeta",
+        "url https://blossom.example/84683602da034055ff62a740b31b55f52fb6affb13f22c196a5f893fb0bab30c.mp4",
+        "x 84683602da034055ff62a740b31b55f52fb6affb13f22c196a5f893fb0bab30c",
+        "m video/mp4",
+        "dim 1080x1920",
+        "duration 12.4"
+      ],
+      [
+        "a",
+        "31810:1b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f:vault-heist",
+        "",
+        "root"
+      ],
+      [
+        "license",
+        "CC-BY-SA-4.0"
+      ],
+      [
+        "gen",
+        "model",
+        "kling-3",
+        "closed"
+      ],
+      [
+        "t",
+        "reelstr"
+      ]
+    ],
+    "content": "prompt for ep1-kling",
+    "pubkey": "1b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f",
+    "id": "109c1430888a270beb08a043608e1e94a272881234e5a3a12ef044b3179efb99",
+    "sig": "ef3390d1029da12105b9651e36176e92a141d4c7dc058e3583599ac5362d60d19621e2fe82d52a6f68d66895093e4e0bf3d45f66e8a072199d0aca4fe7d7eed1"
+  },
+  "expect": []
+}

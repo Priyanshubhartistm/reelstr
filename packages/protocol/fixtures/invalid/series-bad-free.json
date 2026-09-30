@@ -1,0 +1,35 @@
+{
+  "event": {
+    "kind": 31812,
+    "created_at": 1790000000,
+    "tags": [
+      [
+        "d",
+        "the-vault"
+      ],
+      [
+        "title",
+        "x"
+      ],
+      [
+        "a",
+        "31811:462779ad4aad39514614751a71085f2f10e1c7a593e4e030efb5b8721ce55b0b:the-vault:ep-003"
+      ],
+      [
+        "free",
+        "many"
+      ],
+      [
+        "t",
+        "reelstr"
+      ]
+    ],
+    "content": "s",
+    "pubkey": "462779ad4aad39514614751a71085f2f10e1c7a593e4e030efb5b8721ce55b0b",
+    "id": "6a37436eab9c529681c3f1376f4d277330869ff54bf5689de86c73993e8ea3f4",
+    "sig": "bb8b872c83f1600d5bbfe23ceb146fddae039bdc377e02a626bbc5d91f51d91200a72ea011afcd1d92a897e50aded9bbd531fe2bc922d6946ed21197c8c751c2"
+  },
+  "expect": [
+    "free must be an integer"
+  ]
+}

@@ -1,0 +1,26 @@
+# Deviations from the PRD (research-driven)
+
+Nothing from PRD section 6 is dropped. Where the research (`docs/research.md`, 2026-09-30) showed the PRD is wrong, stale or unsupported, the build follows the evidence. Each row: what the PRD says, what is built, why.
+
+| PRD | Built | Why |
+| --- | --- | --- |
+| Scene = kind 22 (regular) | Scene = **kind 34236** (NIP-71 addressable short video), `d` = SHA-256 of the normalized video blob. Immutable by convention: an edit is a new blob, hence a new `d`. Cuts pin by event id **and** blob hash. | Divine and Flare publish addressable kinds; `a` coordinates are stable; regular kinds are only referenceable by `e` id. `d = blob hash` keeps addressable events effectively immutable. |
+| Story/Cut/Series/Payout kinds TBD | Story 31810, Cut 31811, Series 31812 (addressable), Payout 9810 (regular). All in `packages/protocol/src/kinds.ts`. | Free in the NIPs README as of 2026-09-27; unregistered, re-check before the NIP PR. |
+| Series mirrored as NIP-51 30005 | Deferred until rendered episodes are published as NIP-71 video events (media phase). | 30005 lists videos, and a Series lists Cuts. |
+| AES-128 HLS = paywall | Built, documented as **leak-tolerant**. One paying viewer can share the key. DRM hook is an interface stub. | The key is handed to the client in the clear; segments are public Blossom blobs. |
+| Nutzap = verifiable receipt | Key server verifies DLEQ **and** queries the mint for spent state (NUT-07) before releasing a key. Lightning preimage path also supported. | NIP-61 is draft; a signed token is not proof of spend. |
+| NIP-90 generation agents | Plain signed request/response behind an adapter; NIP-90 adapter optional. | NIP-90 is `unrecommended`; its DVM repo was archived 2026-09-07; no text-to-video DVM kind exists. |
+| "Source Verified" re-render badge | Means pinned-container same-arch re-render or perceptual match within threshold. Protocol only exposes `manifestEligibleForVerification`. | No evidence of cross-GPU bitwise reproducibility. |
+| CC-BY-SA default | Kept as the default license tag. UI and docs state it covers the human-authored layer only. | US Copyright Office Part 2; Creative Commons guidance on AI output. |
+| Split service as core custodian | Non-custodial zap-split tips are the default. Custodial split service (BE-7) is built, **off by default**, self-hostable. | FinCEN custody line; legal question unresolved. |
+| Client-side stitching of scenes for playback | Server-rendered continuous HLS per episode is the main path; MSE stitching is the fallback (BE-3). | hls.js #7680; per-clip AAC priming gaps (21-44 ms). |
+| Open-weight default model | Wan 2.2 (Apache-2.0). LTX-2.x behind a revenue-cap warning. MiniMax H3 excluded. | License terms verified against primary sources. |
+| cashu-ts 5.0.0-rc.11 | cashu-ts 4.11.0 (npm `latest`) until 5.0 is stable. | RC needed spec changes against current Nutshell. |
+
+## Protocol choices not in the PRD
+
+- Cut `audio-bed` tag takes an optional 4th element: the bed's share of the creator pool in bps (default 1000). This lets a curator change the default and keeps weights recomputable.
+- Payout Receipt `paid` tags carry a 5th element (`nutzap` or `ln`) naming the proof type, and `carry` tags record dust balances so `sum(paid) + sum(carry) + fee = total + priorCarry` holds (BE-7 acceptance).
+- Episode weights are computed in integer milliseconds with largest-remainder rounding, so every client gets identical weights that sum to exactly 10,000.
+- Validators recompute the split from the scene tags and reject declared weights that differ (clients may downgrade to a warning via `lenientWeights`).
+- Signature verification runs on a clean copy of the event: `nostr-tools` caches verification on a hidden symbol that object spread copies, which would let a tampered copy pass.

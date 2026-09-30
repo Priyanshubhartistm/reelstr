@@ -1,0 +1,65 @@
+{
+  "event": {
+    "kind": 34236,
+    "created_at": 1790000001,
+    "tags": [
+      [
+        "d",
+        "8fbc8ed774ded2462fe5864384af7e68bac1559a17f57764b78de248649b07c6"
+      ],
+      [
+        "title",
+        "ep1-door-v2"
+      ],
+      [
+        "imeta",
+        "url https://blossom.example/8fbc8ed774ded2462fe5864384af7e68bac1559a17f57764b78de248649b07c6.mp4",
+        "x 8fbc8ed774ded2462fe5864384af7e68bac1559a17f57764b78de248649b07c6",
+        "m video/mp4",
+        "dim 1080x1920",
+        "duration 12.4"
+      ],
+      [
+        "a",
+        "31810:1b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f:vault-heist",
+        "",
+        "root"
+      ],
+      [
+        "e",
+        "5dd2e685cc6849d1b6fb1c5b6424a00ca20b61a20c2745a2123d887163892e88",
+        "",
+        "parent"
+      ],
+      [
+        "license",
+        "CC-BY-SA-4.0"
+      ],
+      [
+        "gen",
+        "model",
+        "wan-2.2-t2v",
+        "open"
+      ],
+      [
+        "gen",
+        "seed",
+        "828341"
+      ],
+      [
+        "gen",
+        "ref",
+        "dc19ae267ce0d8c621fb84efcef27d14763e48adaeffcc88973fc090c7738a87"
+      ],
+      [
+        "t",
+        "reelstr"
+      ]
+    ],
+    "content": "prompt for ep1-door-v2",
+    "pubkey": "4d4b6cd1361032ca9bd2aeb9d900aa4d45d9ead80ac9423374c451a7254d0766",
+    "id": "4e6125c5f91d440e4c9d717e6658bb3ea19e2a6bed8cb1b3d68c5c3d69f5116e",
+    "sig": "bcbe3b00fe80a16ebf4a9857db0638d7c8abbbef6ceaec6287741e7852de90ad888149c0332d2a9afd3d48e1efe10afa9eff1faa441a56754de3269e696d0683"
+  },
+  "expect": []
+}

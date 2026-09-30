@@ -1,0 +1,129 @@
+{
+  "event": {
+    "kind": 31811,
+    "created_at": 1790000002,
+    "tags": [
+      [
+        "d",
+        "the-vault:ep-003"
+      ],
+      [
+        "a",
+        "31812:1b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f:the-vault",
+        ""
+      ],
+      [
+        "title",
+        "The vault door"
+      ],
+      [
+        "episode",
+        "3"
+      ],
+      [
+        "scene",
+        "62439c3da0c95a8d94b3461b92576a5539ccda772e716d4d5667280cdfe5bb1a",
+        "f55ff16f66f43360266b95db6f8fec01d76031054306ae4a4b380598f6cfd114",
+        "0",
+        "15",
+        "1b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f"
+      ],
+      [
+        "scene",
+        "49621e16c51a530a14eb22a897d1eacaddfaff59e1fa8728260c919732356de7",
+        "2c3a4249d77070058649dbd822dcaf7957586fce428cfb2ca88b94741eda8b07",
+        "0",
+        "15",
+        "1b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f"
+      ],
+      [
+        "scene",
+        "3a525bf5b4fd6569682c64e885b55e7307fd515e27c2455c0b0c857e2b684251",
+        "f46dd28a5499d8efef0b8fb8ee1ec1c5a5e407c9381741d576ba8deb4f59ec3f",
+        "0",
+        "15",
+        "1b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f"
+      ],
+      [
+        "scene",
+        "bb8811f915ca79f51fc7bb1d4a861b32440ae48dc33c67009bbfde8d69137433",
+        "4539e4b4889079c2a00afeae0bfc1439840ef2379a1fb81c8ba27361ad476d6b",
+        "0",
+        "15",
+        "1b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f"
+      ],
+      [
+        "scene",
+        "fd455997945a235099d5b4e39012bab22aabfc5a91425db0c63e2427c5575c58",
+        "66220e71591b2d933c0e935c138ebfd60710b91fe2fb7599eced4430b3dbb3c9",
+        "0",
+        "2",
+        "1b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f"
+      ],
+      [
+        "scene",
+        "698c571b48f337a0e8513b61098863982f258a32a5097ffb49e2556df380fafe",
+        "7dc96f776c8423e57a2785489a3f9c43fb6e756876d6ad9a9cac4aa4e72ec193",
+        "0",
+        "15",
+        "4d4b6cd1361032ca9bd2aeb9d900aa4d45d9ead80ac9423374c451a7254d0766"
+      ],
+      [
+        "scene",
+        "94e71d1de0a71f14ebbcae282d4ec7109b0e2cf404d4f567c20a43dee12ea04d",
+        "4814d92093ac8a0f4a2163ab87dee509ba306a58f5888be0edcb2fcd0712028b",
+        "0",
+        "15",
+        "4d4b6cd1361032ca9bd2aeb9d900aa4d45d9ead80ac9423374c451a7254d0766"
+      ],
+      [
+        "scene",
+        "b3beec8a9f2eded96ca9841a58c895ed313e5092ba8ab19a27cacd6edf9b59b8",
+        "76a8277347f52530e1cf979175a178980b3a180d176165c985d85f7e142f1eed",
+        "0",
+        "8",
+        "4d4b6cd1361032ca9bd2aeb9d900aa4d45d9ead80ac9423374c451a7254d0766"
+      ],
+      [
+        "price",
+        "50",
+        "sat"
+      ],
+      [
+        "zap",
+        "1b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f",
+        "wss://relay.example",
+        "4340",
+        "creator"
+      ],
+      [
+        "zap",
+        "4d4b6cd1361032ca9bd2aeb9d900aa4d45d9ead80ac9423374c451a7254d0766",
+        "wss://relay.example",
+        "2660",
+        "creator"
+      ],
+      [
+        "zap",
+        "462779ad4aad39514614751a71085f2f10e1c7a593e4e030efb5b8721ce55b0b",
+        "wss://relay.example",
+        "2000",
+        "curator"
+      ],
+      [
+        "zap",
+        "62c0a046dacce86ddd0343c6d3c7c79c2208ba0d9c9cf24a6d046d21d21f90f7",
+        "wss://relay.example",
+        "1000",
+        "host"
+      ]
+    ],
+    "content": "They reach the door.",
+    "pubkey": "462779ad4aad39514614751a71085f2f10e1c7a593e4e030efb5b8721ce55b0b",
+    "id": "8d18f2ea3bd1e32359f9d6db762c1a4f0d5e0d4694d1b8957babcac7a2c7a9a9",
+    "sig": "ea736d6c1c37437f8bfe813d464df2d5e83936c3fbb74cb14454b8c9eb109bff484b1d19c6e7685a1949b6097845161aebc7f689ac61c37f858e0aa1b9ba7cba"
+  },
+  "expect": [
+    "owned by the Cut's curator"
+  ]
+}

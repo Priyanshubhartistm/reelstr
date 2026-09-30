@@ -1,0 +1,43 @@
+{
+  "event": {
+    "kind": 31810,
+    "created_at": 1790000000,
+    "tags": [
+      [
+        "d",
+        "vault-heist"
+      ],
+      [
+        "title",
+        "The Vault"
+      ],
+      [
+        "license",
+        "CC-BY-SA-4.0"
+      ],
+      [
+        "style",
+        "neon noir, 9:16"
+      ],
+      [
+        "cast",
+        "Mara",
+        "dc19ae267ce0d8c621fb84efcef27d14763e48adaeffcc88973fc090c7738a87",
+        "lead"
+      ],
+      [
+        "r",
+        "wss://relay.example"
+      ],
+      [
+        "t",
+        "reelstr"
+      ]
+    ],
+    "content": "A crew, a door, a clock.",
+    "pubkey": "1b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f",
+    "id": "013d365ac0955f4ac1e79170d397a44e5d201215c91943d5453bc4eabf01b366",
+    "sig": "df6be92f1837703fd233a4ce18ae5b4ff091d75048f7ebc0153d5d1d219125f3faeed2d5486800693753bb11f45ffebb60ae4db3008334988d5565285e292f39"
+  },
+  "expect": []
+}

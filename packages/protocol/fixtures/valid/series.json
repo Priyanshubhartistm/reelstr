@@ -1,0 +1,37 @@
+{
+  "event": {
+    "kind": 31812,
+    "created_at": 1790000003,
+    "tags": [
+      [
+        "d",
+        "the-vault"
+      ],
+      [
+        "title",
+        "The Vault"
+      ],
+      [
+        "a",
+        "31811:462779ad4aad39514614751a71085f2f10e1c7a593e4e030efb5b8721ce55b0b:the-vault:ep-003"
+      ],
+      [
+        "a",
+        "31811:462779ad4aad39514614751a71085f2f10e1c7a593e4e030efb5b8721ce55b0b:the-vault:ep-004"
+      ],
+      [
+        "free",
+        "1"
+      ],
+      [
+        "t",
+        "reelstr"
+      ]
+    ],
+    "content": "A heist in 10 episodes.",
+    "pubkey": "462779ad4aad39514614751a71085f2f10e1c7a593e4e030efb5b8721ce55b0b",
+    "id": "f23f902d70932a485685948f3a9e1504e0d07c08a3b0d14c43d8352180463739",
+    "sig": "47cafb9ea95e1b1d9edabecd8a5720ecb27269f7f2bb975c8fd211d606492728e8b59e25fd380f72e2806def621b3a389d6efa9a587be469192a9732a4cf3ec7"
+  },
+  "expect": []
+}

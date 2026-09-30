@@ -1,0 +1,11 @@
+{
+  "name": "@reelstr/protocol",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "dependencies": {
+    "nostr-tools": "2.25.2",
+    "@noble/hashes": "latest"
+  }
+}

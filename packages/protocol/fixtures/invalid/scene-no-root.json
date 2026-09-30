@@ -1,0 +1,55 @@
+{
+  "event": {
+    "kind": 34236,
+    "created_at": 1790000001,
+    "tags": [
+      [
+        "d",
+        "d07de91666f7fbf8c01f5638e2206f0b01be2914191f4e586a2acccedacebf58"
+      ],
+      [
+        "title",
+        "bad-base"
+      ],
+      [
+        "imeta",
+        "url https://blossom.example/d07de91666f7fbf8c01f5638e2206f0b01be2914191f4e586a2acccedacebf58.mp4",
+        "x d07de91666f7fbf8c01f5638e2206f0b01be2914191f4e586a2acccedacebf58",
+        "m video/mp4",
+        "dim 1080x1920",
+        "duration 12.4"
+      ],
+      [
+        "license",
+        "CC-BY-SA-4.0"
+      ],
+      [
+        "gen",
+        "model",
+        "wan-2.2-t2v",
+        "open"
+      ],
+      [
+        "gen",
+        "seed",
+        "828341"
+      ],
+      [
+        "gen",
+        "ref",
+        "dc19ae267ce0d8c621fb84efcef27d14763e48adaeffcc88973fc090c7738a87"
+      ],
+      [
+        "t",
+        "reelstr"
+      ]
+    ],
+    "content": "prompt for bad-base",
+    "pubkey": "1b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f",
+    "id": "064dd344937ceb2366db73126cdf88cbe7f9e6ee3d019da6560e48d8a14112d2",
+    "sig": "b0d29bdd29e062fd40ea9664048f45cc379d2920f4efcdcec8ee25115b7dce03641c842c5a361815112ff8de23dabbbae2e138dabe11d27414cbe27ff9fa5b65"
+  },
+  "expect": [
+    "missing a tag marked root"
+  ]
+}
