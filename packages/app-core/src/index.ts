@@ -29,10 +29,18 @@ export interface Config {
   mediaUrl?: string;
   mediaToken?: string;
   indexerUrl?: string;
+  /** HLS key server: paid episodes are encrypted and their keys registered here */
+  keysUrl?: string;
   /** NIP-13 bits to mine into scenes (public relays may require it) */
   powBits?: number;
   minRelayAcks?: number;
 }
+
+const randomHex = (bytes: number) => {
+  const b = new Uint8Array(bytes);
+  crypto.getRandomValues(b);
+  return Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("");
+};
 
 export interface IngestOut {
   original: BlobDescriptor;
@@ -162,16 +170,29 @@ export class ReelstrClient {
 
   /**
    * Publish a Cut: render the HLS episode (media service), pin it in the Cut's imeta, publish.
-   * `encryption` is handed to the renderer; the key never enters the event.
+   * A paid episode (price > 0, not `free`) is rendered AES-128 encrypted with a fresh random key.
+   * The key never enters an event: after the Cut is signed it is registered with the key server,
+   * pinned to this exact Cut version. Leak-tolerant by design: any paying viewer holds the key.
    */
   async publishCut(
     o: Omit<CutParams, "curator" | "hls"> & {
       scenesSources: { sha256: string; urls: string[] }[];
       render?: boolean;
-      encryption?: { key: string; iv: string; keyUri: string };
+      /** this episode is in the series' free window: no key gate */
+      free?: boolean;
     },
   ) {
     const curator = await this.me();
+    const keysUrl = this.cfg.keysUrl;
+    const paid = o.price.amount > 0 && !o.free && !!keysUrl;
+    const d = cutD(o.seriesSlug, o.episode);
+    const enc = paid
+      ? {
+          key: randomHex(16),
+          iv: randomHex(16),
+          keyUri: `${keysUrl}/key/${curator}/${encodeURIComponent(d)}`,
+        }
+      : undefined;
     let hls: CutParams["hls"];
     if (o.render !== false && this.cfg.mediaUrl) {
       const r = await this.mediaJob<{
@@ -184,12 +205,50 @@ export class ReelstrClient {
           inSec: s.inSec,
           outSec: s.outSec,
         })),
-        ...(o.encryption ?? {}),
+        ...(enc ?? {}),
       });
       hls = { url: `${r.masterUrl}.m3u8`, duration: r.durationSec, sha256: r.masterSha256 };
     }
-    const { scenesSources: _s, render: _r, encryption: _e, ...rest } = o;
-    return this.publish(buildCut({ ...rest, curator, hls }));
+    const { scenesSources: _s, render: _r, free: _f, ...rest } = o;
+    const cut = await this.publish(buildCut({ ...rest, curator, hls }));
+    if (enc && keysUrl) await this.registerEpisodeKey(keysUrl, d, enc, o.price.amount, cut.id);
+    return cut;
+  }
+
+  /** Hand the episode key to the key server, authenticated as the curator (NIP-98). */
+  async registerEpisodeKey(
+    keysUrl: string,
+    d: string,
+    enc: { key: string; iv: string },
+    priceSats: number,
+    cutEventId: string,
+  ) {
+    const url = `${keysUrl}/episodes`;
+    const auth = await this.cfg.signer.signEvent({
+      kind: 27235,
+      created_at: Math.floor(Date.now() / 1000),
+      tags: [
+        ["u", url],
+        ["method", "POST"],
+      ],
+      content: "",
+    });
+    const r = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Nostr ${btoa(JSON.stringify(auth))}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        d,
+        keyHex: enc.key,
+        ivHex: enc.iv,
+        priceSats,
+        free: false,
+        cutEventId,
+      }),
+    });
+    if (!r.ok) throw new Error(`key server refused the episode key: ${r.status} ${await r.text()}`);
   }
 
   async publishSeries(o: Omit<SeriesParams, "curator">) {

@@ -83,12 +83,22 @@ export async function startFakeMint(
   const srv = Bun.serve({
     port: opts.port ?? 0,
     async fetch(req) {
+      // real mints send CORS headers; browsers (the e2e wallet) need them
+      const cors = {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Headers": "*",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+      };
+      if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
+      let res: Response;
       try {
-        return await handle(req);
+        res = await handle(req);
       } catch (e) {
         log.push(`ERROR ${(e as Error).message}`);
-        return err(500, 99999, (e as Error).message);
+        res = err(500, 99999, (e as Error).message);
       }
+      for (const [k, v] of Object.entries(cors)) res.headers.set(k, v);
+      return res;
     },
   });
 

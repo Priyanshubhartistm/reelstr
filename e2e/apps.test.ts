@@ -1,12 +1,21 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { join } from "node:path";
+import { ReelstrClient } from "@reelstr/app-core";
 import { BlossomClient } from "@reelstr/blossom";
 import { Indexer } from "@reelstr/indexer";
 import { createApi } from "@reelstr/indexer/src/server";
+import { createKeyServer } from "@reelstr/keys";
 import { ingestScene, renderAndPublish } from "@reelstr/media-service";
 import { createMediaServer } from "@reelstr/media-service/src/server";
 import { LocalSigner } from "@reelstr/nostr";
-import { cleanup, startBlossom, startRelay, tempDir } from "@reelstr/testkit";
+import {
+  cleanup,
+  FakeLightning,
+  startBlossom,
+  startFakeMint,
+  startRelay,
+  tempDir,
+} from "@reelstr/testkit";
 import { type Browser, type BrowserContext, chromium, type Page } from "playwright-core";
 import { makeClip } from "../packages/media/test/helpers";
 
@@ -17,6 +26,8 @@ let browser: Browser;
 let studioUrl: string;
 let cinemaUrl: string;
 let endpoints: Record<string, unknown>;
+let keys: Awaited<ReturnType<typeof createKeyServer>>;
+let mintUrl: string;
 const procs: Bun.Subprocess[] = [];
 const stops: (() => void | Promise<void>)[] = [];
 const dir = tempDir();
@@ -59,7 +70,21 @@ beforeAll(async () => {
     () => api.stop(true),
     () => ix.close(),
   );
+  const ln = new FakeLightning();
+  const fakeMint = await startFakeMint({ lightning: ln });
+  stops.push(() => fakeMint.stop());
+  mintUrl = fakeMint.url;
+  keys = await createKeyServer({
+    mints: [mintUrl],
+    ln: {
+      createInvoice: async (o) => ln.createInvoice(o),
+      isPaid: async (h) => ln.isPaid(h),
+      payInvoice: async (i) => ({ preimage: ln.pay(i).preimage }),
+    },
+  });
+  stops.push(() => keys.stop());
   endpoints = {
+    keysUrl: keys.url,
     relays: [relay.url],
     blossom: A.url,
     mirrors: [B.url],
@@ -89,8 +114,11 @@ async function newUser(
 ): Promise<{ page: Page; ctx: BrowserContext; errors: string[] }> {
   const ctx = await browser.newContext({ viewport: { width: 1000, height: 900 } });
   await ctx.addInitScript(
-    (e) => localStorage.setItem("reelstr.endpoints", JSON.stringify(e)),
-    endpoints,
+    ([e, m]) => {
+      localStorage.setItem("reelstr.endpoints", JSON.stringify(e));
+      localStorage.setItem("reelstr.mint", m as string);
+    },
+    [endpoints, mintUrl] as const,
   );
   const page = await ctx.newPage();
   const errors: string[] = [];
@@ -99,7 +127,8 @@ async function newUser(
     "console",
     (m) =>
       m.type() === "error" &&
-      !/favicon|ERR_CONNECTION_REFUSED/.test(m.text()) &&
+      // a 402 is the paywall answering the first key probe: expected, and logged by Chrome as a failed load
+      !/favicon|ERR_CONNECTION_REFUSED|status of 402 \(Payment Required\)/.test(m.text()) &&
       errors.push(m.text()),
   );
   await page.goto(url);
@@ -120,8 +149,14 @@ async function diagnose(u: { page: Page; errors: string[] }, f: () => Promise<un
       .locator(".error")
       .allInnerTexts()
       .catch(() => []);
+    const body = (
+      await u.page
+        .locator("body")
+        .innerText()
+        .catch(() => "")
+    ).slice(0, 400);
     throw new Error(
-      `${(e as Error).message}\npage errors: ${JSON.stringify(shown)}\nconsole: ${JSON.stringify(u.errors.slice(0, 6))}`,
+      `${(e as Error).message}\npage errors: ${JSON.stringify(shown)}\nbody: ${JSON.stringify(body)}\nconsole: ${JSON.stringify(u.errors.slice(0, 6))}`,
     );
   }
 }
@@ -241,4 +276,129 @@ describe("Studio and Cinema in a real browser", () => {
     for (const u of [alice, bob, cara, dan]) expect(u.errors).toEqual([]);
     for (const u of [alice, bob, cara, dan]) await u.ctx.close();
   }, 600_000);
+
+  test("paywall: top up a wallet, unlock an encrypted episode with a nutzap, keep access after reload", async () => {
+    const mk = (who: LocalSigner) =>
+      new ReelstrClient({
+        signer: who,
+        relays: endpoints.relays as string[],
+        blossom: endpoints.blossom as string,
+        mirrors: endpoints.mirrors as string[],
+        mediaUrl: endpoints.mediaUrl as string,
+        mediaToken: "tok",
+        indexerUrl: endpoints.indexerUrl as string,
+        keysUrl: keys.url,
+      });
+    const creator = mk(LocalSigner.generate());
+    const pk = await creator.me();
+    await creator.createStory({ d: "paid", title: "Paid Story", logline: "Pay to continue." });
+    const bytes = async (n: string, f: number) =>
+      new Uint8Array(
+        await Bun.file(
+          await makeClip(join(dir, `${n}.mp4`), {
+            size: "360x640",
+            fps: 30,
+            sec: 12,
+            freq: f,
+            gainDb: -20,
+          }),
+        ).arrayBuffer(),
+      );
+    const s1 = await creator.publishScene({
+      bytes: await bytes("p1", 300),
+      title: "One",
+      prompt: "p",
+      story: { pubkey: pk, d: "paid" },
+    });
+    const src = [{ sha256: s1.ingest.normalized.sha256, urls: [s1.ingest.normalized.url] }];
+    const sc = [
+      { id: s1.event.id, sha256: s1.ingest.normalized.sha256, inSec: 0, outSec: 8, payee: pk },
+    ];
+    const base = {
+      seriesSlug: "paid-series",
+      synopsis: "s",
+      scenes: sc,
+      scenesSources: src,
+      curatorBps: 2000,
+      hostBps: 1000,
+      host: pk,
+    };
+    const e1 = await creator.publishCut({
+      ...base,
+      episode: 1,
+      title: "Free one",
+      price: { amount: 30 },
+      free: true,
+    });
+    const e2 = await creator.publishCut({
+      ...base,
+      episode: 2,
+      title: "Paid two",
+      price: { amount: 30 },
+    });
+    await creator.publishSeries({
+      slug: "paid-series",
+      title: "Paid Series",
+      summary: "s",
+      episodes: [1, 2],
+      freeEpisodes: 1,
+    });
+    expect(e1.id).not.toBe(e2.id);
+    // the key exists only on the key server, pinned to the Cut version; the free episode has none
+    expect(keys.ledger.episode(`${pk}/paid-series:ep-002`)?.cut_event_id).toBe(e2.id);
+    expect(keys.ledger.episode(`${pk}/paid-series:ep-001`)).toBeNull();
+
+    const viewer = await newUser(cinemaUrl);
+    await viewer.page.getByRole("link", { name: "Wallet" }).click();
+    await diagnose(viewer, () => viewer.page.getByTestId("balance").waitFor({ timeout: 30_000 }));
+    expect(await viewer.page.getByTestId("balance").innerText()).toBe("0 sats");
+    await viewer.page.locator("#w-amt").fill("100");
+    await viewer.page.getByRole("button", { name: "Get invoice" }).click();
+    await viewer.page.getByText("100 sats", { exact: true }).waitFor({ timeout: T });
+
+    await viewer.page.getByRole("link", { name: "Watch" }).click();
+    await viewer.page.getByRole("link", { name: /Paid Series/ }).click({ timeout: T });
+    await viewer.page.getByRole("link", { name: /Ep 2/ }).click({ timeout: T });
+    await viewer.page.getByTestId("paywall").waitFor({ timeout: T });
+    expect(await viewer.page.locator("video.player").count()).toBe(0); // no player behind the paywall
+    await viewer.page.getByRole("button", { name: "Unlock for 30 sats" }).click();
+    await viewer.page.waitForFunction(
+      () => {
+        const v = document.querySelector("video.player") as HTMLVideoElement | null;
+        return !!v && v.readyState >= 3 && v.currentTime > 0.5;
+      },
+      null,
+      { timeout: T },
+    );
+    expect(await viewer.page.getByTestId("paywall").count()).toBe(0);
+    const r = keys.ledger.receipts(`${pk}/paid-series:ep-002`);
+    expect(r).toMatchObject([{ msats: 30_000, source: "nutzap", cut_event_id: e2.id }]);
+
+    // reload: the token is remembered and the wallet balance comes back from relays (NIP-60)
+    await viewer.page.reload();
+    await viewer.page.waitForFunction(
+      () => {
+        const v = document.querySelector("video.player") as HTMLVideoElement | null;
+        return !!v && v.readyState >= 3 && v.currentTime > 0.5;
+      },
+      null,
+      { timeout: T },
+    );
+    await viewer.page.goto(`${cinemaUrl}/#/wallet`);
+    await viewer.page.getByText("70 sats", { exact: true }).waitFor({ timeout: T });
+    expect(keys.ledger.receipts(`${pk}/paid-series:ep-002`).length).toBe(1); // reload did not pay again
+
+    // a viewer with no money gets the paywall and no video
+    const broke = await newUser(cinemaUrl);
+    await broke.page.goto(`${cinemaUrl}/#/watch/${e2.id}`);
+    await broke.page.getByTestId("paywall").waitFor({ timeout: T });
+    expect(await broke.page.getByRole("button", { name: "Unlock for 30 sats" }).isDisabled()).toBe(
+      true,
+    );
+    expect(await broke.page.locator("video.player").count()).toBe(0);
+
+    for (const u of [viewer, broke]) expect(u.errors).toEqual([]);
+    await viewer.ctx.close();
+    await broke.ctx.close();
+  }, 900_000);
 });

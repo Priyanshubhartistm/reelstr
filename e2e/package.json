@@ -8,6 +8,10 @@
     "@reelstr/media-service": "workspace:*",
     "@reelstr/nostr": "workspace:*",
     "@reelstr/testkit": "workspace:*",
-    "playwright-core": "latest"
+    "playwright-core": "latest",
+    "@reelstr/app-core": "workspace:*",
+    "@reelstr/keys": "workspace:*",
+    "@reelstr/wallet": "workspace:*",
+    "@reelstr/protocol": "workspace:*"
   }
 }

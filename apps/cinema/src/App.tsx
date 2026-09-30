@@ -1,12 +1,16 @@
 import { LoginGate, useRoute, useSession } from "@reelstr/ui";
 import { Desk } from "./Desk";
 import { Home, SeriesPage } from "./Home";
+import { PaymentsProvider } from "./payments";
+import { Wallet } from "./Wallet";
 import { Watch } from "./Watch";
 
 export function App() {
   return (
     <LoginGate title="Reelstr Cinema">
-      <Shell />
+      <PaymentsProvider>
+        <Shell />
+      </PaymentsProvider>
     </LoginGate>
   );
 }
@@ -22,6 +26,7 @@ function Shell() {
         <strong>Reelstr</strong>
         <nav>
           <a href="#/">Watch</a>
+          <a href="#/wallet">Wallet</a>
           <a href="#/desk">Curator desk</a>
         </nav>
         <span className="grow" />
@@ -35,6 +40,7 @@ function Shell() {
       <div className="wrap">
         {page === "series" && arg ? <SeriesPage coord={arg} /> : null}
         {page === "desk" ? <Desk /> : null}
+        {page === "wallet" ? <Wallet /> : null}
         {!page ? <Home /> : null}
       </div>
     </>

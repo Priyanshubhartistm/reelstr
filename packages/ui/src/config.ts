@@ -12,6 +12,7 @@ export const defaultEndpoints = (): Endpoints => ({
   mediaUrl: env.VITE_MEDIA_URL ?? "http://127.0.0.1:3200",
   mediaToken: env.VITE_MEDIA_TOKEN ?? "",
   indexerUrl: env.VITE_INDEXER_URL ?? "http://127.0.0.1:3300",
+  keysUrl: env.VITE_KEYS_URL ?? "http://127.0.0.1:3400",
   powBits: Number(env.VITE_POW_BITS ?? 0),
 });
 

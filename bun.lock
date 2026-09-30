@@ -18,6 +18,7 @@
         "@reelstr/nostr": "workspace:*",
         "@reelstr/protocol": "workspace:*",
         "@reelstr/ui": "workspace:*",
+        "@reelstr/wallet": "workspace:*",
         "react": "19.3.0",
         "react-dom": "19.3.0",
       },
@@ -49,11 +50,15 @@
     "e2e": {
       "name": "@reelstr/e2e",
       "dependencies": {
+        "@reelstr/app-core": "workspace:*",
         "@reelstr/blossom": "workspace:*",
         "@reelstr/indexer": "workspace:*",
+        "@reelstr/keys": "workspace:*",
         "@reelstr/media-service": "workspace:*",
         "@reelstr/nostr": "workspace:*",
+        "@reelstr/protocol": "workspace:*",
         "@reelstr/testkit": "workspace:*",
+        "@reelstr/wallet": "workspace:*",
         "playwright-core": "latest",
       },
     },

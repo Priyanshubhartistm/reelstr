@@ -146,6 +146,7 @@ export function Desk() {
         })),
         scenesSources: items.map((i) => ({ sha256: i.sha, urls: [i.url] })),
         audioBed: bed ? { sha256: bed.sha, payee: me, poolBps: bed.poolPct * 100 } : undefined,
+        free: episode <= meta.free,
         price: { amount: meta.price },
         curatorBps: meta.curatorPct * 100,
         hostBps: meta.hostPct * 100,
