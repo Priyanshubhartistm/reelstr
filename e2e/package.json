@@ -1,0 +1,13 @@
+{
+  "name": "@reelstr/e2e",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@reelstr/blossom": "workspace:*",
+    "@reelstr/indexer": "workspace:*",
+    "@reelstr/media-service": "workspace:*",
+    "@reelstr/nostr": "workspace:*",
+    "@reelstr/testkit": "workspace:*",
+    "playwright-core": "latest"
+  }
+}

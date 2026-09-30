@@ -45,7 +45,9 @@ export class BlossomClient {
   constructor(
     server: string,
     private readonly signer: Signer,
-    private readonly fetchFn: FetchLike = fetch,
+    // wrap, don't store the bare global: a stored `fetch` called as `this.fetchFn(...)` throws
+    // "Illegal invocation" in browsers (Bun does not, so only a real browser catches it)
+    private readonly fetchFn: FetchLike = (input, init) => fetch(input, init),
   ) {
     this.server = server.replace(/\/+$/, "");
   }
@@ -127,7 +129,7 @@ export class BlossomClient {
 export async function fetchVerified(
   urls: string[],
   sha256: string,
-  fetchFn: FetchLike = fetch,
+  fetchFn: FetchLike = (input, init) => fetch(input, init),
 ): Promise<{ bytes: Uint8Array; url: string }> {
   const failures: string[] = [];
   for (const url of urls) {

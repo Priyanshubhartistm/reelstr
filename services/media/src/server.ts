@@ -36,51 +36,63 @@ export function createMediaServer(opts: {
     return job;
   };
 
+  // browsers call this from the Studio/Cinema origin, so it needs CORS (and a preflight answer)
+  const CORS = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Headers": "authorization, content-type",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  };
+  const handle = async (req: Request): Promise<Response> => {
+    const url = new URL(req.url);
+    if (req.headers.get("authorization") !== `Bearer ${opts.token}`)
+      return Response.json({ error: "unauthorized" }, { status: 401 });
+    if (req.method === "POST" && url.pathname === "/ingest") {
+      const b = (await req.json()) as {
+        sha256: string;
+        urls: string[];
+        fit?: "crop" | "letterbox";
+      };
+      if (!/^[0-9a-f]{64}$/.test(b.sha256) || !Array.isArray(b.urls) || b.urls.length === 0)
+        return Response.json({ error: "need sha256 and urls" }, { status: 400 });
+      return Response.json(
+        enqueue("ingest", () => run.ingest(b, opts.hosts, { fit: b.fit })),
+        { status: 202 },
+      );
+    }
+    if (req.method === "POST" && url.pathname === "/render") {
+      const b = (await req.json()) as Parameters<typeof renderAndPublish>[0] & {
+        key?: string;
+        iv?: string;
+        keyUri?: string;
+      };
+      if (!Array.isArray(b.scenes) || b.scenes.length === 0)
+        return Response.json({ error: "need scenes" }, { status: 400 });
+      const job = { ...b } as Parameters<typeof renderAndPublish>[0];
+      if (b.key && b.iv && b.keyUri)
+        job.encryption = {
+          key: Buffer.from(b.key, "hex"),
+          iv: Buffer.from(b.iv, "hex"),
+          keyUri: b.keyUri,
+        };
+      return Response.json(
+        enqueue("render", () => run.render(job, opts.hosts)),
+        { status: 202 },
+      );
+    }
+    const m = url.pathname.match(/^\/jobs\/([\w-]+)$/);
+    if (req.method === "GET" && m) {
+      const j = jobs.get(m[1] as string);
+      return j ? Response.json(j) : Response.json({ error: "no such job" }, { status: 404 });
+    }
+    return Response.json({ error: "not found" }, { status: 404 });
+  };
   return Bun.serve({
     port: Number(process.env.PORT ?? 3200),
     async fetch(req) {
-      const url = new URL(req.url);
-      if (req.headers.get("authorization") !== `Bearer ${opts.token}`)
-        return Response.json({ error: "unauthorized" }, { status: 401 });
-      if (req.method === "POST" && url.pathname === "/ingest") {
-        const b = (await req.json()) as {
-          sha256: string;
-          urls: string[];
-          fit?: "crop" | "letterbox";
-        };
-        if (!/^[0-9a-f]{64}$/.test(b.sha256) || !Array.isArray(b.urls) || b.urls.length === 0)
-          return Response.json({ error: "need sha256 and urls" }, { status: 400 });
-        return Response.json(
-          enqueue("ingest", () => run.ingest(b, opts.hosts, { fit: b.fit })),
-          { status: 202 },
-        );
-      }
-      if (req.method === "POST" && url.pathname === "/render") {
-        const b = (await req.json()) as Parameters<typeof renderAndPublish>[0] & {
-          key?: string;
-          iv?: string;
-          keyUri?: string;
-        };
-        if (!Array.isArray(b.scenes) || b.scenes.length === 0)
-          return Response.json({ error: "need scenes" }, { status: 400 });
-        const job = { ...b } as Parameters<typeof renderAndPublish>[0];
-        if (b.key && b.iv && b.keyUri)
-          job.encryption = {
-            key: Buffer.from(b.key, "hex"),
-            iv: Buffer.from(b.iv, "hex"),
-            keyUri: b.keyUri,
-          };
-        return Response.json(
-          enqueue("render", () => run.render(job, opts.hosts)),
-          { status: 202 },
-        );
-      }
-      const m = url.pathname.match(/^\/jobs\/([\w-]+)$/);
-      if (req.method === "GET" && m) {
-        const j = jobs.get(m[1] as string);
-        return j ? Response.json(j) : Response.json({ error: "no such job" }, { status: 404 });
-      }
-      return Response.json({ error: "not found" }, { status: 404 });
+      if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
+      const res = await handle(req);
+      for (const [k, v] of Object.entries(CORS)) res.headers.set(k, v);
+      return res;
     },
   });
 }

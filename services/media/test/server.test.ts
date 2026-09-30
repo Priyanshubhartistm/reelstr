@@ -36,6 +36,13 @@ describe("media server", () => {
       (await fetch(`${base}/jobs/x`, { headers: { Authorization: "Bearer nope" } })).status,
     ).toBe(401);
   });
+  test("answers CORS preflight and marks responses for browsers", async () => {
+    const pre = await fetch(`${base}/ingest`, { method: "OPTIONS" });
+    expect(pre.status).toBe(204);
+    expect(pre.headers.get("access-control-allow-headers")).toContain("authorization");
+    const r = await fetch(`${base}/jobs/x`, { headers: auth });
+    expect(r.headers.get("access-control-allow-origin")).toBe("*");
+  });
   test("validates input", async () => {
     const r = await fetch(`${base}/ingest`, {
       method: "POST",

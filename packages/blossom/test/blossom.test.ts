@@ -128,6 +128,29 @@ describe("blossom client (BUD-01/02/04/11)", () => {
     }
   });
 
+  test("default fetch is called unbound, like a browser requires (regression: Illegal invocation)", async () => {
+    const real = globalThis.fetch;
+    // a browser's fetch throws when invoked with any `this` other than window/undefined
+    globalThis.fetch = function strict(
+      this: unknown,
+      input: RequestInfo | URL,
+      init?: RequestInit,
+    ) {
+      if (this !== undefined && this !== globalThis)
+        throw new TypeError("Failed to execute 'fetch' on 'Window': Illegal invocation");
+      return real(input, init);
+    } as typeof fetch;
+    try {
+      const c = new BlossomClient(A.server, signer); // default fetch
+      const b = new TextEncoder().encode(`unbound ${Math.random()}`);
+      const d = await c.upload(b, "video/mp4");
+      expect(await c.has(d.sha256)).toBe(true);
+      expect((await fetchVerified([c.urlFor(d.sha256)], d.sha256)).bytes).toEqual(b);
+    } finally {
+      globalThis.fetch = real;
+    }
+  });
+
   test("delete removes a blob", async () => {
     const tmp = new TextEncoder().encode(`to delete ${Math.random()}`);
     const d = await A.upload(tmp, "video/mp4");

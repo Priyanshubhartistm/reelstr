@@ -5,14 +5,16 @@
   "workspaces": [
     "packages/*",
     "apps/*",
-    "services/*"
+    "services/*",
+    "e2e"
   ],
   "scripts": {
-    "check": "biome check . && tsc -b && bun test",
-    "test": "bun test",
+    "check": "biome check . && tsc -b && bun test packages services",
+    "test": "bun test packages services",
     "lint": "biome check .",
     "fix": "biome check --write .",
-    "test:fast": "bun test packages/protocol packages/nostr packages/blossom"
+    "test:fast": "bun test packages/protocol packages/nostr packages/blossom",
+    "test:e2e": "bun test e2e"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",
