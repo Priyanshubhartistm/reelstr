@@ -39,7 +39,7 @@ export async function applyDerived(db: Db, e: Ev): Promise<void> {
     case KIND.SCENE: {
       const s = parseScene(e);
       await db.query(
-        `insert into scenes values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) on conflict do nothing`,
+        `insert into scenes values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) on conflict do nothing`,
         [
           e.id,
           s.author,
@@ -53,6 +53,9 @@ export async function applyDerived(db: Db, e: Ev): Promise<void> {
           manifestEligibleForVerification(e),
           powBits(e.id),
           e.created_at,
+          s.content,
+          JSON.stringify(s.gen),
+          s.videoUrl,
         ],
       );
       break;

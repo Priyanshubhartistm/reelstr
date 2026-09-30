@@ -24,6 +24,15 @@
     },
     {
       "path": "packages/app-core"
+    },
+    {
+      "path": "packages/ui"
+    },
+    {
+      "path": "apps/studio"
+    },
+    {
+      "path": "apps/cinema"
     }
   ]
 }

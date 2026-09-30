@@ -32,7 +32,8 @@ export async function migrate(db: Db) {
       id text primary key, author text not null, payee text not null, story_coord text not null,
       parent_id text, video_sha text not null, duration double precision not null,
       title text not null, license text not null, eligible boolean not null,
-      pow_bits int not null, created_at bigint not null
+      pow_bits int not null, created_at bigint not null,
+      content text not null default '', gen text not null default '{}', video_url text not null default ''
     );
     create index if not exists scenes_story on scenes(story_coord);
     create index if not exists scenes_parent on scenes(parent_id);
