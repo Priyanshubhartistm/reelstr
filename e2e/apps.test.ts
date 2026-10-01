@@ -267,6 +267,18 @@ describe("Studio and Cinema in a real browser", () => {
     await cara.page.locator("#m-sum").fill("They reach the door.");
     await cara.page.locator("#m-t").fill("The door");
     await cara.page.locator("#m-f").fill("5");
+    // captions: a WebVTT file uploaded through the Desk (rejects a non-VTT file first)
+    const vtt = join(dir, "captions.vtt");
+    await Bun.write(
+      vtt,
+      "WEBVTT\n\n00:00:00.500 --> 00:00:03.000\nThe door is steel.\n\n00:00:03.500 --> 00:00:08.000\nRain on the vault.\n",
+    );
+    const notVtt = join(dir, "notes.txt");
+    await Bun.write(notVtt, "just some notes");
+    await cara.page.locator("#m-cap").setInputFiles(notVtt);
+    await cara.page.getByText(/does not look like a WebVTT file/).waitFor({ timeout: 10_000 });
+    await cara.page.locator("#m-cap").setInputFiles(vtt);
+    await cara.page.getByText("Uploaded captions.vtt.").waitFor({ timeout: 30_000 });
     // trims: first clip 0..10, second 1..11 => creators 10 s each
     await cara.page.locator("#out0").fill("10");
     await cara.page.locator("#in1").fill("1");
@@ -300,6 +312,25 @@ describe("Studio and Cinema in a real browser", () => {
       h: v.videoHeight,
       t: v.currentTime,
     }));
+    // captions: the track is on the player, loads over the network, and its cues display at the right time
+    const cues = await dan.page.evaluate(async () => {
+      const v = document.querySelector("video.player") as HTMLVideoElement;
+      const t = v.textTracks[0];
+      if (!t) return null;
+      t.mode = "showing";
+      for (let i = 0; i < 100 && (t.cues?.length ?? 0) === 0; i++)
+        await new Promise((r) => setTimeout(r, 100));
+      v.currentTime = 1;
+      await new Promise((r) => setTimeout(r, 400));
+      const during = Array.from(t.activeCues ?? []).map((c) => (c as VTTCue).text);
+      return { lang: t.language, count: t.cues?.length ?? 0, during, kind: t.kind };
+    });
+    expect(cues).toEqual({
+      lang: "en",
+      count: 2,
+      during: ["The door is steel."],
+      kind: "captions",
+    });
     expect(info.d).toBeGreaterThan(19);
     expect(info.d).toBeLessThan(21);
     expect(info.h).toBeGreaterThan(info.w); // vertical

@@ -26,6 +26,8 @@ export interface CutParams {
   audioBed?: { sha256: string; payee: string; poolBps?: number };
   hls?: { url: string; duration: number; sha256?: string };
   price: { amount: number; unit?: "sat" };
+  /** WebVTT captions (accessibility). One entry per language; the file lives on Blossom. */
+  captions?: { url: string; lang: string; sha256?: string }[];
   /** NIP-71 content-warning: clients blur the episode until the viewer opts in */
   contentWarning?: string;
   curatorBps: number;
@@ -73,6 +75,8 @@ export function buildCut(p: CutParams): EventTemplate {
         duration: secs(p.hls.duration),
       }),
     );
+  for (const c of p.captions ?? [])
+    tags.push(c.sha256 ? ["caption", c.url, c.lang, c.sha256] : ["caption", c.url, c.lang]);
   if (p.contentWarning) tags.push(["content-warning", p.contentWarning]);
   tags.push(["price", String(p.price.amount), p.price.unit ?? "sat"]);
   for (const w of cutWeights(p)) tags.push(["zap", w.pubkey, relay, String(w.weight), w.role]);
@@ -96,6 +100,7 @@ export interface Cut {
   audioBed?: { sha256: string; payee: string; poolBps: number };
   hlsUrl?: string;
   contentWarning?: string;
+  captions: { url: string; lang: string; sha256?: string }[];
   price: { amount: number; unit: string };
   weights: Weight[];
   durationSec: number;
@@ -131,6 +136,11 @@ export function parseCut(e: EventLike): Cut {
     },
     hlsUrl: hls?.url,
     contentWarning: tagValue(e.tags, "content-warning"),
+    captions: tagsOf(e.tags, "caption").map((t) => ({
+      url: t[1] ?? "",
+      lang: t[2] ?? "",
+      sha256: t[3],
+    })),
     price: { amount: Number(price?.[1]), unit: price?.[2] ?? "" },
     weights: tagsOf(e.tags, "zap").map((t) => ({
       pubkey: t[1] ?? "",
@@ -200,6 +210,13 @@ export function validateCut(e: EventLike, ctx: CutContext = {}): Validation {
   const total = totalMs / 1000;
   if (total > 0 && (total < EPISODE_TARGET_SEC[0] || total > EPISODE_TARGET_SEC[1]))
     c.warn(`episode is ${total}s, outside the ${EPISODE_TARGET_SEC.join("-")}s target`);
+
+  for (const [i, t] of tagsOf(e.tags, "caption").entries()) {
+    if (!/^https?:\/\//.test(t[1] ?? "")) c.err(`caption[${i}]: url must be http(s)`);
+    if (!/^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$/.test(t[2] ?? ""))
+      c.err(`caption[${i}]: language must be a BCP-47 tag like en or pt-BR`);
+    if (t[3] !== undefined && !isHex64(t[3])) c.err(`caption[${i}]: sha256 must be 64 hex`);
+  }
 
   const bed = tagsOf(e.tags, "audio-bed")[0];
   if (bed) {

@@ -432,3 +432,43 @@ describe("canonical seconds", () => {
     expect(tpl.tags.find((t) => t[0] === "imeta")?.includes("duration 12")).toBe(true);
   });
 });
+
+import { parseCut as parseCutC } from "../src";
+
+describe("caption tags on a Cut", () => {
+  const base = {
+    curator: CUR,
+    seriesSlug: "s",
+    episode: 1,
+    title: "t",
+    synopsis: "s",
+    scenes: [{ id: "1".repeat(64), sha256: "a".repeat(64), inSec: 0, outSec: 70, payee: A }],
+    price: { amount: 5 },
+    curatorBps: 0,
+    hostBps: 0,
+    host: HOST,
+  };
+  test("round trips, validates, and rejects bad urls and language tags", () => {
+    const tpl = buildCutC({
+      ...base,
+      captions: [
+        { url: "https://b.example/c.vtt", lang: "en", sha256: "c".repeat(64) },
+        { url: "https://b.example/pt.vtt", lang: "pt-BR" },
+      ],
+    });
+    const ev = { ...tpl, pubkey: CUR };
+    expect(validateCut(ev).errors).toEqual([]);
+    expect(parseCutC(ev).captions).toEqual([
+      { url: "https://b.example/c.vtt", lang: "en", sha256: "c".repeat(64) },
+      { url: "https://b.example/pt.vtt", lang: "pt-BR", sha256: undefined },
+    ]);
+    for (const [bad, msg] of [
+      [{ url: "javascript:alert(1)", lang: "en" }, "http(s)"],
+      [{ url: "https://x/y.vtt", lang: "English" }, "BCP-47"],
+      [{ url: "https://x/y.vtt", lang: "en", sha256: "zz" }, "sha256"],
+    ] as const) {
+      const e2 = { ...buildCutC({ ...base, captions: [bad] }), pubkey: CUR };
+      expect(validateCut(e2).errors.join()).toContain(msg);
+    }
+  });
+});

@@ -72,7 +72,11 @@ export function Desk() {
     hostPct: 10,
     host: "",
     warning: "",
+    captionLang: "en",
   });
+  const [caption, setCaption] = useState<{ url: string; sha256: string; name: string } | null>(
+    null,
+  );
   const [bed, setBed] = useState<{ sha: string; poolPct: number } | null>(null);
   const [drag, setDrag] = useState<number | null>(null);
   const [status, setStatus] = useState("");
@@ -149,6 +153,9 @@ export function Desk() {
         audioBed: bed ? { sha256: bed.sha, payee: me, poolBps: bed.poolPct * 100 } : undefined,
         free: episode <= meta.free,
         contentWarning: meta.warning || undefined,
+        captions: caption
+          ? [{ url: caption.url, lang: meta.captionLang, sha256: caption.sha256 }]
+          : undefined,
         price: { amount: meta.price },
         curatorBps: meta.curatorPct * 100,
         hostBps: meta.hostPct * 100,
@@ -422,6 +429,31 @@ export function Desk() {
           value={meta.synopsis}
           onChange={(e) => setMeta({ ...meta, synopsis: e.target.value })}
         />
+        <label htmlFor="m-cap">Captions (WebVTT file, optional)</label>
+        <div className="row">
+          <input
+            id="m-cap"
+            type="file"
+            accept=".vtt,text/vtt"
+            onChange={async (e) => {
+              const f = e.target.files?.[0];
+              if (!f) return setCaption(null);
+              const text = await f.text();
+              if (!text.trimStart().startsWith("WEBVTT"))
+                return setErr("That does not look like a WebVTT file (it must start with WEBVTT).");
+              setErr("");
+              const d = await c.blossom.upload(new TextEncoder().encode(text), "text/vtt");
+              setCaption({ url: d.url, sha256: d.sha256, name: f.name });
+            }}
+          />
+          <input
+            aria-label="Caption language"
+            style={{ maxWidth: 90 }}
+            value={meta.captionLang}
+            onChange={(e) => setMeta({ ...meta, captionLang: e.target.value.trim() })}
+          />
+        </div>
+        {caption && <p className="muted">Uploaded {caption.name}.</p>}
         <label htmlFor="m-cw">Content warning (optional)</label>
         <input
           id="m-cw"

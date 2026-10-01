@@ -54,6 +54,8 @@ export function HlsPlayer({
       className="player"
       playsInline
       controls
+      // captions are fetched in CORS mode: without this a <track> on another origin (Blossom) never loads
+      crossOrigin="anonymous"
       onEnded={onEnded}
       onTimeUpdate={(e) => onProgress?.(e.currentTarget.currentTime, e.currentTarget.duration)}
     >

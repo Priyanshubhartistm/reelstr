@@ -172,6 +172,12 @@ export function Watch({ cutId }: { cutId: string }) {
           key={`${c.id}-${have?.kind}`}
           src={c.hls_url}
           keyHeaders={have ? keyHeaders(have) : undefined}
+          captions={(
+            JSON.parse((c as CutRow & { captions?: string }).captions ?? "[]") as {
+              url: string;
+              lang: string;
+            }[]
+          ).map((x) => ({ src: x.url, lang: x.lang, label: x.lang }))}
           startAt={start > 0 && start < Number(c.duration) - 2 ? start : 0}
           onProgress={(t) => {
             if (t - last.current > 2) {

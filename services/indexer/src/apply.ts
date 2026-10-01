@@ -99,7 +99,7 @@ export async function applyDerived(db: Db, e: Ev): Promise<void> {
         await db.query("delete from cut_weights where cut_id=$1", [old.id]);
         await db.query("delete from cuts where coord=$1", [coord]);
       }
-      await db.query("insert into cuts values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)", [
+      await db.query("insert into cuts values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)", [
         coord,
         e.id,
         e.pubkey,
@@ -111,6 +111,7 @@ export async function applyDerived(db: Db, e: Ev): Promise<void> {
         c.hlsUrl ?? null,
         e.created_at,
         c.contentWarning ?? null,
+        JSON.stringify(c.captions),
       ]);
       for (const [i, s] of c.scenes.entries())
         await db.query("insert into cut_scenes values ($1,$2,$3,$4,$5,$6,$7)", [
