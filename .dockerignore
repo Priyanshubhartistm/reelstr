@@ -1,0 +1,10 @@
+**/node_modules
+**/dist
+**/*.tsbuildinfo
+.git
+.venv-mint
+.venv-asr
+**/bin
+**/data
+demo/.demo-keys.json
+infra/blossom/node_modules

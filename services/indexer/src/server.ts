@@ -1,3 +1,4 @@
+import { retry } from "@reelstr/nostr";
 import {
   credits,
   earnings,
@@ -101,7 +102,7 @@ export function createApi(ix: Indexer, port = Number(process.env.PORT ?? 3300)) 
 
 if (import.meta.main) {
   const relays = (process.env.RELAYS ?? "ws://127.0.0.1:3334").split(",");
-  const ix = await Ix.open(process.env.DATABASE_URL);
+  const ix = await retry("database", () => Ix.open(process.env.DATABASE_URL));
   await ix.follow(relays);
   const s = createApi(ix);
   console.log(`indexer API on :${s.port}, following ${relays.join(", ")}`);

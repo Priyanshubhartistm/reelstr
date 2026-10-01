@@ -200,6 +200,7 @@
         "@noble/hashes": "latest",
         "@reelstr/app-core": "workspace:*",
         "@reelstr/blossom": "workspace:*",
+        "@reelstr/keys": "workspace:*",
         "@reelstr/media": "workspace:*",
         "@reelstr/nostr": "workspace:*",
         "@reelstr/protocol": "workspace:*",
@@ -235,6 +236,7 @@
       "dependencies": {
         "@cashu/cashu-ts": "4.11.0",
         "@noble/hashes": "latest",
+        "@reelstr/blossom": "workspace:*",
         "@reelstr/bolt11": "workspace:*",
         "@reelstr/nostr": "workspace:*",
         "@reelstr/protocol": "workspace:*",
@@ -265,6 +267,8 @@
       "name": "@reelstr/split",
       "version": "0.1.0",
       "dependencies": {
+        "@noble/hashes": "latest",
+        "@reelstr/blossom": "workspace:*",
         "@reelstr/bolt11": "workspace:*",
         "@reelstr/keys": "workspace:*",
         "@reelstr/nostr": "workspace:*",
@@ -273,7 +277,6 @@
       },
       "devDependencies": {
         "@cashu/cashu-ts": "4.11.0",
-        "@noble/hashes": "latest",
         "@reelstr/testkit": "workspace:*",
       },
     },

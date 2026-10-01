@@ -2,6 +2,7 @@ import { getPubKeyFromPrivKey } from "@cashu/cashu-ts";
 import { hmac } from "@noble/hashes/hmac.js";
 import { sha256 } from "@noble/hashes/sha2.js";
 import { bytesToHex, hexToBytes, randomBytes } from "@noble/hashes/utils.js";
+import { installUrlRewrite } from "@reelstr/blossom";
 import { decodeInvoice, paymentHashOf } from "@reelstr/bolt11";
 import { LocalSigner } from "@reelstr/nostr";
 import { type EventLike, verifyHttpAuth, verifySignature } from "@reelstr/protocol";
@@ -244,6 +245,7 @@ export async function createKeyServer(o: KeyServerOpts) {
 }
 
 if (import.meta.main) {
+  installUrlRewrite();
   const mints = (process.env.MINTS ?? "").split(",").filter(Boolean);
   // Lightning is optional: PHOENIXD_URL + PHOENIXD_PASSWORD, or LND_URL + LND_MACAROON (hex) [+ LND_CA]
   const ln: LnBackend | undefined = process.env.PHOENIXD_URL

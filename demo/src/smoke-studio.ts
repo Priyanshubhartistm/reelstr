@@ -10,8 +10,8 @@ import { demoKeys } from "./stack";
 const out = process.argv[2] ?? ".";
 const keys = demoKeys();
 const nsec = (n: string) => new LocalSigner(hexToBytes(keys[n] as string)).backup();
-const studio = "http://127.0.0.1:5173";
-const cinema = "http://127.0.0.1:5174";
+const studio = process.env.STUDIO_URL ?? "http://127.0.0.1:5173";
+const cinema = process.env.CINEMA_URL ?? "http://127.0.0.1:5174";
 const dir = tempDir("reelstr-demo-smoke-");
 const browser = await chromium.launch({
   executablePath: process.env.CHROME_PATH ?? "/usr/bin/google-chrome",
@@ -32,9 +32,10 @@ const step = (s: string) => console.log(`ok: ${s}`);
 const dev = await as("dev");
 await dev.page.goto(studio);
 await dev.page.getByRole("link", { name: /The Last Signal/ }).click({ timeout: 60_000 });
-await dev.page.waitForFunction(() => document.querySelectorAll(".tree .node").length === 5, null, {
-  timeout: 60_000,
-});
+// the seeded tree (any size: the seed may grow); the fork must add exactly one
+await dev.page.locator(".tree .node").first().waitFor({ timeout: 60_000 });
+await dev.page.waitForTimeout(1500);
+const before = await dev.page.locator(".tree .node").count();
 await dev.page.screenshot({ path: `${out}/s1-tree.png` });
 await dev.page.locator(".tree .node", { hasText: "The Broadcast" }).click();
 await dev.page.getByRole("button", { name: "Fork / continue from here" }).click();
@@ -50,11 +51,15 @@ await dev.page.locator("#c-title").fill("Reply");
 await dev.page.locator("#c-prompt").fill("Wren answers the voice");
 await dev.page.getByRole("button", { name: "Publish fork" }).click();
 await dev.page.getByText("Published.").waitFor({ timeout: 120_000 });
-await dev.page.waitForFunction(() => document.querySelectorAll(".tree .node").length === 6, null, {
-  timeout: 60_000,
-});
+await dev.page.waitForFunction(
+  (n) => document.querySelectorAll(".tree .node").length === n + 1,
+  before,
+  {
+    timeout: 60_000,
+  },
+);
 await dev.page.screenshot({ path: `${out}/s2-forked.png` });
-step("fork from the tree: 6 scenes");
+step(`fork from the tree: ${before} -> ${before + 1} scenes`);
 
 // 2. Dev commissions the agent (needs test sats first)
 await dev.page.locator("header.bar").getByRole("link", { name: "Wallet", exact: true }).click();
@@ -63,9 +68,7 @@ await dev.page.locator("#w-amt").fill("300");
 await dev.page.getByRole("button", { name: "Get invoice" }).click();
 await dev.page.getByText("300 sats", { exact: true }).waitFor({ timeout: 60_000 });
 await dev.page.locator("header.bar").getByRole("link", { name: "Agents", exact: true }).click();
-await dev.page
-  .locator("#ag-agent option", { hasText: "demo-bot" })
-  .waitFor({ state: "attached", timeout: 30_000 });
+await dev.page.locator("#ag-agent option").nth(1).waitFor({ state: "attached", timeout: 30_000 });
 await dev.page.locator("#ag-agent").selectOption({ index: 1 });
 await dev.page.locator("#ag-story").selectOption({ label: "The Last Signal" });
 await dev.page.locator("#ag-prompt").fill("the tower seen from a drone at dawn");

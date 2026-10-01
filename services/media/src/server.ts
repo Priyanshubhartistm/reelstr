@@ -1,4 +1,4 @@
-import { BlossomClient } from "@reelstr/blossom";
+import { BlossomClient, installUrlRewrite, rewriteHosts } from "@reelstr/blossom";
 import { LocalSigner } from "@reelstr/nostr";
 import { verifyHttpAuth } from "@reelstr/protocol";
 import { captionEpisode, type Hosts, ingestScene, renderAndPublish } from "./pipeline";
@@ -205,6 +205,7 @@ export function createMediaServer(opts: MediaServerOpts) {
 }
 
 if (import.meta.main) {
+  installUrlRewrite();
   // MEDIA_ALLOW: comma-separated hex pubkeys. Empty = anyone with a valid signature (still rate limited).
   const allowed = (process.env.MEDIA_ALLOW ?? "").split(",").filter(Boolean);
   const signer = process.env.MEDIA_NSEC
@@ -217,6 +218,10 @@ if (import.meta.main) {
     .map((u) => new BlossomClient(u, signer));
   const s = createMediaServer({
     hosts: { primary, mirrors },
+    // clients send the public blob URLs Blossom gave them; allow those hosts too (fetched via BLOSSOM_REWRITE)
+    allowedHosts: [primary.server, ...mirrors.map((m) => m.server)]
+      .map((u) => new URL(u).host)
+      .concat(rewriteHosts()),
     allow: allowed.length ? (pk) => allowed.includes(pk) : undefined,
   });
   console.log(`media service on :${s.port}`);

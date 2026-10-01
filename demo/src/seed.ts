@@ -6,9 +6,14 @@ import { LocalSigner } from "@reelstr/nostr";
 import { buildRating } from "@reelstr/protocol";
 import { tempDir } from "@reelstr/testkit";
 import { makeScene } from "./footage";
-import { demoKeys, type startStack } from "./stack";
+import { demoKeys } from "./stack";
 
-type Stack = Awaited<ReturnType<typeof startStack>>;
+/** All the seed needs to know about a running stack: where its services are. */
+type Stack = {
+  endpoints: ConstructorParameters<typeof ReelstrClient>[0] extends infer C
+    ? Omit<NonNullable<C>, "signer">
+    : never;
+};
 
 const THEMES = {
   signal: { c0: "0x0b1d3a", c1: "0x4aa3ff", freq: 220 },

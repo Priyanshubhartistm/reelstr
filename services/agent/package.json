@@ -5,7 +5,8 @@
   "type": "module",
   "main": "src/index.ts",
   "scripts": {
-    "start": "bun src/server.ts"
+    "start": "bun src/server.ts",
+    "verifier": "bun src/verifier-server.ts"
   },
   "dependencies": {
     "@cashu/cashu-ts": "4.11.0",
@@ -15,7 +16,8 @@
     "@reelstr/media": "workspace:*",
     "@reelstr/nostr": "workspace:*",
     "@reelstr/protocol": "workspace:*",
-    "@reelstr/wallet": "workspace:*"
+    "@reelstr/wallet": "workspace:*",
+    "@reelstr/keys": "workspace:*"
   },
   "devDependencies": {
     "@reelstr/indexer": "workspace:*",

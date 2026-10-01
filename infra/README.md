@@ -7,17 +7,25 @@
 | Postgres | PGlite (embedded) | `postgres` (the indexer is tested against it: `TEST_DATABASE_URL=postgres://reelstr:reelstr-dev@127.0.0.1:5432/reelstr bun test services/indexer`) |
 | Cashu mint | the real Nutshell in `.venv-mint` (see `requirements-mint.txt`) | `mint` profile (dev only: FakeWallet) |
 
-## Containers
+## Containers: the whole stack
 
-The images build and the stack runs with **podman** (rootless) as well as Docker; the compose file uses fully qualified image names for that reason.
+Everything runs from containers with **podman** (rootless) or Docker; the compose file uses fully qualified image names for that reason. Two Dockerfiles: `services/relay`, `services/crew`, `infra/blossom` (each its own), and the repo-root `Dockerfile` which builds the Bun services (media, indexer, keys, split, agent, verifier) as one image plus the two web apps behind nginx.
 
 ```sh
 uv tool install podman-compose          # if you use podman
+bun demo/src/envgen.ts                  # writes infra/.env with fresh secrets (or: --host <public host or IP>)
 cd infra
-BLOSSOM_PUBLIC_URL=http://127.0.0.1:3100 podman-compose -p reelstr up -d relay blossom postgres
-# browser tests against these containers (fresh volumes: `down -v` first):
-cd .. && E2E_COMPOSE=1 bun test e2e
+podman-compose -p reelstr up -d                      # relay, crew, blossom, postgres, media, indexer, keys, web
+podman-compose -p reelstr --profile mint --profile agent --profile verifier up -d   # + dev mint (FakeWallet), agent, verifier
+cd .. && bun demo/src/remote.ts                      # seed the running stack with the demo story
+bun demo/src/smoke.ts shots && bun demo/src/smoke-studio.ts shots   # drive it in a real browser
 ```
+
+Browsers use `PUBLIC_HOST` (in `infra/.env`) to reach the services; containers use service names. Published events carry the public addresses (blob and mint URLs), so every Bun service maps them back with `URL_REWRITE` (see `.env`/compose); this is what makes `http://localhost:3100/<hash>` fetchable from inside a container.
+
+For a VM: `bun demo/src/envgen.ts --host <the VM's DNS name or IP>`, open ports 3100, 3200, 3300, 3334, 3335, 3338 (dev mint only), 3400, 5173 and 5174, then the same `up` and `remote.ts --host <host>`. There is no TLS in this file: put a reverse proxy in front (and use `https://`/`wss://` hosts in `PUBLIC_HOST`-derived URLs) before exposing it to the internet. Caption generation needs the `services-asr` image: set `MEDIA_TARGET=services-asr`.
+
+Browser tests against only the relay, Blossom and Postgres containers (the rest in-process): `cd infra && podman-compose -p reelstr up -d relay blossom postgres`, then `E2E_COMPOSE=1 bun test e2e` from the root.
 
 Notes learned the hard way:
 
@@ -27,7 +35,7 @@ Notes learned the hard way:
 - Rootless podman accepts TCP connections before the app inside is listening: wait on the app's log line, not just an open port.
 
 ## Caption generation
-The media service transcribes speech locally for the Desk's "Generate captions (draft)". Install once: `uv venv --python 3.12 .venv-asr && uv pip install --python .venv-asr/bin/python -r requirements-asr.txt` (the `small` model, about 460 MB, downloads on first use). The compose image for the media service does not include it yet; use the native service for captions.
+The media service transcribes speech locally for the Desk's "Generate captions (draft)". Install once: `uv venv --python 3.12 .venv-asr && uv pip install --python .venv-asr/bin/python -r requirements-asr.txt` (the `small` model, about 460 MB, downloads on first use). In containers use the `services-asr` target (see above).
 
 ## Real Lightning on regtest
 `services/keys/test/lnd.test.ts` and the last test in `services/split/test/split.test.ts` run two real LND nodes on a private Bitcoin regtest chain (podman, no real money). They skip themselves if the images are missing:

@@ -9,11 +9,15 @@
     "@reelstr/keys": "workspace:*",
     "@reelstr/nostr": "workspace:*",
     "@reelstr/protocol": "workspace:*",
-    "@reelstr/wallet": "workspace:*"
+    "@reelstr/wallet": "workspace:*",
+    "@noble/hashes": "latest",
+    "@reelstr/blossom": "workspace:*"
   },
   "devDependencies": {
     "@reelstr/testkit": "workspace:*",
-    "@cashu/cashu-ts": "4.11.0",
-    "@noble/hashes": "latest"
+    "@cashu/cashu-ts": "4.11.0"
+  },
+  "scripts": {
+    "start": "bun src/server.ts"
   }
 }

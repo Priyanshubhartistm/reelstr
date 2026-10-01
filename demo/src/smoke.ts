@@ -8,7 +8,7 @@ const browser = await chromium.launch({
   args: ["--no-sandbox", "--autoplay-policy=no-user-gesture-required"],
 });
 const page = await (await browser.newContext({ viewport: { width: 420, height: 860 } })).newPage();
-await page.goto("http://127.0.0.1:5174");
+await page.goto(process.env.CINEMA_URL ?? "http://127.0.0.1:5174");
 await page.getByRole("button", { name: "Generate a key" }).click();
 await page.getByText("I saved my key").click();
 await page.getByRole("button", { name: "Continue" }).click();

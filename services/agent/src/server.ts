@@ -1,16 +1,19 @@
 import { getPubKeyFromPrivKey } from "@cashu/cashu-ts";
 import { hexToBytes } from "@noble/hashes/utils.js";
 import { ReelstrClient } from "@reelstr/app-core";
-import { LocalSigner, RelayPool } from "@reelstr/nostr";
-import { CashuWallet, MemoryStore } from "@reelstr/wallet";
+import { installUrlRewrite } from "@reelstr/blossom";
+import { openLedger } from "@reelstr/keys";
+import { LocalSigner, RelayPool, retry } from "@reelstr/nostr";
+import { CashuWallet } from "@reelstr/wallet";
 import { Agent, FalWanAdapter, MockAdapter, registry } from "./index";
 
 /**
  * Run an agent. Environment:
- *   AGENT_NSEC, AGENT_LOCK_PRIVKEY (hex), RELAYS, BLOSSOM_URL, MEDIA_URL, MINT_URL,
+ *   AGENT_NAME (profile name, default reelstr-agent), AGENT_NSEC, AGENT_LOCK_PRIVKEY (hex), RELAYS, BLOSSOM_URL, MEDIA_URL, MINT_URL,
  *   PRICE_SATS (default 100), FAL_KEY (optional: enables wan-2.2-t2v), MOCK=1 (enables mock-open-1)
- * Earnings live in an in-memory wallet here: wire a persistent ProofStore before holding real money.
+ * Earnings are kept in AGENT_LEDGER_DB (sqlite, default ./agent.db).
  */
+installUrlRewrite();
 const env = (k: string, d?: string) => {
   const v = process.env[k] ?? d;
   if (v === undefined) throw new Error(`${k} is required`);
@@ -40,10 +43,14 @@ const agent = new Agent({
     blossom: env("BLOSSOM_URL", "http://127.0.0.1:3100"),
     mediaUrl: env("MEDIA_URL", "http://127.0.0.1:3200"),
   }),
-  wallet: await CashuWallet.open(mint, new MemoryStore()),
+  // earnings persist: a restart must not lose what the agent has been paid
+  wallet: await retry("mint", () =>
+    CashuWallet.open(mint, openLedger(process.env.AGENT_LEDGER_DB ?? "agent.db").proofStore(mint)),
+  ),
   lockPrivkey: lockPriv,
   lockPubkey: Buffer.from(getPubKeyFromPrivKey(hexToBytes(lockPriv))).toString("hex"),
   mints: [mint],
+  name: process.env.AGENT_NAME,
   onLog: (l) => console.log(new Date().toISOString(), l),
 });
 await agent.start();

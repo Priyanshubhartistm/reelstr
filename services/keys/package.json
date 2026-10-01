@@ -14,7 +14,8 @@
     "@reelstr/protocol": "workspace:*",
     "@reelstr/wallet": "workspace:*",
     "nostr-tools": "2.25.2",
-    "@cashu/cashu-ts": "4.11.0"
+    "@cashu/cashu-ts": "4.11.0",
+    "@reelstr/blossom": "workspace:*"
   },
   "devDependencies": {
     "@reelstr/testkit": "workspace:*"

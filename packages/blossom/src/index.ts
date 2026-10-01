@@ -154,6 +154,41 @@ export class BlossomClient {
 }
 
 /**
+ * Server-side address book for containers: a blob or mint URL published as `http://localhost:3100/…`
+ * is reachable from a browser but not from inside another container. `URL_REWRITE` (alias
+ * `BLOSSOM_REWRITE`) maps public origins to internal ones:
+ * "http://localhost:3100=http://blossom:3100,http://localhost:3338=http://mint:3338".
+ * Unset (and always in a browser) it changes nothing.
+ */
+function rewrites(): [string, string][] {
+  const env = typeof process !== "undefined" ? process.env : undefined;
+  const raw = env?.URL_REWRITE ?? env?.BLOSSOM_REWRITE;
+  return (raw ?? "")
+    .split(",")
+    .map((p) => p.trim().split("="))
+    .filter((p): p is [string, string] => p.length === 2 && !!p[0] && !!p[1])
+    .map(([a, b]) => [a.replace(/\/+$/, ""), b.replace(/\/+$/, "")]);
+}
+export function internalUrl(url: string): string {
+  for (const [pub, int] of rewrites())
+    if (url === pub || url.startsWith(`${pub}/`)) return int + url.slice(pub.length);
+  return url;
+}
+/** Make every outgoing `fetch` in this process go to the internal address. Call once at service start. */
+export function installUrlRewrite() {
+  if (rewrites().length === 0) return;
+  const orig = globalThis.fetch;
+  globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
+    if (typeof input === "string") return orig(internalUrl(input), init);
+    if (input instanceof URL) return orig(internalUrl(input.href), init);
+    return orig(new Request(internalUrl(input.url), input), init);
+  }) as typeof fetch;
+}
+
+/** hosts (host:port) of the public origins in BLOSSOM_REWRITE, so a service may fetch from them */
+export const rewriteHosts = (): string[] => rewrites().map(([pub]) => new URL(pub).host);
+
+/**
  * Try each URL in order (primary, then `fallback` and mirror URLs) and return the first body
  * whose SHA-256 matches. A server that returns the wrong bytes is skipped, never trusted.
  */
@@ -165,7 +200,7 @@ export async function fetchVerified(
   const failures: string[] = [];
   for (const url of urls) {
     try {
-      const res = await fetchFn(url);
+      const res = await fetchFn(internalUrl(url));
       if (!res.ok) {
         failures.push(`${url}: HTTP ${res.status}`);
         continue;
