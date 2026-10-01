@@ -7,7 +7,7 @@ How each thing was checked. Levels, strongest first:
 - **fake**: run against a test double I wrote, from the spec.
 - **untested**: code exists, nothing exercised it.
 
-Run: `bun run check` (lint, types, 191 tests) and `bun run test:e2e` (10 headless-Chrome tests). Browser tests also run against the compose containers with `E2E_COMPOSE=1` (start from fresh volumes: `podman-compose -p reelstr down -v`, because the tests are not idempotent against a relay that kept the last run's stories). Last run: all 10 pass natively (9 against compose, run before captions), with the slim Blossom image. **Nothing here has touched a public relay, a real Lightning node, or real money.**
+Run: `bun run check` (lint, types, 196 tests) and `bun run test:e2e` (10 headless-Chrome tests). Browser tests also run against the compose containers with `E2E_COMPOSE=1` (start from fresh volumes: `podman-compose -p reelstr down -v`, because the tests are not idempotent against a relay that kept the last run's stories). Last run: all 10 pass natively (9 against compose, run before captions), with the slim Blossom image. **Nothing here has touched a public relay, a real Lightning node, or real money.**
 
 ## What talks to what
 
@@ -17,7 +17,7 @@ Run: `bun run check` (lint, types, 191 tests) and `bun run test:e2e` (10 headles
 | Postgres | **real**: Postgres 17 in a container (full indexer suite, 16 tests). Day-to-day tests use PGlite. |
 | Relay, Blossom | **real**: as built containers (podman) and as native processes. |
 | Browser | **real**: Chrome (headless). WebKit/Safari: **cannot be run on this machine** (needs Ubuntu libraries). |
-| Lightning | **fake** (`FakeLightning`) plus the real mint's FakeWallet. No real node, invoice settlement or routing. LNURL: mock server. |
+| Lightning | **real LND 0.18 on a private regtest chain** (two nodes, one channel, real invoices, HTLCs, preimages, routing failures): `LndBackend`, the key server's L402 unlock, and the split service's Lightning-address payout. Everything else still uses `FakeLightning` for speed. **Not real:** mainnet, real liquidity and routing across a public graph, real fees, and phoenixd (the production target) was never run. LNURL: a mock server fronting a real node. |
 | phoenixd | **mock-of-real**: mock reproduces its `Api.kt` behaviours (204 for unknown hash, 200 + `reason` on failure). Never run against phoenixd. |
 | fal.ai (Wan 2.2) | **mock-of-real**: mock queue; auth and URL scheme checked against the `@fal-ai/client` source. Never run live. |
 | Video models | A mock "model" (deterministic colour fields). No real generative model has been run. |
@@ -55,8 +55,8 @@ Run: `bun run check` (lint, types, 191 tests) and `bun run test:e2e` (10 headles
 | BE-3 client stitching fallback | real browser (Chrome) | Free episodes only (paid ones are encrypted, so there is nothing to stitch). Plays the trimmed scenes in two video elements when the rendered HLS is unreachable. Worst join gap measured **100 to 150 ms** (the HLS path is one frame). Warming the next decoder or starting early made it worse and was reverted. |
 | BE-4 indexer | real Postgres 17 + PGlite | Rebuild from relays alone reproduces every table. |
 | BE-5 web of trust | real | Seeded spam test under 5%. |
-| BE-6 key server | real mint (nutzap), fake Lightning (L402-style) | NIP-98 registration bound to the body. |
-| BE-7 split service | real mint | Payouts by real nutzaps redeemed by the recipients; Lightning-address rail against a mock LNURL. Custody-gated. |
+| BE-6 key server | real mint (nutzap), real LND on regtest (L402-style), fake Lightning in most tests | NIP-98 registration bound to the body. |
+| BE-7 split service | real mint | Payouts by real nutzaps redeemed by the recipients; Lightning-address rail: mock LNURL fronting a **real LND node on regtest** (preimage matches the real invoice, which settles). Custody-gated. |
 | BE-8 mirror | real | Plays with the origin stopped. |
 | Media service | real | NIP-98 per-request auth, job ownership, rate limit, queue cap, size cap, SSRF allowlist. |
 
@@ -77,7 +77,7 @@ Run: `bun run check` (lint, types, 191 tests) and `bun run test:e2e` (10 headles
 ## Known gaps and risks
 
 - **Demand is unproven.** Fork rate and unlock conversion are the real tests; the PRD's kill signals stand.
-- **Real Lightning is untested**: settlement, routing failures, real LNURL servers, and whether small payments are worth their fees. The real mint charged 1 sat (reserve 2) on a 21 sat melt, which is roughly 5% on a micropayment.
+- **Real Lightning is only tested on regtest** (see above): settlement, failures and the L402 and payout flows work against real LND; mainnet routing, a real LNURL server and whether small payments are worth their fees are untested. The real mint charged 1 sat (reserve 2) on a 21 sat melt, which is roughly 5% on a micropayment.
 - **No real video model has run.** A Wan 2.2 generation through fal is the first thing to try; the adapter is checked only against a mock.
 - **Safari/iPhone untested**, and all measured timings are on localhost, not a 4G network.
 - **Legal is not solved by code.** Custody, money transmission, India VDA tax, and likeness rules need a lawyer before the split service touches other people's money. The split service refuses to start without an explicit acknowledgement.

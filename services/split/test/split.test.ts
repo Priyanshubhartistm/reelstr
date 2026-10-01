@@ -1,10 +1,17 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { getPubKeyFromPrivKey } from "@cashu/cashu-ts";
+import { sha256 } from "@noble/hashes/sha2.js";
 import { bytesToHex, hexToBytes, randomBytes } from "@noble/hashes/utils.js";
-import { type LnBackend, openLedger } from "@reelstr/keys";
+import { type LnBackend, LndBackend, openLedger } from "@reelstr/keys";
 import { LocalSigner, RelayPool } from "@reelstr/nostr";
 import { buildCut, type CutScene, KIND, validateEvent } from "@reelstr/protocol";
-import { cleanup, FakeLightning, startFakeMint, startRelay } from "@reelstr/testkit";
+import {
+  cleanup,
+  FakeLightning,
+  startFakeMint,
+  startLndRegtest,
+  startRelay,
+} from "@reelstr/testkit";
 import { buildNutzapInfo, CashuWallet, redeemNutzap } from "@reelstr/wallet";
 import { runPayouts } from "../src";
 
@@ -266,4 +273,73 @@ describe("split service (BE-7)", () => {
     );
     expect(total).toBe(1_000_000);
   }, 60_000);
+});
+
+const lndImages = ["lnd:0.18.3-beta", "bitcoind:27.0"].every(
+  (i) =>
+    Bun.spawnSync([
+      process.env.CONTAINER_CLI ?? "podman",
+      "image",
+      "exists",
+      `docker.io/polarlightning/${i}`,
+    ]).exitCode === 0,
+);
+
+describe.skipIf(!lndImages)("split service paying a Lightning address over real LND", () => {
+  test("the host's share goes out as a real payment to a real invoice; the preimage is the proof", async () => {
+    const net = await startLndRegtest();
+    const hashes: string[] = [];
+    // the host's LNURL-pay server hands out invoices from the host's own (real) node, bob
+    const host: ReturnType<typeof Bun.serve> = Bun.serve({
+      port: 0,
+      async fetch(req): Promise<Response> {
+        const u = new URL(req.url);
+        if (u.pathname.startsWith("/.well-known/lnurlp/"))
+          return Response.json({
+            callback: `http://127.0.0.1:${host.port}/cb`,
+            minSendable: 1000,
+            maxSendable: 10_000_000_000,
+            tag: "payRequest",
+          });
+        const sats = Number(u.searchParams.get("amount")) / 1000;
+        const r = JSON.parse((await net.bob.cli("addinvoice", `--amt=${sats}`)).out) as {
+          payment_request: string;
+          r_hash: string;
+        };
+        hashes.push(r.r_hash);
+        return Response.json({ pr: r.payment_request });
+      },
+    });
+    try {
+      const w = await world();
+      for (const i of [1, 2, 3]) w.receive(1000, `lnd${i}`);
+      const alice = new LndBackend(
+        `https://127.0.0.1:${net.alice.restPort}`,
+        net.alice.macaroon,
+        undefined,
+        (i, o) => fetch(i, { ...o, tls: { rejectUnauthorized: false } } as RequestInit),
+      );
+      const rep = await runPayouts({
+        ...w.opts,
+        ln: alice,
+        lnurl: {
+          urlFor: (l: string) =>
+            `http://127.0.0.1:${host.port}/.well-known/lnurlp/${l.split("@")[0]}`,
+        },
+      });
+      const paid = rep.batches[0]?.paid.find((p) => p.pubkey === w.HOST.pub);
+      expect(paid).toMatchObject({ msats: 300_000, proofType: "ln" });
+      expect(hashes.length).toBe(1);
+      expect(bytesToHex(sha256(hexToBytes(paid?.proof as string)))).toBe(hashes[0] as string);
+      const inv = JSON.parse((await net.bob.cli("lookupinvoice", hashes[0] as string)).out) as {
+        state: string;
+        amt_paid_sat: string;
+      };
+      expect(inv.state).toBe("SETTLED");
+      expect(inv.amt_paid_sat).toBe("300");
+    } finally {
+      host.stop(true);
+      await net.stop();
+    }
+  }, 300_000);
 });

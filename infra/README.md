@@ -28,3 +28,7 @@ Notes learned the hard way:
 
 ## Caption generation
 The media service transcribes speech locally for the Desk's "Generate captions (draft)". Install once: `uv venv --python 3.12 .venv-asr && uv pip install --python .venv-asr/bin/python -r requirements-asr.txt` (the `small` model, about 460 MB, downloads on first use). The compose image for the media service does not include it yet; use the native service for captions.
+
+## Real Lightning on regtest
+`services/keys/test/lnd.test.ts` and the last test in `services/split/test/split.test.ts` run two real LND nodes on a private Bitcoin regtest chain (podman, no real money). They skip themselves if the images are missing:
+`podman pull docker.io/polarlightning/bitcoind:27.0 docker.io/polarlightning/lnd:0.18.3-beta`. The key server reads `LND_URL`, `LND_MACAROON` (hex), `LND_CA`, or `PHOENIXD_URL`, `PHOENIXD_PASSWORD`.

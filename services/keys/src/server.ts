@@ -7,7 +7,7 @@ import { LocalSigner } from "@reelstr/nostr";
 import { type EventLike, verifyHttpAuth, verifySignature } from "@reelstr/protocol";
 import { CashuWallet, parseNutzap, redeemNutzap, verifyNutzap } from "@reelstr/wallet";
 import { type Ledger, openLedger } from "./db";
-import type { LnBackend } from "./ln";
+import { type LnBackend, LndBackend, PhoenixdBackend } from "./ln";
 
 export interface KeyServerOpts {
   ledger?: Ledger;
@@ -245,7 +245,14 @@ export async function createKeyServer(o: KeyServerOpts) {
 
 if (import.meta.main) {
   const mints = (process.env.MINTS ?? "").split(",").filter(Boolean);
+  // Lightning is optional: PHOENIXD_URL + PHOENIXD_PASSWORD, or LND_URL + LND_MACAROON (hex) [+ LND_CA]
+  const ln: LnBackend | undefined = process.env.PHOENIXD_URL
+    ? new PhoenixdBackend(process.env.PHOENIXD_URL, process.env.PHOENIXD_PASSWORD ?? "")
+    : process.env.LND_URL
+      ? new LndBackend(process.env.LND_URL, process.env.LND_MACAROON ?? "", process.env.LND_CA)
+      : undefined;
   const s = await createKeyServer({
+    ln,
     mints,
     port: Number(process.env.PORT ?? 3400),
     ledger: openLedger(process.env.LEDGER_DB ?? "keys.db"),
