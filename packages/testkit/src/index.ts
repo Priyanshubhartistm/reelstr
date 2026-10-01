@@ -106,3 +106,35 @@ export function cleanup() {
 export { FakeLightning } from "./fake-ln";
 export { startFakeMint } from "./fake-mint";
 export { startFakeNwc } from "./fake-nwc";
+
+/**
+ * Start the real Nutshell mint (Python, installed in .venv-mint) with its FakeWallet Lightning
+ * backend. This is the reference Cashu mint implementation, not our own test double, so wallets
+ * tested against it are tested against real NUT behaviour. Returns null if it is not installed.
+ */
+export async function startNutshell(opts: { port?: number } = {}) {
+  const bin = join(ROOT, ".venv-mint/bin/mint");
+  if (!(await Bun.file(bin).exists())) return null;
+  const port = opts.port ?? freePort();
+  const dir = tempDir("reelstr-nutshell-");
+  const proc = Bun.spawn([bin], {
+    env: {
+      ...process.env,
+      MINT_BACKEND_BOLT11_SAT: "FakeWallet",
+      MINT_LISTEN_HOST: "127.0.0.1",
+      MINT_LISTEN_PORT: String(port),
+      MINT_PRIVATE_KEY: "reelstr-test-only-key",
+      MINT_DATABASE: dir,
+      CASHU_DIR: dir,
+      FAKEWALLET_BRR: "TRUE",
+      FAKEWALLET_DELAY_PAYMENT: "FALSE",
+      FAKEWALLET_STOCHASTIC_INVOICE: "FALSE",
+      MINT_INPUT_FEE_PPK: "0",
+    },
+    stdout: "ignore",
+    stderr: "ignore",
+  });
+  procs.push(proc);
+  await waitFor(async () => (await fetch(`http://127.0.0.1:${port}/v1/info`)).ok, "nutshell", 200);
+  return { url: `http://127.0.0.1:${port}`, port, stop: () => proc.kill() };
+}

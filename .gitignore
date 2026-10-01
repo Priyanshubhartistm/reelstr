@@ -10,3 +10,4 @@ infra/blossom/node_modules/
 infra/blossom/data/
 services/crew/bin/
 services/crew/data/
+.venv-mint/

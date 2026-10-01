@@ -1,0 +1,5 @@
+# Real Cashu mint (Nutshell) for tests. Python 3.12: coincurve has no 3.14 wheel.
+#   uv venv --python 3.12 .venv-mint && uv pip install --python .venv-mint/bin/python -r requirements-mint.txt
+cashu==0.21.0
+marshmallow<4
+limits<4

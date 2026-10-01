@@ -14,6 +14,8 @@ export interface Invoice {
   paymentHash: string;
   description?: string;
   paymentSecret?: string;
+  /** node pubkey recovered from the signature (33-byte compressed hex) */
+  payee: string;
 }
 
 // msat per unit: 1 BTC = 1e11 msat; m = 1e-3 BTC = 1e8 msat, u = 1e5, n = 100, p = 0.1
@@ -29,6 +31,15 @@ const intWords = (n: number, len?: number) => {
   return w;
 };
 const wordsToInt = (w: number[]) => w.reduce((a, x) => a * 32 + x, 0);
+
+/** sha256(hrp || 5-bit data zero-padded to bytes): the message every BOLT11 signature covers. */
+function signingHash(hrp: string, dataWords: number[]): Uint8Array {
+  const bits =
+    dataWords.map((w) => w.toString(2).padStart(5, "0")).join("") +
+    "0".repeat((8 - ((dataWords.length * 5) % 8)) % 8);
+  const bytes = Uint8Array.from((bits.match(/.{8}/g) ?? []).map((b) => Number.parseInt(b, 2)));
+  return sha256(new Uint8Array([...new TextEncoder().encode(hrp), ...bytes]));
+}
 
 /** Decode a BOLT11 invoice (does not verify the signature; callers that need it must). */
 export function decodeInvoice(invoice: string): Invoice {
@@ -47,6 +58,7 @@ export function decodeInvoice(invoice: string): Invoice {
     timestamp: wordsToInt(words.slice(0, 7)),
     expirySec: 3600,
     paymentHash: "",
+    payee: "",
   };
   let i = 7;
   const end = words.length - 104; // trailing 65-byte signature
@@ -62,6 +74,23 @@ export function decodeInvoice(invoice: string): Invoice {
     else if (type === 16) out.paymentSecret = bytesToHex(Uint8Array.from(bech32.fromWords(data)));
   }
   if (!out.paymentHash) throw new Error("invoice has no payment hash");
+  // signature: 64 bytes r||s then 1 byte recovery id. Recover the payee and require it to verify.
+  const sigBytes = Uint8Array.from(bech32.fromWords(words.slice(end)));
+  const sig = sigBytes.slice(0, 64);
+  const recid = sigBytes[64] ?? 99;
+  if (recid > 3) throw new Error("invalid recovery id in signature");
+  const noble = new Uint8Array(65);
+  noble[0] = recid;
+  noble.set(sig, 1);
+  try {
+    out.payee = bytesToHex(
+      secp256k1.recoverPublicKey(noble, signingHash(prefix, words.slice(0, end)), {
+        prehash: false,
+      }),
+    );
+  } catch {
+    throw new Error("invoice signature does not recover to a public key");
+  }
   return out;
 }
 
@@ -85,13 +114,14 @@ export function encodeInvoice(o: {
   tag(16, toWords(hexToBytes(o.paymentSecret ?? o.paymentHash)));
   tag(13, toWords(new TextEncoder().encode(o.description ?? "reelstr")));
   tag(6, intWords(o.expirySec ?? 3600));
-  // signing data: hrp bytes || 5-bit words zero-padded into whole bytes
-  const bits =
-    words.map((w) => w.toString(2).padStart(5, "0")).join("") +
-    "0".repeat((8 - ((words.length * 5) % 8)) % 8);
-  const bytes = Uint8Array.from((bits.match(/.{8}/g) ?? []).map((b) => Number.parseInt(b, 2)));
-  const msg = sha256(new Uint8Array([...new TextEncoder().encode(hrp), ...bytes]));
-  const sig = secp256k1.sign(msg, o.nodeKey, { prehash: false, format: "recovered" });
+  const rec = secp256k1.sign(signingHash(hrp, words), o.nodeKey, {
+    prehash: false,
+    format: "recovered",
+  });
+  // noble returns recid || r || s; BOLT11 wants r || s || recid
+  const sig = new Uint8Array(65);
+  sig.set(rec.slice(1), 0);
+  sig[64] = rec[0] as number;
   return bech32.encode(hrp, [...words, ...toWords(sig)], 2048);
 }
 
