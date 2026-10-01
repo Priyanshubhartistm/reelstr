@@ -20,7 +20,7 @@ import {
   credits,
   type Ev,
   earnings,
-  Indexer,
+  type Indexer,
   inbox,
   rankInbox,
   ratingSummary,
@@ -29,6 +29,7 @@ import {
   storyTree,
   verifications,
 } from "../src";
+import { openIx } from "./open";
 
 afterAll(cleanup);
 
@@ -62,7 +63,7 @@ async function snapshot(ix: Indexer) {
 
 describe("ingest", () => {
   test("valid fixtures are stored, invalid ones rejected with reasons, duplicates ignored", async () => {
-    const ix = await Indexer.open();
+    const ix = await openIx();
     for (const v of load("valid")) expect((await ix.ingest(v.event)).result).toBe("stored");
     for (const v of load("invalid")) {
       const r = await ix.ingest(v.event);
@@ -79,7 +80,7 @@ describe("ingest", () => {
   }, 60_000);
 
   test("a tampered event and a forged follow list are rejected", async () => {
-    const ix = await Indexer.open();
+    const ix = await openIx();
     const v = load("valid").find((x) => x.f === "story.json")?.event as Ev;
     expect((await ix.ingest({ ...v, content: "evil" })).result).toBe("rejected");
     const k = sk();
@@ -98,7 +99,7 @@ describe("ingest", () => {
 
 describe("graph queries", () => {
   async function world() {
-    const ix = await Indexer.open();
+    const ix = await openIx();
     const a = sk(),
       b = sk(),
       cur = sk(),
@@ -181,7 +182,7 @@ describe("graph queries", () => {
   }, 60_000);
 
   test("credits: seconds and shares per recipient, totals exactly 100%", async () => {
-    const ix = await Indexer.open();
+    const ix = await openIx();
     for (const v of load("valid")) await ix.ingest(v.event);
     const cut = load("valid").find((x) => x.f === "cut.json")?.event as Ev;
     const c = await credits(ix.db, cut.id);
@@ -196,7 +197,7 @@ describe("graph queries", () => {
   }, 60_000);
 
   test("earnings: seconds used, episodes, and sats paid per the payout receipt", async () => {
-    const ix = await Indexer.open();
+    const ix = await openIx();
     for (const v of load("valid")) await ix.ingest(v.event);
     const cut = load("valid").find((x) => x.f === "cut.json")?.event as Ev;
     const creatorA = (cut.tags.find((t) => t[0] === "scene") as string[])[5] as string;
@@ -235,7 +236,7 @@ describe("graph queries", () => {
       [v1, v2],
       [v2, v1],
     ]) {
-      const ix = await Indexer.open();
+      const ix = await openIx();
       for (const e of order) await ix.ingest(e);
       const rows = await ix.db.query<{ title: string }>("select title from cuts");
       expect(rows.map((r) => r.title)).toEqual(["new"]);
@@ -245,7 +246,7 @@ describe("graph queries", () => {
   }, 60_000);
 
   test("rebuild from `events` reproduces every derived table exactly (BE-4)", async () => {
-    const ix = await Indexer.open();
+    const ix = await openIx();
     for (const v of load("valid")) await ix.ingest(v.event);
     const before = await snapshot(ix);
     expect(before.length).toBeGreaterThan(500);
@@ -299,7 +300,7 @@ describe("web of trust (BE-5)", () => {
   });
 
   test("zaps break ties within a hop; scenes already in a Cut are not in the inbox", async () => {
-    const ix = await Indexer.open();
+    const ix = await openIx();
     const cur = sk(),
       a = sk(),
       b = sk(),
@@ -358,11 +359,11 @@ describe("follow relays", () => {
     const relay = await startRelay();
     const pool = new RelayPool();
     for (const v of load("valid")) await pool.publish(v.event, [relay.url]);
-    const one = await Indexer.open();
+    const one = await openIx();
     await one.follow([relay.url]);
     const snap1 = await snapshot(one);
     expect(one.counts.stored).toBe(load("valid").length);
-    const two = await Indexer.open();
+    const two = await openIx();
     await two.follow([relay.url]);
     expect(await snapshot(two)).toBe(snap1);
     expect(cutD("the-vault", 3)).toBe("the-vault:ep-003");
@@ -375,7 +376,7 @@ describe("follow relays", () => {
 describe("labels in the index (FE-11, FE-13, Source Verified)", () => {
   const T2 = 1_790_100_000;
   test("ratings: one per rater, newest wins, average and count; other apps' labels are ignored", async () => {
-    const ix = await Indexer.open();
+    const ix = await openIx();
     const cutId = "a".repeat(64);
     const cutCoord = `31811:${"b".repeat(64)}:s:ep-001`;
     const [u1, u2, u3] = [sk(), sk(), sk()];
@@ -417,7 +418,7 @@ describe("labels in the index (FE-11, FE-13, Source Verified)", () => {
   }, 60_000);
 
   test("reports count distinct reporters; verifications can be filtered to trusted verifiers", async () => {
-    const ix = await Indexer.open();
+    const ix = await openIx();
     const target = "c".repeat(64);
     const author = "d".repeat(64);
     const [r1, r2, v1, v2] = [sk(), sk(), sk(), sk()];
@@ -474,7 +475,7 @@ describe("live subscription covers every indexed kind", () => {
   test("ratings, reports and verifications published to a relay reach a running indexer", async () => {
     const relay = await startRelay();
     const pool = new RelayPool();
-    const ix = await Indexer.open();
+    const ix = await openIx();
     await ix.follow([relay.url]); // subscribed before anything is published
     const [a, b, c] = [sk(), sk(), sk()];
     const cutId = "9".repeat(64);
@@ -531,7 +532,7 @@ describe("events with old timestamps are still indexed (regression: since:now dr
   test("a clock-skewed or backfilled event published after the indexer started is indexed", async () => {
     const relay = await startRelay();
     const pool = new RelayPool();
-    const ix = await Indexer.open();
+    const ix = await openIx();
     await ix.follow([relay.url]);
     const author = sk();
     const old = Math.floor(Date.now() / 1000) - 3 * 86400;

@@ -16,8 +16,8 @@ export class Indexer {
   readonly counts: Record<IngestResult, number> = { stored: 0, duplicate: 0, rejected: 0 };
   private constructor(readonly db: Db) {}
 
-  static async open(url?: string) {
-    const db = await openDb(url);
+  static async open(url?: string, opts: { schema?: string } = {}) {
+    const db = await openDb(url, opts);
     await migrate(db);
     return new Indexer(db);
   }

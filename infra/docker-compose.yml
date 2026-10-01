@@ -20,7 +20,7 @@ services:
     restart: unless-stopped
 
   postgres:
-    image: postgres:17-alpine
+    image: docker.io/library/postgres:17-alpine
     environment:
       POSTGRES_USER: reelstr
       POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-reelstr-dev}"
@@ -31,7 +31,7 @@ services:
 
   # Cashu mint for development only: FakeWallet mints without real Lightning. Never point real funds at it.
   mint:
-    image: cashubtc/nutshell:latest
+    image: docker.io/cashubtc/nutshell:latest
     command: ["poetry", "run", "mint"]
     environment:
       MINT_BACKEND_BOLT11_SAT: FakeWallet

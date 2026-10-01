@@ -97,7 +97,7 @@ describe("reference relay (NP-3)", () => {
       story: { pubkey: pk, d: "s" },
     });
     await expect(pool.publish(await s.signEvent(tpl), [gated])).rejects.toThrow(/pow/);
-    const mined = await s.signEvent(withPow(tpl, 8, pk));
+    const mined = await s.signEvent(await withPow(tpl, 8, pk));
     expect((await pool.publish(mined, [gated])).ok).toEqual([gated]);
     // a Story is not gated
     expect((await pool.publish(fixture("story"), [gated])).ok).toEqual([gated]);
@@ -144,4 +144,159 @@ describe("signers (FE-1)", () => {
         .id,
     ).toBeTruthy();
   });
+});
+
+describe("created_at limits advertised and enforced", () => {
+  test("NIP-11 states the window; events inside it (even old) are accepted, absurd ones refused", async () => {
+    const info = (await (
+      await fetch(open.replace("ws", "http"), { headers: { Accept: "application/nostr+json" } })
+    ).json()) as {
+      limitation: { created_at_lower_limit: number; created_at_upper_limit: number };
+    };
+    expect(info.limitation.created_at_lower_limit).toBe(10 * 365 * 24 * 3600);
+    expect(info.limitation.created_at_upper_limit).toBe(3600);
+    const s = LocalSigner.generate();
+    const now = Math.floor(Date.now() / 1000);
+    const story = (at: number) =>
+      s.signEvent({
+        kind: KIND.STORY,
+        created_at: at,
+        tags: [
+          ["d", `t${at}`],
+          ["title", "t"],
+          ["license", "CC0-1.0"],
+          ["t", "reelstr"],
+        ],
+        content: "l",
+      });
+    expect((await pool.publish(await story(now - 5 * 86400), [open])).ok).toEqual([open]); // backfilled
+    expect((await pool.publish(await story(now + 600), [open])).ok).toEqual([open]); // slightly fast clock
+    await expect(pool.publish(await story(now + 7200), [open])).rejects.toThrow(
+      /future|too|timestamp/i,
+    );
+    await expect(pool.publish(await story(now - 11 * 365 * 86400), [open])).rejects.toThrow(
+      /past|old|too|timestamp/i,
+    );
+  });
+});
+
+describe("publishing survives a dead connection", () => {
+  test("a relay restart (or a dropped idle socket) is recovered with one reconnect; a refusal is not retried", async () => {
+    const port = freePort();
+    const startOn = async () => {
+      const db = mkdtempSync(join(tmpdir(), "reelstr-relay-"));
+      dirs.push(db);
+      const p = Bun.spawn([BIN], {
+        env: { ...process.env, PORT: String(port), DB_PATH: db, POW_BITS: "0" },
+        stdout: "ignore",
+        stderr: "ignore",
+      });
+      procs.push(p);
+      for (let i = 0; i < 50; i++) {
+        try {
+          if (
+            (
+              await fetch(`http://127.0.0.1:${port}`, {
+                headers: { Accept: "application/nostr+json" },
+              })
+            ).ok
+          )
+            return p;
+        } catch {}
+        await Bun.sleep(100);
+      }
+      throw new Error("relay did not start");
+    };
+    const url = `ws://127.0.0.1:${port}`;
+    const first = await startOn();
+    const p2 = new RelayPool();
+    const s = LocalSigner.generate();
+    const mk = (n: string) =>
+      s.signEvent({
+        kind: KIND.STORY,
+        created_at: Math.floor(Date.now() / 1000),
+        tags: [
+          ["d", n],
+          ["title", n],
+          ["license", "CC0-1.0"],
+          ["t", "reelstr"],
+        ],
+        content: "l",
+      });
+    expect((await p2.publish(await mk("one"), [url])).ok).toEqual([url]);
+    first.kill(); // the pooled socket is now dead
+    await first.exited;
+    await startOn(); // same address, new process
+    const rep = await p2.publish(await mk("two"), [url]);
+    expect(rep.ok).toEqual([url]);
+    expect(
+      (await p2.query([url], { kinds: [KIND.STORY] })).map(
+        (e) => e.tags.find((t) => t[0] === "d")?.[1],
+      ),
+    ).toEqual(["two"]);
+    // a refusal comes straight back: one attempt, no reconnect storm
+    const t0 = Date.now();
+    await expect(
+      p2.publish(
+        await s.signEvent({
+          kind: 1,
+          created_at: Math.floor(Date.now() / 1000),
+          tags: [],
+          content: "x",
+        }),
+        [url],
+      ),
+    ).rejects.toThrow(/blocked/);
+    expect(Date.now() - t0).toBeLessThan(2000);
+    p2.close([url]);
+  }, 60_000);
+});
+
+import { getEventHash } from "nostr-tools/pure";
+import { leadingZeroBits } from "../src";
+
+describe("NIP-13 mining", () => {
+  test("leadingZeroBits counts like NIP-13 (including partial hex digits)", () => {
+    expect(leadingZeroBits("ffff")).toBe(0);
+    expect(leadingZeroBits("7fff")).toBe(1);
+    expect(leadingZeroBits("0fff")).toBe(4);
+    expect(leadingZeroBits("00ff")).toBe(8);
+    expect(leadingZeroBits("0001")).toBe(15);
+    expect(leadingZeroBits("0000")).toBe(16);
+    expect(leadingZeroBits("1000")).toBe(3);
+  });
+
+  test("mined events really have the difficulty, replace a stale nonce, and bits <= 0 is a no-op", async () => {
+    const pk = await LocalSigner.generate().getPublicKey();
+    const tpl = {
+      kind: 34236,
+      created_at: 1_790_000_000,
+      tags: [
+        ["t", "reelstr"],
+        ["nonce", "5", "99"],
+      ],
+      content: "x",
+    };
+    const mined = await withPow(tpl, 12, pk);
+    expect(mined.tags.filter((t) => t[0] === "nonce")).toHaveLength(1);
+    expect(mined.tags.find((t) => t[0] === "nonce")?.[2]).toBe("12");
+    expect(leadingZeroBits(getEventHash({ ...mined, pubkey: pk }))).toBeGreaterThanOrEqual(12);
+    expect(await withPow(tpl, 0, pk)).toBe(tpl);
+  });
+
+  test("mining yields to the event loop: timers and other work keep running while it searches", async () => {
+    const pk = await LocalSigner.generate().getPublicKey();
+    let ticks = 0;
+    const timer = setInterval(() => ticks++, 5);
+    const t0 = Date.now();
+    // several mines so one lucky nonce cannot make the run trivially short (16 bits ~ 65k hashes each)
+    for (let i = 0; i < 6; i++)
+      await withPow({ kind: 1, created_at: 1 + i, tags: [], content: `yield ${i}` }, 16, pk);
+    const ms = Date.now() - t0;
+    clearInterval(timer);
+    console.log(`mined 6 x 16 bits in ${ms} ms with ${ticks} timer ticks meanwhile`);
+    // a blocking miner lets the 5 ms timer fire ~0 times; a yielding one keeps it running throughout
+    expect(ms).toBeGreaterThan(300);
+    expect(ticks).toBeGreaterThan(Math.floor(ms / 50));
+  }, 60_000);
 });

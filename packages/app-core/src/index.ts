@@ -82,6 +82,33 @@ export class ReelstrClient {
     return ev;
   }
 
+  private powCache: Promise<number> | null = null;
+
+  /**
+   * PoW to mine into a scene: the highest NIP-11 `limitation.min_pow_difficulty` among our relays
+   * (so a PoW-gated relay works without configuration), never less than an explicit `powBits`.
+   * A relay that cannot be reached for its info document just contributes 0.
+   */
+  requiredPow(): Promise<number> {
+    this.powCache ??= (async () => {
+      const asked = await Promise.all(
+        this.cfg.relays.map(async (r) => {
+          try {
+            const res = await fetch(r.replace(/^ws/, "http"), {
+              headers: { Accept: "application/nostr+json" },
+            });
+            const j = (await res.json()) as { limitation?: { min_pow_difficulty?: number } };
+            return Number(j.limitation?.min_pow_difficulty ?? 0) || 0;
+          } catch {
+            return 0;
+          }
+        }),
+      );
+      return Math.max(this.cfg.powBits ?? 0, ...asked);
+    })();
+    return this.powCache;
+  }
+
   async me() {
     return this.cfg.signer.getPublicKey();
   }
@@ -168,7 +195,8 @@ export class ReelstrClient {
       gen: o.gen,
       commissioner: o.commissioner,
     });
-    if (this.cfg.powBits) tpl = withPow(tpl, this.cfg.powBits, pk);
+    const bits = await this.requiredPow();
+    if (bits) tpl = await withPow(tpl, bits, pk);
     return { template: tpl, ingest: r };
   }
 

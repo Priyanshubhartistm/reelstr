@@ -12,10 +12,13 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/fiatjaf/eventstore/badger"
 	"github.com/fiatjaf/khatru"
+	"github.com/fiatjaf/khatru/policies"
 	"github.com/nbd-wtf/go-nostr"
+	"github.com/nbd-wtf/go-nostr/nip11"
 	"github.com/nbd-wtf/go-nostr/nip13"
 )
 
@@ -56,6 +59,16 @@ func main() {
 	relay.Info.Name = "reelstr-relay"
 	relay.Info.Description = "Reelstr reference relay: kind allowlist and PoW floor"
 	relay.Info.SupportedNIPs = []any{1, 9, 11, 13, 40}
+	// advertise the PoW floor (NIP-11 limitation.min_pow_difficulty) so clients can mine it unprompted;
+	// note it applies to Scene events only, which is what this relay enforces
+	// the limits advertised here are the ones enforced below: timestamps within 10 years back and
+	// 1 hour ahead (backfilled or clock-skewed events are fine, nonsense timestamps are not)
+	const maxPast, maxFuture = 10 * 365 * 24 * time.Hour, time.Hour
+	relay.Info.Limitation = &nip11.RelayLimitationDocument{
+		MinPowDifficulty:    powBits,
+		CreatedAtLowerLimit: int64(maxPast.Seconds()),
+		CreatedAtUpperLimit: int64(maxFuture.Seconds()),
+	}
 
 	db := &badger.BadgerBackend{Path: dbPath}
 	if err := db.Init(); err != nil {
@@ -66,6 +79,10 @@ func main() {
 	relay.DeleteEvent = append(relay.DeleteEvent, db.DeleteEvent)
 	relay.ReplaceEvent = append(relay.ReplaceEvent, db.ReplaceEvent)
 
+	relay.RejectEvent = append(relay.RejectEvent,
+		policies.PreventTimestampsInThePast(maxPast),
+		policies.PreventTimestampsInTheFuture(maxFuture),
+	)
 	relay.RejectEvent = append(relay.RejectEvent, func(ctx context.Context, ev *nostr.Event) (bool, string) {
 		if !allowed[ev.Kind] {
 			return true, fmt.Sprintf("blocked: kind %d is not a Reelstr kind", ev.Kind)

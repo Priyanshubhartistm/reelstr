@@ -214,6 +214,7 @@ export function Crew() {
                     run(async () => {
                       await releaseDraft(d as never, {
                         signer: c.cfg.signer,
+                        powBits: await c.requiredPow(),
                         publish: (ev) => c.pool.publish(ev, c.cfg.relays),
                       });
                     }, `Released "${s.title}".`)

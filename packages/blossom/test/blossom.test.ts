@@ -159,6 +159,38 @@ describe("blossom client (BUD-01/02/04/11)", () => {
     }
   });
 
+  test("a connection reset on a pooled socket is retried (uploads are idempotent); HTTP errors are not", async () => {
+    let calls = 0;
+    const flaky = new BlossomClient("http://flaky.test", signer, async (_u, init) => {
+      calls++;
+      if (calls <= 2) throw new TypeError("The socket connection was closed unexpectedly");
+      const b = init?.body as Uint8Array;
+      return new Response(
+        JSON.stringify({ url: "http://flaky.test/x", sha256: sha256Hex(b), size: b.length }),
+        { status: 200 },
+      );
+    });
+    const bytes = new TextEncoder().encode("retry me");
+    expect((await flaky.upload(bytes, "video/mp4")).sha256).toBe(sha256Hex(bytes));
+    expect(calls).toBe(3);
+    // an answer from the server (here 500) is never retried
+    let hits = 0;
+    const bad = new BlossomClient("http://bad.test", signer, async () => {
+      hits++;
+      return new Response("nope", { status: 500 });
+    });
+    await expect(bad.upload(bytes, "video/mp4")).rejects.toThrow(/500/);
+    expect(hits).toBe(1);
+    // a server that never answers gives up after three tries
+    let dead = 0;
+    const down = new BlossomClient("http://down.test", signer, async () => {
+      dead++;
+      throw new TypeError("fetch failed");
+    });
+    await expect(down.has("a".repeat(64))).rejects.toThrow();
+    expect(dead).toBe(3);
+  });
+
   test("delete removes a blob", async () => {
     const tmp = new TextEncoder().encode(`to delete ${Math.random()}`);
     const d = await A.upload(tmp, "video/mp4");

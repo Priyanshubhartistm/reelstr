@@ -40,6 +40,28 @@ function checkDescriptor(d: BlobDescriptor, expectedSha: string, what: string): 
   return d;
 }
 
+/**
+ * Retry a request that failed at the network level (connection reset, stale keep-alive socket).
+ * Every Blossom call here is idempotent (blobs are addressed by their hash), so repeating one is
+ * safe. HTTP error statuses are answers, not network failures, and are never retried.
+ */
+async function netRetry<T>(f: () => Promise<T>, tries = 3): Promise<T> {
+  for (let i = 1; ; i++) {
+    try {
+      return await f();
+    } catch (e) {
+      const msg = String((e as Error).message ?? e);
+      const network =
+        e instanceof TypeError ||
+        /ECONNRESET|socket connection was closed|connection closed|ECONNREFUSED|fetch failed/i.test(
+          msg,
+        );
+      if (!network || i >= tries) throw e;
+      await new Promise((r) => setTimeout(r, 100 * i));
+    }
+  }
+}
+
 export class BlossomClient {
   readonly server: string;
   constructor(
@@ -55,16 +77,19 @@ export class BlossomClient {
   /** BUD-02 upload. The server's answer is checked against the locally computed hash. */
   async upload(bytes: Uint8Array, contentType: string): Promise<BlobDescriptor> {
     const sha256 = sha256Hex(bytes);
-    const res = await this.fetchFn(`${this.server}/upload`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": contentType,
-        "Content-Length": String(bytes.length),
-        "X-SHA-256": sha256,
-        Authorization: await authHeader(this.signer, "upload", { sha256 }),
-      },
-      body: bytes as unknown as BodyInit,
-    });
+    // a fresh authorization per attempt: it carries an expiry and is cheap to sign
+    const res = await netRetry(async () =>
+      this.fetchFn(`${this.server}/upload`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": contentType,
+          "Content-Length": String(bytes.length),
+          "X-SHA-256": sha256,
+          Authorization: await authHeader(this.signer, "upload", { sha256 }),
+        },
+        body: bytes as unknown as BodyInit,
+      }),
+    );
     if (!res.ok)
       throw new Error(
         `upload to ${this.server} failed: ${res.status} ${res.headers.get("x-reason") ?? (await res.text())}`,
@@ -78,14 +103,16 @@ export class BlossomClient {
 
   /** BUD-04 mirror: ask this server to copy a blob from `url`. Servers MAY refuse. */
   async mirror(url: string, sha256: string): Promise<BlobDescriptor> {
-    const res = await this.fetchFn(`${this.server}/mirror`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: await authHeader(this.signer, "upload", { sha256 }),
-      },
-      body: JSON.stringify({ url }),
-    });
+    const res = await netRetry(async () =>
+      this.fetchFn(`${this.server}/mirror`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: await authHeader(this.signer, "upload", { sha256 }),
+        },
+        body: JSON.stringify({ url }),
+      }),
+    );
     if (!res.ok)
       throw new Error(
         `mirror to ${this.server} failed: ${res.status} ${res.headers.get("x-reason") ?? (await res.text())}`,
@@ -98,21 +125,25 @@ export class BlossomClient {
   }
 
   async has(sha256: string): Promise<boolean> {
-    const res = await this.fetchFn(`${this.server}/${sha256}`, { method: "HEAD" });
+    const res = await netRetry(async () =>
+      this.fetchFn(`${this.server}/${sha256}`, { method: "HEAD" }),
+    );
     return res.ok;
   }
 
   async list(pubkey: string): Promise<BlobDescriptor[]> {
-    const res = await this.fetchFn(`${this.server}/list/${pubkey}`);
+    const res = await netRetry(async () => this.fetchFn(`${this.server}/list/${pubkey}`));
     if (!res.ok) throw new Error(`list failed: ${res.status}`);
     return (await res.json()) as BlobDescriptor[];
   }
 
   async delete(sha256: string): Promise<void> {
-    const res = await this.fetchFn(`${this.server}/${sha256}`, {
-      method: "DELETE",
-      headers: { Authorization: await authHeader(this.signer, "delete", { sha256 }) },
-    });
+    const res = await netRetry(async () =>
+      this.fetchFn(`${this.server}/${sha256}`, {
+        method: "DELETE",
+        headers: { Authorization: await authHeader(this.signer, "delete", { sha256 }) },
+      }),
+    );
     if (!res.ok) throw new Error(`delete failed: ${res.status}`);
   }
 

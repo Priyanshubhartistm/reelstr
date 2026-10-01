@@ -1,4 +1,4 @@
-import type { NostrEvent, Signer } from "@reelstr/nostr";
+import { type NostrEvent, type Signer, withPow } from "@reelstr/nostr";
 import { type EventLike, KIND, parseScene, validateEvent } from "@reelstr/protocol";
 import type { VerifiedEvent } from "nostr-tools/pure";
 import { Relay } from "nostr-tools/relay";
@@ -150,21 +150,22 @@ export async function releaseDraft(
     publish: (ev: NostrEvent) => Promise<unknown>;
     /** override the parent, e.g. when an earlier draft was itself released under a new id */
     parentId?: string;
+    /**
+     * NIP-13 bits the public relays require. Release signs a NEW event (new id), so any proof of
+     * work mined into the draft no longer counts and must be redone for the released copy.
+     */
+    powBits?: number;
   },
 ): Promise<NostrEvent> {
   const who = await o.signer.getPublicKey();
   if (draft.pubkey !== who) throw new Error("only the author can release their own draft");
   const tags = draft.tags
-    .filter((t) => t[0] !== "h")
+    .filter((t) => t[0] !== "h" && t[0] !== "nonce") // the old nonce is meaningless for the new id
     .map((t) =>
       o.parentId && t[0] === "e" && t[3] === "parent" ? ["e", o.parentId, t[2] ?? "", "parent"] : t,
     );
-  const ev = await o.signer.signEvent({
-    kind: draft.kind,
-    created_at: now(),
-    tags,
-    content: draft.content,
-  });
+  const tpl = { kind: draft.kind, created_at: now(), tags, content: draft.content };
+  const ev = await o.signer.signEvent(o.powBits ? await withPow(tpl, o.powBits, who) : tpl);
   const v = validateEvent(ev, { verifySig: true });
   if (!v.ok) throw new Error(`draft is not publishable: ${v.errors.join("; ")}`);
   parseScene(ev); // throws if it is not a well-formed scene

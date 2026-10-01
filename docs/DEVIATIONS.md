@@ -35,6 +35,22 @@ Nothing from PRD section 6 is dropped. Where the research (`docs/research.md`, 2
 - **The split service refuses to start without `acknowledgeCustody`.** It holds viewers' money between unlock and payout.
 - **Chat in a room has no defined order inside one second** (Nostr timestamps are seconds); clients sort by time then id.
 
+## Found by testing against real systems
+
+- **BOLT11:** my first invoice encoder produced signatures the real Nutshell mint rejected ("Invalid recovery id"), and my decoder never checked signatures. Both fixed; the decoder now recovers the payee key and is tested against three genuine invoices from the BOLT #11 spec.
+- **Real mint fees:** the Nutshell mint charged a 1 sat fee (reserve 2) on a 21 sat melt. My fake mint charged nothing, which hid it.
+- **phoenixd:** reading its own source (`Api.kt`) showed `payments/incoming/{hash}` answers `204 No Content` for an unknown hash and `payinvoice` answers `200` with `{reason}` and no preimage on failure. My backend would have crashed on the first and treated the second as success.
+- **Audio tail loss:** ffmpeg's `loudnorm` dropped up to ~70 ms of tail audio on some scenes (audio shorter than its video), leaving a gap at joins. Replaced with a measured static gain (`gainFor`) that has no tail loss.
+- **Render speed:** the first single-process render took 94 s for a 2-minute episode against a 60 s target. Multi-threaded x264 is not reproducible (different bytes for identical input), so each ladder rung is its own single-threaded ffmpeg, run concurrently, with cheap deterministic settings: about 36 s.
+- **Indexer subscription:** the live subscription asked for `since: now-5`, silently dropping any event whose `created_at` was older than the moment it subscribed (clock-skewed clients, late relaying, backfill). It now subscribes without `since` and relies on idempotent ingest.
+- **Release into a PoW relay:** releasing a crew draft signs a new event, which voids any proof of work mined into the draft, so release to a PoW-gated relay always failed. Release now re-mines.
+- **PoW mining froze the event loop:** nostr-tools' synchronous miner blocked a process long enough for a relay to drop its connection; `withPow` is now async and yields.
+- **Relay advertises what it enforces:** NIP-11 now carries `min_pow_difficulty` and the `created_at` window, and the client reads the PoW floor and mines it unprompted. Before, the compose default (16 bits) and the client default (0) could not work together.
+- **Blossom container segfaulted on Node 24** (exit 139, about 40% of fresh containers) with `better-sqlite3` 11.x; the image now uses Node 22 LTS (14 of 14 fresh containers fine). The same module runs natively on Node 24.10 without issue, so this is an image-level finding.
+- **Postgres vs PGlite:** node-postgres returns `bigint` as strings and PGlite as numbers; the indexer now returns numbers on both.
+- **Media service auth:** the shared bearer token (visible in the browser) is gone. Requests are NIP-98 signed and bound to URL, method and body; jobs belong to their creator; there is a per-key rate limit, a queue cap, a request size cap, and an allowlist of source hosts (the service used to fetch any URL it was given: SSRF).
+- **compose:** unqualified image names fail under podman; they are now `docker.io/...`.
+
 ## Protocol choices not in the PRD
 
 - Cut `audio-bed` tag takes an optional 4th element: the bed's share of the creator pool in bps (default 1000). This lets a curator change the default and keeps weights recomputable.

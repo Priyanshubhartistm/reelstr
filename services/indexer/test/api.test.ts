@@ -3,12 +3,13 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { type Ev, Indexer } from "../src";
 import { createApi } from "../src/server";
+import { openIx } from "./open";
 
 const FIX = join(import.meta.dir, "../../../packages/protocol/fixtures/valid");
 const events = readdirSync(FIX).map(
   (f) => (JSON.parse(readFileSync(join(FIX, f), "utf8")) as { event: Ev }).event,
 );
-const ix = await Indexer.open();
+const ix = await openIx();
 for (const e of events) await ix.ingest(e);
 const srv = createApi(ix, 0);
 const base = `http://127.0.0.1:${srv.port}`;

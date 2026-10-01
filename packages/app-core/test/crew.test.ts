@@ -67,7 +67,7 @@ describe("crew rooms (NP-4, FE-12)", () => {
       signer: alice,
       publish: (ev) => pool.publish(ev, [pub.url]),
     });
-    expect(released.id).not.toBe(draft.id);
+    expect(released.id).not.toBe(draft.id); // the room tag is gone, so this is a different event
     expect(released.tags.some((t) => t[0] === "h")).toBe(false);
     expect(validateEvent(released, { verifySig: true }).ok).toBe(true);
     expect((await pool.query([pub.url], { kinds: [KIND.SCENE] })).map((x) => x.id)).toEqual([
@@ -102,4 +102,33 @@ describe("crew rooms (NP-4, FE-12)", () => {
     );
     room.close();
   }, 30_000);
+});
+
+describe("release into a PoW-gated public relay (regression)", () => {
+  test("a released copy has a new id, so it must be re-mined; without powBits the relay refuses it", async () => {
+    const gated = await startRelay({ powBits: 8 });
+    const alice = LocalSigner.generate();
+    const pa = await alice.getPublicKey();
+    const { withPow } = await import("@reelstr/nostr");
+    // the draft itself was mined (as prepareScene does) and posted to the room
+    const draft = await alice.signEvent(await withPow(draftTemplate(pa, "c"), 8, pa));
+    expect(draft.id.startsWith("0")).toBe(true);
+    await expect(
+      releaseDraft(draft as never, {
+        signer: alice,
+        publish: (ev) => pool.publish(ev, [gated.url]),
+      }),
+    ).rejects.toThrow(/pow/);
+    const released = await releaseDraft(draft as never, {
+      signer: alice,
+      powBits: 8,
+      publish: (ev) => pool.publish(ev, [gated.url]),
+    });
+    expect(released.id.startsWith("0")).toBe(true);
+    expect(released.tags.filter((t) => t[0] === "nonce")).toHaveLength(1); // exactly the new one
+    expect((await pool.query([gated.url], { kinds: [KIND.SCENE] })).map((e) => e.id)).toEqual([
+      released.id,
+    ]);
+    pool.close([gated.url]);
+  }, 60_000);
 });

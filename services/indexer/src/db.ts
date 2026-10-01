@@ -10,9 +10,26 @@ export interface Db {
 }
 
 /** PGlite (embedded, for dev/tests) by default; real Postgres when `url` is a postgres:// URL. */
-export async function openDb(url?: string): Promise<Db> {
+export async function openDb(url?: string, opts: { schema?: string } = {}): Promise<Db> {
   if (url?.startsWith("postgres")) {
-    const pool = new pg.Pool({ connectionString: url });
+    // node-postgres returns bigint (counts, timestamps, msats) as strings; PGlite returns numbers. Make
+    // them match: every bigint we store (unix seconds, msats, sats) is far below 2^53.
+    const types = {
+      getTypeParser: ((oid: number, format?: "text" | "binary") =>
+        oid === 20
+          ? (v: string) => Number(v)
+          : pg.types.getTypeParser(oid, format as "text")) as never,
+    };
+    const pool = new pg.Pool({
+      connectionString: url,
+      options: opts.schema ? `-c search_path=${opts.schema}` : undefined,
+      types,
+    });
+    if (opts.schema) {
+      if (!/^[a-z_][a-z0-9_]*$/.test(opts.schema))
+        throw new Error("schema must be a plain identifier");
+      await pool.query(`create schema if not exists ${opts.schema}`);
+    }
     const wrap = (c: {
       query: (s: string, p?: unknown[]) => Promise<{ rows: unknown[] }>;
     }): Db => ({
@@ -39,7 +56,12 @@ export async function openDb(url?: string): Promise<Db> {
           c.release();
         }
       },
-      close: () => pool.end(),
+      close: async () => {
+        // a throwaway test schema is dropped on close; a real deployment passes no schema
+        if (opts.schema?.startsWith("test_"))
+          await pool.query(`drop schema if exists ${opts.schema} cascade`);
+        await pool.end();
+      },
     };
   }
   const lite = new PGlite(url && url !== "memory" ? url : undefined);

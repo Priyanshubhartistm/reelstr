@@ -6,7 +6,7 @@ import { createApi } from "@reelstr/indexer/src/server";
 import { probe } from "@reelstr/media";
 import { ingestScene, renderAndPublish } from "@reelstr/media-service";
 import { createMediaServer } from "@reelstr/media-service/src/server";
-import { LocalSigner } from "@reelstr/nostr";
+import { LocalSigner, RelayPool } from "@reelstr/nostr";
 import { KIND, parseCut, parseScene, validateEvent } from "@reelstr/protocol";
 import { cleanup, startBlossom, startRelay, tempDir } from "@reelstr/testkit";
 import { makeClip } from "../../media/test/helpers";
@@ -224,4 +224,60 @@ describe("R0 end to end", () => {
       }),
     ).rejects.toThrow();
   });
+});
+
+describe("PoW-gated relay (NIP-11 min_pow_difficulty)", () => {
+  test("the client learns the floor from the relay's info document and mines it; an ungated relay costs nothing", async () => {
+    const gated = await startRelay({ powBits: 10 });
+    const info = (await (
+      await fetch(gated.url.replace("ws", "http"), {
+        headers: { Accept: "application/nostr+json" },
+      })
+    ).json()) as { limitation?: { min_pow_difficulty?: number } };
+    expect(info.limitation?.min_pow_difficulty).toBe(10);
+    const mkClient = (relays: string[]) =>
+      new ReelstrClient({
+        signer: LocalSigner.generate(),
+        relays,
+        blossom: A.url,
+        mediaUrl: `http://127.0.0.1:${media.port}`,
+      });
+    const c = mkClient([gated.url]);
+    expect(await c.requiredPow()).toBe(10);
+    // end to end: a scene published to the gated relay is accepted because the client mined enough PoW
+    await c.createStory({ d: "pow", title: "P", logline: "l" });
+    const pk = await c.me();
+    const clip = new Uint8Array(
+      await Bun.file(
+        await makeClip(join(dir, "pow.mp4"), {
+          size: "360x640",
+          fps: 30,
+          sec: 12,
+          freq: 380,
+          gainDb: -20,
+        }),
+      ).arrayBuffer(),
+    );
+    const s = await c.publishScene({
+      bytes: clip,
+      title: "mined",
+      prompt: "p",
+      story: { pubkey: pk, d: "pow" },
+    });
+    const got = await new RelayPool().query([gated.url], { kinds: [KIND.SCENE] });
+    expect(got.map((e) => e.id)).toEqual([s.event.id]);
+    expect(s.event.id.startsWith("00")).toBe(true); // 10 bits = at least 2 leading zero hex digits... 0b0000_0000_00
+    // an explicit floor wins when higher; an ungated relay needs none
+    expect(
+      await new ReelstrClient({
+        signer: LocalSigner.generate(),
+        relays: [gated.url],
+        blossom: A.url,
+        powBits: 12,
+      }).requiredPow(),
+    ).toBe(12);
+    expect(await mkClient([relay.url]).requiredPow()).toBe(0);
+    // an unreachable relay does not break publishing decisions
+    expect(await mkClient(["ws://127.0.0.1:1"]).requiredPow()).toBe(0);
+  }, 180_000);
 });

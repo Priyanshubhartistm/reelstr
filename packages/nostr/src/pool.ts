@@ -13,15 +13,41 @@ export interface PublishReport {
 export class RelayPool {
   private readonly pool = new SimplePool();
 
-  /** Publish to every relay; throws if fewer than `minAcks` accept (FE-2 wants 2+). */
+  /**
+   * Publish to every relay; throws if fewer than `minAcks` accept (FE-2 wants 2+). A relay that
+   * fails because its connection died (an idle socket dropped by the server or a proxy, or a relay
+   * restart) is reconnected and tried once more. A relay's own refusal ("blocked:", "pow:") is an
+   * answer and is never retried. Republishing the same signed event is harmless.
+   */
   async publish(event: NostrEvent, relays: string[], minAcks = 1): Promise<PublishReport> {
-    const results = await Promise.allSettled(this.pool.publish(relays, event));
+    const attempt = async (rs: string[]) => {
+      const results = await Promise.allSettled(this.pool.publish(rs, event));
+      return results.map((r, i) => ({
+        relay: rs[i] ?? "?",
+        ok: r.status === "fulfilled",
+        reason: r.status === "rejected" ? String((r.reason as Error)?.message ?? r.reason) : "",
+      }));
+    };
+    let outcome = await attempt(relays);
+    const dead = outcome.filter(
+      (o) =>
+        !o.ok &&
+        /connection closed|connection error|not connected|closed|ECONNRESET|ECONNREFUSED|timed out|WebSocket/i.test(
+          o.reason,
+        ) &&
+        !/blocked|pow:|invalid|rejected|rate/i.test(o.reason),
+    );
+    if (dead.length > 0) {
+      const urls = dead.map((d) => d.relay);
+      this.pool.close(urls); // drop the stale sockets so the next publish opens fresh ones
+      const retried = await attempt(urls);
+      outcome = outcome.map((o) => retried.find((r) => r.relay === o.relay) ?? o);
+    }
     const report: PublishReport = { event, ok: [], failed: [] };
-    results.forEach((r, i) => {
-      const relay = relays[i] ?? "?";
-      if (r.status === "fulfilled") report.ok.push(relay);
-      else report.failed.push({ relay, reason: String((r.reason as Error)?.message ?? r.reason) });
-    });
+    for (const o of outcome) {
+      if (o.ok) report.ok.push(o.relay);
+      else report.failed.push({ relay: o.relay, reason: o.reason });
+    }
     if (report.ok.length < minAcks)
       throw new Error(
         `published to ${report.ok.length}/${minAcks} required relays: ${report.failed.map((f) => `${f.relay}: ${f.reason}`).join("; ")}`,

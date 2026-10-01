@@ -6,7 +6,7 @@ Start here: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), [`docs/STATUS.md`](d
 
 ## Run the tests
 
-Needs bun, Go, ffmpeg, Python 3 and Chrome (for the browser tests).
+Needs bun, Go, ffmpeg, Python 3 and Chrome (for the browser tests). For tests against the real Cashu mint, also `uv venv --python 3.12 .venv-mint && uv pip install --python .venv-mint/bin/python -r requirements-mint.txt` (tests that need it skip with a warning if it is missing). Container tests need podman or Docker and the two images (see `infra/README.md`).
 
 ```sh
 bun install
