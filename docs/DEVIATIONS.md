@@ -13,7 +13,7 @@ Nothing from PRD section 6 is dropped. Where the research (`docs/research.md`, 2
 | "Source Verified" re-render badge | Means pinned-container same-arch re-render or perceptual match within threshold. Protocol only exposes `manifestEligibleForVerification`. | No evidence of cross-GPU bitwise reproducibility. |
 | CC-BY-SA default | Kept as the default license tag. UI and docs state it covers the human-authored layer only. | US Copyright Office Part 2; Creative Commons guidance on AI output. |
 | Split service as core custodian | Non-custodial zap-split tips are the default. Custodial split service (BE-7) is built, **off by default**, self-hostable. | FinCEN custody line; legal question unresolved. |
-| Client-side stitching of scenes for playback | Server-rendered continuous HLS per episode is the main path; MSE stitching is the fallback (BE-3). | hls.js #7680; per-clip AAC priming gaps (21-44 ms). |
+| Client-side stitching of scenes for playback | Server-rendered continuous HLS per episode is the main path; The fallback (BE-3) is built with two video elements, not MSE: free episodes only, 100-150 ms worst join gap. | hls.js #7680; per-clip AAC priming gaps (21-44 ms). |
 | Open-weight default model | Wan 2.2 (Apache-2.0). LTX-2.x behind a revenue-cap warning. MiniMax H3 excluded. | License terms verified against primary sources. |
 | cashu-ts 5.0.0-rc.11 | cashu-ts 4.11.0 (npm `latest`) until 5.0 is stable. | RC needed spec changes against current Nutshell. |
 

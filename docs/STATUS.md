@@ -42,6 +42,8 @@ Run: `bun run check` (lint, types, 185+ tests) and `bun run test:e2e` (7 headles
 | FE-12 crew rooms | real browser | Private draft, chat, invite, release; release re-mines PoW. |
 | FE-13 ratings | real browser | |
 | Agents page | real browser, mock model, real mint | Commission, review, accept, nutzap. |
+| US-K6 edit a published episode | real browser | Desk loads an episode, replaces scenes, publishes a new version. Progress and ratings are keyed by episode coordinate so they survive versions; reports and content-warning opt-ins stay per version. One early run saved progress 0 after a pause and never reproduced in 4 later passes (suspect: HlsPlayer start position is a player-effect dependency). |
+| Source Verified | real relay, mock model | `Verifier` follows the relay, re-renders eligible scenes, publishes a signed NIP-32 label (tested: one label, correct verifier and verdict; doctored seed gives mismatch via `verifyScene`). Studio shows the badge only for verifiers the viewer trusts (`reelstr.verifiers` in localStorage or `VITE_VERIFIERS`). No real open model has been re-rendered, and the badge is not covered by a browser test. |
 | Captions | real browser | WebVTT uploaded in the Desk, shown by the player with correct cue timing. Nothing *generates* captions. |
 
 ## Backend and media
@@ -50,7 +52,7 @@ Run: `bun run check` (lint, types, 185+ tests) and `bun run test:e2e` (7 headles
 | --- | --- | --- |
 | BE-1 normalizer | real | Output conforms; audio is as long as video (a `loudnorm` tail-loss bug was found and fixed). 12 s clip normalizes in about 4 s. |
 | BE-2 renderer | real | **2-minute episode renders in about 36 s** (target 60 s) on a 12-core machine; will be slower on a small VPS. Hash-stable. Near-silence at a join: 0.2 ms (target 20 ms). |
-| BE-3 client stitching fallback | **not built** | Server render is the only path. |
+| BE-3 client stitching fallback | real browser (Chrome) | Free episodes only (paid ones are encrypted, so there is nothing to stitch). Plays the trimmed scenes in two video elements when the rendered HLS is unreachable. Worst join gap measured **100 to 150 ms** (the HLS path is one frame). Warming the next decoder or starting early made it worse and was reverted. |
 | BE-4 indexer | real Postgres 17 + PGlite | Rebuild from relays alone reproduces every table. |
 | BE-5 web of trust | real | Seeded spam test under 5%. |
 | BE-6 key server | real mint (nutzap), fake Lightning (L402-style) | NIP-98 registration bound to the body. |
@@ -80,6 +82,6 @@ Run: `bun run check` (lint, types, 185+ tests) and `bun run test:e2e` (7 headles
 - **Safari/iPhone untested**, and all measured timings are on localhost, not a 4G network.
 - **Legal is not solved by code.** Custody, money transmission, India VDA tax, and likeness rules need a lawyer before the split service touches other people's money. The split service refuses to start without an explicit acknowledgement.
 - **Encrypted episodes use MPEG-TS**, because ffmpeg cannot encrypt fMP4. Any paying viewer can share the key.
-- **Blossom image runs Node 22**: on Node 24 it segfaulted intermittently. It is 889 MB (build tools included); slim it before shipping.
-- **Not built:** replacing a scene in a live episode has no UI (publishing a new Cut version works); fiat top-up; native apps (out of scope); caption generation.
+- **Blossom image runs Node 22**: on Node 24 it segfaulted intermittently. Multi-stage build, 411 MB (was 808); upload and fetch-by-hash checked on the built image.
+- **Not built:** fiat top-up; native apps (out of scope); caption generation.
 - **Not exercised:** the `mint` profile in compose (it is a dev-only FakeWallet mint; the real Nutshell is tested natively instead).

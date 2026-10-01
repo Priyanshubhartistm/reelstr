@@ -1269,7 +1269,8 @@ describe("Studio and Cinema in a real browser", () => {
     expect(times.length).toBeGreaterThan(100);
     expect(worst).toBeLessThan(400); // honest bound for a two-element swap; the server render is the gapless path
     // the first episode ends and playback moves on to the paid one, which must NOT play raw scenes
-    await v.page.waitForFunction((id) => location.hash.includes(id), paidCut.id, {
+    const paidD = paidCut.tags.find((t) => t[0] === "d")?.[1] as string;
+    await v.page.waitForFunction((d) => decodeURIComponent(location.hash).endsWith(d), paidD, {
       timeout: 30_000,
     });
     await v.page.getByText(/still being prepared/).waitFor({ timeout: 20_000 });

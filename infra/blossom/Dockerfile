@@ -1,9 +1,14 @@
-FROM node:22-bookworm-slim
+FROM node:22-bookworm-slim AS build
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ && rm -rf /var/lib/apt/lists/*
 COPY package.json ./
-RUN npm install --no-audit --no-fund && npm rebuild better-sqlite3
-COPY config.yml ./
+RUN npm install --omit=dev --no-audit --no-fund && npm rebuild better-sqlite3 && npm cache clean --force
+
+# runtime image: no compilers, only the built node_modules
+FROM node:22-bookworm-slim
+WORKDIR /app
+COPY --from=build /app/node_modules ./node_modules
+COPY package.json config.yml ./
 ENV PORT=3100 BLOSSOM_DATA=/data BLOSSOM_CONFIG=/app/config.yml BLOSSOM_PUBLIC_URL=http://localhost:3100
 VOLUME /data
 EXPOSE 3100

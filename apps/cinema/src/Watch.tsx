@@ -17,7 +17,7 @@ import {
 import { useRef, useState } from "react";
 import { Ratings, ReportButton } from "./Feedback";
 import { Credits, type CutRow, type SeriesRow } from "./Home";
-import { hiddenIds, isRevealed, reveal } from "./moderation";
+import { hiddenIds, isRevealed, reveal, unhide } from "./moderation";
 import { loadProgress, saveProgress } from "./progress";
 
 const tokenKey = (keyUrl: string) => `reelstr.unlock.${keyUrl}`;
@@ -156,8 +156,9 @@ export function Watch({ cutRef }: { cutRef: string }) {
             type="button"
             className="ghost"
             onClick={() => {
-              import("./moderation").then((m) => m.unhide((c as CutRow).id));
+              unhide((c as CutRow).id);
               setHidden(false);
+              bump((n) => n + 1); // hidden is derived from storage, so a no-op setHidden would not re-render
             }}
           >
             Show it again
