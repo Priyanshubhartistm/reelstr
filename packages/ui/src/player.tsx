@@ -22,20 +22,27 @@ export function HlsPlayer({
   captions?: { src: string; lang: string; label: string }[];
 }) {
   const ref = useRef<HTMLVideoElement>(null);
+  // The parent recomputes startAt and keyHeaders on every render. Reading them through refs keeps a
+  // re-render (rating, typing, a progress save) from tearing the player down and restarting it.
+  const live = useRef({ startAt, autoPlay, keyHeaders });
+  live.current = { startAt, autoPlay, keyHeaders };
+  const keySig = JSON.stringify(keyHeaders ?? null);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `keySig` stands for keyHeaders' content; the rest is read from `live`
   useEffect(() => {
     const v = ref.current;
     if (!v) return;
     let hls: Hls | undefined;
     const start = () => {
-      if (startAt > 0) v.currentTime = startAt;
-      if (autoPlay) void v.play().catch(() => {});
+      if (live.current.startAt > 0) v.currentTime = live.current.startAt;
+      if (live.current.autoPlay) void v.play().catch(() => {});
     };
     if (Hls.isSupported()) {
       hls = new Hls({
-        startPosition: startAt,
+        startPosition: live.current.startAt,
         xhrSetup: (xhr, url) => {
-          if (keyHeaders && /\/keys?\//.test(url))
-            for (const [k, val] of Object.entries(keyHeaders)) xhr.setRequestHeader(k, val);
+          const h = live.current.keyHeaders;
+          if (h && /\/keys?\//.test(url))
+            for (const [k, val] of Object.entries(h)) xhr.setRequestHeader(k, val);
         },
       });
       hls.loadSource(src);
@@ -46,7 +53,7 @@ export function HlsPlayer({
       v.addEventListener("loadedmetadata", start, { once: true });
     }
     return () => hls?.destroy();
-  }, [src, startAt, autoPlay, keyHeaders]);
+  }, [src, keySig]);
   return (
     // biome-ignore lint/a11y/useMediaCaption: captions are rendered from the `captions` prop below
     <video
