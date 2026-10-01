@@ -3,7 +3,7 @@ import { chromium } from "playwright-core";
 // Walks the running demo as a viewer: series list, free episode plays, paid one asks for sats.
 const out = process.argv[2] ?? ".";
 const browser = await chromium.launch({
-  executablePath: "/usr/bin/google-chrome",
+  executablePath: process.env.CHROME_PATH ?? "/usr/bin/google-chrome",
   headless: true,
   args: ["--no-sandbox", "--autoplay-policy=no-user-gesture-required"],
 });

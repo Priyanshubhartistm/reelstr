@@ -115,7 +115,7 @@ beforeAll(async () => {
   studioUrl = await serveApp("studio");
   cinemaUrl = await serveApp("cinema");
   browser = await chromium.launch({
-    executablePath: "/usr/bin/google-chrome",
+    executablePath: process.env.CHROME_PATH ?? "/usr/bin/google-chrome",
     headless: true,
     args: ["--no-sandbox", "--autoplay-policy=no-user-gesture-required"],
   });
@@ -166,6 +166,8 @@ async function newUser(
 }
 
 const T = 120_000;
+/** unique per run: stories from earlier runs on a reused relay must not collide by title */
+const RUN = Date.now().toString(36);
 
 const until = async <R>(f: () => Promise<R | undefined>, ms = 30_000): Promise<R> => {
   const end = Date.now() + ms;
@@ -217,10 +219,12 @@ describe("Studio and Cinema in a real browser", () => {
 
     // --- Studio: alice starts a story and adds the first scene
     const alice = await newUser(studioUrl);
-    await alice.page.getByLabel("Title").first().fill("E2E Heist");
+    await alice.page.getByLabel("Title").first().fill(`E2E Heist ${RUN}`);
     await alice.page.getByLabel("Logline").fill("A crew, a door, a clock.");
     await alice.page.getByRole("button", { name: "Create story" }).click();
-    await alice.page.getByRole("link", { name: /E2E Heist/ }).click({ timeout: T });
+    await alice.page
+      .getByRole("link", { name: new RegExp(`E2E Heist ${RUN}`) })
+      .click({ timeout: T });
     await alice.page.getByRole("button", { name: "Add the first scene" }).click();
     await alice.page.locator("#c-file").setInputFiles(clipA);
     await alice.page.locator("#c-title").fill("The door");
@@ -257,13 +261,13 @@ describe("Studio and Cinema in a real browser", () => {
     // --- Cinema: cara curates both scenes into an episode
     const cara = await newUser(cinemaUrl);
     await cara.page.getByRole("link", { name: "Curator desk" }).click();
-    await cara.page.locator("#d-story").selectOption({ label: "E2E Heist" });
+    await cara.page.locator("#d-story").selectOption({ label: `E2E Heist ${RUN}` });
     await cara.page.getByText("include scenes already used").click();
     await cara.page.getByRole("button", { name: "Add" }).first().waitFor({ timeout: T });
     await cara.page.getByRole("button", { name: "Add" }).nth(0).click();
     await cara.page.getByRole("button", { name: "Add" }).nth(1).click();
     await cara.page.locator("#m-slug").fill("e2e-heist");
-    await cara.page.locator("#m-st").fill("E2E Heist");
+    await cara.page.locator("#m-st").fill(`E2E Heist ${RUN}`);
     await cara.page.locator("#m-sum").fill("They reach the door.");
     await cara.page.locator("#m-t").fill("The door");
     await cara.page.locator("#m-f").fill("5");
@@ -292,7 +296,9 @@ describe("Studio and Cinema in a real browser", () => {
 
     // --- Cinema: a viewer opens the series and watches it
     const dan = await newUser(cinemaUrl);
-    await dan.page.getByRole("link", { name: /E2E Heist/ }).click({ timeout: T });
+    await dan.page
+      .getByRole("link", { name: new RegExp(`E2E Heist ${RUN}`) })
+      .click({ timeout: T });
     await dan.page.getByText(/Ep 1/).first().waitFor({ timeout: T });
     await dan.page.getByText("Credits and split").waitFor({ timeout: T });
     await dan.page.getByRole("link", { name: /Ep 1/ }).click();
@@ -571,7 +577,7 @@ describe("Studio and Cinema in a real browser", () => {
       });
     const creator = mk(LocalSigner.generate());
     const pk = await creator.me();
-    await creator.createStory({ d: "mod", title: "Mod Story", logline: "x" });
+    await creator.createStory({ d: "mod", title: `Mod Story ${RUN}`, logline: "x" });
     const clip = new Uint8Array(
       await Bun.file(
         await makeClip(join(dir, "mod.mp4"), {
@@ -611,7 +617,7 @@ describe("Studio and Cinema in a real browser", () => {
     });
     await creator.publishSeries({
       slug: "mod-series",
-      title: "Mod Series",
+      title: `Mod Series ${RUN}`,
       summary: "s",
       episodes: [1, 2],
       freeEpisodes: 2,
@@ -820,10 +826,12 @@ describe("Studio and Cinema in a real browser", () => {
     await agent.start(5);
 
     const u = await newUser(studioUrl);
-    await u.page.getByLabel("Title").first().fill("Agent Story");
+    await u.page.getByLabel("Title").first().fill(`Agent Story ${RUN}`);
     await u.page.getByLabel("Logline").fill("Made by a bot.");
     await u.page.getByRole("button", { name: "Create story" }).click();
-    await u.page.getByRole("link", { name: /Agent Story/ }).waitFor({ timeout: T });
+    await u.page
+      .getByRole("link", { name: new RegExp(`Agent Story ${RUN}`) })
+      .waitFor({ timeout: T });
 
     // fund the wallet from Studio (the real mint settles its own quotes)
     await u.page.locator("header.bar").getByRole("link", { name: "Wallet", exact: true }).click();
@@ -841,7 +849,7 @@ describe("Studio and Cinema in a real browser", () => {
     await u.page
       .locator("#ag-agent")
       .selectOption({ label: "browser-test-bot · 100 sats · mock-open-1" });
-    await u.page.locator("#ag-story").selectOption({ label: "Agent Story" });
+    await u.page.locator("#ag-story").selectOption({ label: `Agent Story ${RUN}` });
     await u.page.locator("#ag-prompt").fill("a neon alley in the rain");
     await u.page.locator("#ag-seed").fill("1234");
     await u.page.locator("#ag-dur").fill("6");
@@ -1293,7 +1301,7 @@ describe("Studio and Cinema in a real browser", () => {
       indexerUrl: endpoints.indexerUrl as string,
       keysUrl: keys.url,
     });
-    await creator.createStory({ d: "k6", title: "Revisions", logline: "x" });
+    await creator.createStory({ d: "k6", title: `Revisions ${RUN}`, logline: "x" });
     const bytes = async (n: string, f: number) =>
       new Uint8Array(
         await Bun.file(
@@ -1336,7 +1344,7 @@ describe("Studio and Cinema in a real browser", () => {
     });
     await creator.publishSeries({
       slug: "revs",
-      title: "Revisions",
+      title: `Revisions ${RUN}`,
       summary: "s",
       episodes: [1],
       freeEpisodes: 0,
@@ -1415,7 +1423,7 @@ describe("Studio and Cinema in a real browser", () => {
       .locator("header.bar")
       .getByText(`${cpk.slice(0, 8)}…`)
       .waitFor({ timeout: 30_000 });
-    await page.locator("#d-story").selectOption({ label: "Revisions" });
+    await page.locator("#d-story").selectOption({ label: `Revisions ${RUN}` });
     await page
       .getByLabel("Your published episodes")
       .selectOption({ label: "revs · Ep 1 · The cut" });
@@ -1486,7 +1494,7 @@ describe("Studio and Cinema in a real browser", () => {
       indexerUrl: endpoints.indexerUrl as string,
       keysUrl: keys.url,
     });
-    await creator.createStory({ d: "caps", title: "Spoken", logline: "x" });
+    await creator.createStory({ d: "caps", title: `Spoken ${RUN}`, logline: "x" });
     const wav = join(dir, "say.wav");
     await run("espeak-ng", [
       "-v",
@@ -1537,10 +1545,10 @@ describe("Studio and Cinema in a real browser", () => {
     );
     const page = await ctx.newPage();
     await page.goto(`${cinemaUrl}/#/desk`);
-    await page.locator("#d-story").selectOption({ label: "Spoken" });
+    await page.locator("#d-story").selectOption({ label: `Spoken ${RUN}` });
     await page.getByRole("button", { name: "Add" }).first().click({ timeout: 30_000 });
     await page.locator("#m-slug").fill("spoken");
-    await page.locator("#m-st").fill("Spoken");
+    await page.locator("#m-st").fill(`Spoken ${RUN}`);
     await page.locator("#m-sum").fill("s");
     await page.locator("#m-t").fill("Say it");
     await page.locator("#m-f").fill("5");

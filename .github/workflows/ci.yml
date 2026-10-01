@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# Tests that need the real Cashu mint, speech-to-text or the LND regtest images skip themselves
+# when those are missing. The mint is installed here; the other two are heavier and left out.
+jobs:
+  check:
+    name: lint, types, unit and integration tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+      - uses: actions/setup-go@v5
+        with:
+          go-version: 1.25.5
+      # Blossom segfaulted on Node 24 (see docs/STATUS.md): pin 22
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: astral-sh/setup-uv@v5
+      - name: System packages
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg espeak-ng
+      - name: Real Cashu mint (Nutshell)
+        run: |
+          uv venv --python 3.12 .venv-mint
+          uv pip install --python .venv-mint/bin/python -r requirements-mint.txt
+      - name: Install
+        run: |
+          bun install --frozen-lockfile
+          (cd infra/blossom && npm install --no-audit --no-fund && npm rebuild better-sqlite3)
+      - name: Check
+        run: bun run check
+
+  e2e:
+    name: browser tests (headless Chrome)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+      - uses: actions/setup-go@v5
+        with:
+          go-version: 1.25.5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: astral-sh/setup-uv@v5
+      - name: System packages
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg espeak-ng
+      - name: Real Cashu mint (Nutshell)
+        run: |
+          uv venv --python 3.12 .venv-mint
+          uv pip install --python .venv-mint/bin/python -r requirements-mint.txt
+      - name: Install
+        run: |
+          bun install --frozen-lockfile
+          (cd infra/blossom && npm install --no-audit --no-fund && npm rebuild better-sqlite3)
+      - name: Chrome
+        run: google-chrome --version
+      - name: E2E
+        run: bun run test:e2e

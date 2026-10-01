@@ -14,7 +14,7 @@ const studio = "http://127.0.0.1:5173";
 const cinema = "http://127.0.0.1:5174";
 const dir = tempDir("reelstr-demo-smoke-");
 const browser = await chromium.launch({
-  executablePath: "/usr/bin/google-chrome",
+  executablePath: process.env.CHROME_PATH ?? "/usr/bin/google-chrome",
   headless: true,
   args: ["--no-sandbox", "--autoplay-policy=no-user-gesture-required"],
 });
