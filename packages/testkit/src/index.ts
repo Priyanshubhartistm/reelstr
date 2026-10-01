@@ -108,6 +108,7 @@ export { FakeLightning } from "./fake-ln";
 export { startFakeMint } from "./fake-mint";
 export { startFakeNwc } from "./fake-nwc";
 export { startLndRegtest } from "./lnd-regtest";
+export { startNakBunker } from "./nak-bunker";
 
 /**
  * Start the real Nutshell mint (Python, installed in .venv-mint) with its FakeWallet Lightning

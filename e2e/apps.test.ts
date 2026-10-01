@@ -1660,4 +1660,132 @@ describe("Studio and Cinema in a real browser", () => {
     expect(u.errors).toEqual([]);
     await u.ctx.close();
   }, 300_000);
+
+  test("NIP-46 in the browser against the real nak bunker (not our test bunker)", async () => {
+    const { startNakBunker } = await import("@reelstr/testkit");
+    const { RelayPool } = await import("@reelstr/nostr");
+    const { getPublicKey } = await import("nostr-tools/pure");
+    const sk = crypto.getRandomValues(new Uint8Array(32));
+    const bunker = await startNakBunker({
+      relay: publicRelay,
+      secHex: Buffer.from(sk).toString("hex"),
+    });
+    if (!bunker) return console.log("nak e2e skipped: nak not installed");
+    const pk = getPublicKey(sk);
+    const probe = new RelayPool();
+    const ctx = await browser.newContext({ viewport: { width: 1000, height: 900 } });
+    await ctx.addInitScript(
+      ([e, m]) => {
+        localStorage.setItem("reelstr.endpoints", JSON.stringify(e));
+        localStorage.setItem("reelstr.mint", m as string);
+      },
+      [endpoints, mintUrl] as const,
+    );
+    const page = await ctx.newPage();
+    const errs: string[] = [];
+    page.on("pageerror", (e) => errs.push(e.message));
+    await page.goto(studioUrl);
+    await page.getByPlaceholder("bunker://… or name@domain").fill(bunker.uri);
+    await page.getByRole("button", { name: "Connect (NIP-46)" }).click();
+    await page
+      .locator("header.bar")
+      .getByText(`${pk.slice(0, 8)}…`)
+      .waitFor({ timeout: 60_000 });
+    const title = `Signed by nak ${RUN}`;
+    await page.getByLabel("Title").first().fill(title);
+    await page.getByLabel("Logline").fill("Remote signing, for real.");
+    await page.getByRole("button", { name: "Create story" }).click();
+    const titles = async () =>
+      (await probe.query([publicRelay], { kinds: [31810], authors: [pk] })).map(
+        (e) => e.tags.find((t) => t[0] === "title")?.[1],
+      );
+    for (let i = 0; i < 300 && !(await titles()).includes(title); i++) await Bun.sleep(200);
+    expect(await titles()).toContain(title);
+    expect(errs).toEqual([]);
+    bunker.stop();
+    probe.close([publicRelay]);
+    await ctx.close();
+  }, 300_000);
+
+  test("NIP-07 with the real nos2x extension: the key lives in the extension, the page only sees window.nostr", async () => {
+    const { existsSync } = await import("node:fs");
+    const { mkdtempSync } = await import("node:fs");
+    const { tmpdir } = await import("node:os");
+    const { RelayPool, LocalSigner: LS } = await import("@reelstr/nostr");
+    const ext = process.env.NOS2X_DIR ?? join(ROOT, ".cache", "nos2x", "extension");
+    // branded Chrome (the one the other tests use) ignores --load-extension: this needs Playwright's Chromium
+    if (!existsSync(join(ext, "background.build.js")))
+      return console.log("nos2x e2e skipped: run infra/extensions/fetch-nos2x.sh");
+    const key = LS.generate();
+    const pk = await key.getPublicKey();
+    const ctx = await chromium.launchPersistentContext(
+      mkdtempSync(join(tmpdir(), "reelstr-nos2x-")),
+      {
+        headless: false, // `--headless=new` below: no window on the desktop, and extensions still load
+        args: [
+          "--headless=new",
+          "--no-sandbox",
+          `--disable-extensions-except=${ext}`,
+          `--load-extension=${ext}`,
+        ],
+      },
+    );
+    try {
+      const sw =
+        ctx.serviceWorkers()[0] ?? (await ctx.waitForEvent("serviceworker", { timeout: 30_000 }));
+      const extId = new URL(sw.url()).host;
+      // put the user's key into the extension (its own options page), as a person would
+      const opts = await ctx.newPage();
+      await opts.goto(`chrome-extension://${extId}/options.html`);
+      await opts.locator("input[type=password], input[type=text]").first().fill(key.backup());
+      await opts.getByRole("button", { name: "save" }).click();
+      await opts.waitForTimeout(500);
+      await opts.close();
+
+      // every signing request opens a prompt window: approve it forever
+      ctx.on("page", async (p) => {
+        // the prompt window starts at about:blank, then navigates to prompt.html
+        await p.waitForURL(/prompt\.html/, { timeout: 5000 }).catch(() => {});
+        if (!p.url().includes("prompt.html")) return;
+        // "authorize forever" when reading the key, "authorize kind 31810 forever" when signing
+        await p.getByRole("button", { name: /^authorize (kind \d+ )?forever$/ }).click();
+      });
+      await ctx.addInitScript(
+        ([e, m]) => {
+          localStorage.setItem("reelstr.endpoints", JSON.stringify(e));
+          localStorage.setItem("reelstr.mint", m as string);
+        },
+        [endpoints, mintUrl] as const,
+      );
+      const page = await ctx.newPage();
+      const errs: string[] = [];
+      page.on("pageerror", (e) => errs.push(e.message));
+      await page.goto(studioUrl);
+      await page.getByRole("button", { name: "Use NIP-07 extension" }).click();
+      await page
+        .locator("header.bar")
+        .getByText(`${pk.slice(0, 8)}…`)
+        .waitFor({ timeout: 60_000 });
+      // the page never held the secret: it only has the extension's window.nostr
+      expect(
+        await page.evaluate(() => typeof (window as unknown as { nostr?: unknown }).nostr),
+      ).toBe("object");
+      const title = `Signed by nos2x ${RUN}`;
+      await page.getByLabel("Title").first().fill(title);
+      await page.getByLabel("Logline").fill("Signed in a real extension.");
+      await page.getByRole("button", { name: "Create story" }).click();
+      const probe = new RelayPool();
+      const titles = async () =>
+        (await probe.query([publicRelay], { kinds: [31810], authors: [pk] })).map(
+          (e) => e.tags.find((t) => t[0] === "title")?.[1],
+        );
+      for (let i = 0; i < 300 && !(await titles()).includes(title); i++) await Bun.sleep(200);
+      expect(await titles()).toContain(title);
+      expect(await page.content()).not.toContain(key.backup());
+      expect(errs).toEqual([]);
+      probe.close([publicRelay]);
+    } finally {
+      await ctx.close();
+    }
+  }, 300_000);
 });
