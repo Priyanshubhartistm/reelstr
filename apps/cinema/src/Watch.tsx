@@ -1,4 +1,12 @@
-import { go, HlsPlayer, useAsync, usePayments, useSession } from "@reelstr/ui";
+import {
+  type Clip,
+  go,
+  HlsPlayer,
+  SceneSequencePlayer,
+  useAsync,
+  usePayments,
+  useSession,
+} from "@reelstr/ui";
 import {
   keyHeaders,
   type Unlock,
@@ -164,8 +172,30 @@ export function Watch({ cutId }: { cutId: string }) {
           </button>
         </div>
       )}
-      {c && !hidden && !blurred && !c.hls_url && (
-        <p className="muted">This episode has no rendered video yet.</p>
+      {c && !hidden && !blurred && !c.hls_url && paid && (
+        // raw scene blobs are public, so playing them for a paid episode would bypass the paywall
+        <p className="muted">
+          This episode is still being prepared and will be available to unlock shortly.
+        </p>
+      )}
+      {c && !hidden && !blurred && !c.hls_url && !paid && (
+        <FallbackPlayer
+          cut={c}
+          startAt={start}
+          onProgress={(t) => {
+            if (t - last.current > 2) {
+              last.current = t;
+              saveProgress(c.id, t, {
+                series: c.series_slug,
+                title: `${c.series_slug} · Ep ${c.episode}`,
+              });
+            }
+          }}
+          onEnded={() => {
+            saveProgress(c.id, 0);
+            if (cut.data?.next) go("watch", cut.data.next.id);
+          }}
+        />
       )}
       {c?.hls_url && !locked && !hidden && !blurred && (
         <HlsPlayer
@@ -277,5 +307,50 @@ export function Watch({ cutId }: { cutId: string }) {
       {c && !hidden && <Credits cutId={c.id} priceSats={c.price} />}
       {c && !hidden && <Ratings cutId={c.id} cutCoord={c.coord} />}
     </div>
+  );
+}
+
+/**
+ * BE-3: an episode with no rendered HLS (yet) still plays: its scenes are played back to back from
+ * Blossom, trims applied. Not gapless like the render, and only offered for free episodes.
+ */
+function FallbackPlayer({
+  cut,
+  startAt,
+  onProgress,
+  onEnded,
+}: {
+  cut: CutRow;
+  startAt: number;
+  onProgress: (t: number) => void;
+  onEnded: () => void;
+}) {
+  const { client, endpoints } = useSession();
+  const scenes = useAsync(
+    async () =>
+      await (client as NonNullable<typeof client>).api<
+        { sha: string; in_sec: number; out_sec: number }[]
+      >(`/cuts/${cut.id}/scenes`),
+    [cut.id],
+  );
+  if (scenes.error) return <p className="error">{scenes.error}</p>;
+  if (!scenes.data) return <p className="muted">Loading…</p>;
+  const servers = [endpoints.blossom, ...(endpoints.mirrors ?? [])];
+  const clips: Clip[] = scenes.data.map((s) => ({
+    src: `${servers[0]}/${s.sha}.mp4`,
+    fallbacks: servers.slice(1).map((u) => `${u}/${s.sha}.mp4`),
+    inSec: Number(s.in_sec),
+    outSec: Number(s.out_sec),
+  }));
+  return (
+    <>
+      <SceneSequencePlayer
+        clips={clips}
+        startAt={startAt}
+        onProgress={(t) => onProgress(t)}
+        onEnded={onEnded}
+      />
+      <p className="muted">Playing scene by scene while the full episode is prepared.</p>
+    </>
   );
 }

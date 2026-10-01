@@ -2,6 +2,7 @@ export * from "./config";
 export * from "./hooks";
 export * from "./payments";
 export * from "./player";
+export * from "./sequence";
 export * from "./session";
 export * from "./split";
 export * from "./tree";

@@ -1,8 +1,7 @@
 import { computeWeights, type Weight } from "@reelstr/protocol";
-import { SplitTable, useAsync, useSession } from "@reelstr/ui";
+import { SceneSequencePlayer, SplitTable, useAsync, useSession } from "@reelstr/ui";
 import { useMemo, useState } from "react";
 import type { CutRow } from "./Home";
-import { TimelinePreview } from "./Preview";
 
 interface SceneRow {
   id: string;
@@ -326,7 +325,9 @@ export function Desk() {
             </li>
           ))}
         </ul>
-        <TimelinePreview
+        <SceneSequencePlayer
+          autoPlay={false}
+          maxWidth={260}
           clips={items.map((i) => ({ src: i.url, inSec: i.inSec, outSec: i.outSec }))}
         />
       </div>

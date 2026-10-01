@@ -1149,4 +1149,133 @@ describe("Studio and Cinema in a real browser", () => {
     pool.close([publicRelay]);
     console.log(`\n${out.join("\n")}\n`);
   }, 900_000);
+
+  test("BE-3 fallback: an episode with no rendition plays scene by scene; a paid one does not leak its raw scenes", async () => {
+    const mk = (who: LocalSigner) =>
+      new ReelstrClient({
+        signer: who,
+        relays: [publicRelay],
+        blossom: endpoints.blossom as string,
+        mirrors: endpoints.mirrors as string[],
+        mediaUrl: endpoints.mediaUrl as string,
+        indexerUrl: endpoints.indexerUrl as string,
+        keysUrl: keys.url,
+      });
+    const creator = mk(LocalSigner.generate());
+    const pk = await creator.me();
+    await creator.createStory({ d: "fb", title: "Fallback Story", logline: "x" });
+    const clip = new Uint8Array(
+      await Bun.file(
+        await makeClip(join(dir, "fb.mp4"), {
+          size: "360x640",
+          fps: 30,
+          sec: 12,
+          freq: 360,
+          gainDb: -20,
+        }),
+      ).arrayBuffer(),
+    );
+    const s1 = await creator.publishScene({
+      bytes: clip,
+      title: "F1",
+      prompt: "p",
+      story: { pubkey: pk, d: "fb" },
+    });
+    const src = { sha256: s1.ingest.normalized.sha256, urls: [s1.ingest.normalized.url] };
+    const scn = (n: number) =>
+      Array.from({ length: n }, (_, k) => ({
+        id: s1.event.id,
+        sha256: src.sha256,
+        inSec: k * 2,
+        outSec: k * 2 + 2,
+        payee: pk,
+      }));
+    const base = {
+      seriesSlug: "fb-series",
+      synopsis: "s",
+      scenes: scn(3),
+      scenesSources: [src, src, src],
+      curatorBps: 0,
+      hostBps: 0,
+      host: pk,
+      render: false,
+    };
+    // no rendered HLS for either episode
+    const freeCut = await creator.publishCut({
+      ...base,
+      episode: 1,
+      title: "Free no render",
+      price: { amount: 0 },
+      free: true,
+    });
+    const paidCut = await creator.publishCut({
+      ...base,
+      episode: 2,
+      title: "Paid no render",
+      price: { amount: 25 },
+    });
+    await creator.publishSeries({
+      slug: "fb-series",
+      title: "FB",
+      summary: "s",
+      episodes: [1, 2],
+      freeEpisodes: 1,
+    });
+    await until(
+      async () =>
+        (await creator.api<unknown[]>(`/cuts?series=fb-series&curator=${pk}`)).length === 2
+          ? true
+          : undefined,
+      20_000,
+    );
+
+    const v = await newUser(cinemaUrl);
+    await v.page.goto(`${cinemaUrl}/#/watch/${freeCut.id}`);
+    await v.page.getByTestId("scene-sequence").waitFor({ timeout: 30_000 });
+    await v.page.evaluate(() => {
+      const w = window as unknown as { __t: number[] };
+      w.__t = [];
+      for (const el of Array.from(
+        document.querySelectorAll("[data-testid=scene-sequence] video"),
+      ) as (HTMLVideoElement & {
+        requestVideoFrameCallback: (cb: (now: number) => void) => number;
+      })[]) {
+        const cb = (now: number) => {
+          w.__t.push(now);
+          el.requestVideoFrameCallback(cb);
+        };
+        el.requestVideoFrameCallback(cb);
+      }
+    });
+    // plays all three scenes (6 s), then the episode ends and (being the first of two) auto-advances
+    await v.page.waitForFunction(
+      () => /watch\//.test(location.hash) && document.body.innerText.includes("scene 3/3"),
+      null,
+      { timeout: 30_000 },
+    );
+    await v.page
+      .waitForFunction(() => (window as unknown as { __t: number[] }).__t.length > 150, null, {
+        timeout: 30_000,
+      })
+      .catch(() => {});
+    const times = await v.page.evaluate(() => (window as unknown as { __t: number[] }).__t);
+    const sorted = [...times].sort((a, b) => a - b);
+    const gaps = sorted.slice(1).map((t, i) => t - (sorted[i] as number));
+    const worst = Math.max(...gaps);
+    const big = gaps.filter((g) => g > 50).length;
+    console.log(
+      `BE-3 fallback: ${times.length} frames over 2 joins; worst gap ${worst.toFixed(0)} ms (1 frame = 33 ms), ${big} gaps over 50 ms`,
+    );
+    expect(times.length).toBeGreaterThan(100);
+    expect(worst).toBeLessThan(400); // honest bound for a two-element swap; the server render is the gapless path
+    // the first episode ends and playback moves on to the paid one, which must NOT play raw scenes
+    await v.page.waitForFunction((id) => location.hash.includes(id), paidCut.id, {
+      timeout: 30_000,
+    });
+    await v.page.getByText(/still being prepared/).waitFor({ timeout: 20_000 });
+    expect(await v.page.getByTestId("scene-sequence").count()).toBe(0);
+    expect(await v.page.locator("video").count()).toBe(0);
+    expect(v.errors).toEqual([]);
+    await v.ctx.close();
+  }, 300_000);
 });
