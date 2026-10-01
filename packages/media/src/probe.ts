@@ -92,3 +92,20 @@ export async function measureLoudness(path: string, inputArgs: string[] = []): P
     offset: Number(j.target_offset),
   };
 }
+
+/**
+ * Static gain (dB) that brings a measured clip to the target loudness without exceeding the
+ * true-peak ceiling. Silent input (measured near -70 LUFS or lower) is left alone. Replaces
+ * loudnorm's second pass, which dropped up to ~70 ms of tail audio on some inputs (measured), so
+ * audio ended before its video and left a gap at scene joins.
+ */
+export function gainFor(
+  m: { i: number; tp: number },
+  targetLufs: number,
+  ceilingDbtp: number,
+): number {
+  if (!Number.isFinite(m.i) || m.i < -60) return 0;
+  const want = targetLufs - m.i;
+  const room = ceilingDbtp - m.tp; // how much we can raise before the true peak passes the ceiling
+  return Math.round(Math.min(want, room) * 1000) / 1000;
+}

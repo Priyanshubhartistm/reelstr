@@ -57,3 +57,57 @@ describe("normalizeScene (BE-1)", () => {
     expect((await probe(join(d, "a.mp4"))).durationSec).toBeCloseTo(3, 1);
   }, 60_000);
 });
+
+import { gainFor, run } from "../src";
+
+describe("audio length and loudness gain (regression: loudnorm dropped tail audio)", () => {
+  test("every normalized scene keeps audio as long as its video, for several tones and levels", async () => {
+    const d = tmp();
+    for (const [i, [freq, gain]] of (
+      [
+        [300, -18],
+        [450, -18],
+        [600, -18],
+        [750, -18],
+        [1000, -30],
+        [180, -12],
+      ] as const
+    ).entries()) {
+      const raw = await makeClip(join(d, `r${i}.mp4`), {
+        size: "360x640",
+        fps: 30,
+        sec: 6,
+        freq,
+        gainDb: gain,
+      });
+      const out = join(d, `n${i}.mp4`);
+      await normalizeScene(raw, out);
+      const { stdout } = await run("ffmpeg", [
+        "-v",
+        "error",
+        "-i",
+        out,
+        "-map",
+        "0:a:0",
+        "-f",
+        "null",
+        "-progress",
+        "pipe:1",
+        "-nostats",
+        "-",
+      ]);
+      const audioSec =
+        ([...stdout.matchAll(/out_time_us=(\d+)/g)].map((m) => Number(m[1])).at(-1) ?? 0) / 1e6;
+      // AAC adds <= ~one frame of priming/padding; losing 60+ ms of tail was the bug
+      expect(audioSec).toBeGreaterThanOrEqual(5.99);
+      expect(audioSec).toBeLessThan(6.04);
+    }
+  }, 180_000);
+
+  test("gainFor: reaches the target, respects the true-peak ceiling, leaves silence alone", () => {
+    expect(gainFor({ i: -30, tp: -20 }, -14, -1)).toBe(16);
+    expect(gainFor({ i: -20, tp: -3 }, -14, -1)).toBe(2); // wants +6 but only 2 dB of headroom
+    expect(gainFor({ i: -70, tp: -80 }, -14, -1)).toBe(0);
+    expect(gainFor({ i: Number.NEGATIVE_INFINITY, tp: -80 }, -14, -1)).toBe(0);
+  });
+});

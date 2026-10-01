@@ -1,8 +1,8 @@
 import { mkdirSync, mkdtempSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
-import { DETERMINISTIC, TARGET } from "./normalize";
-import { measureLoudness, probe } from "./probe";
+import { deterministic, TARGET } from "./normalize";
+import { gainFor, measureLoudness, probe } from "./probe";
 import { hashFile, run } from "./run";
 
 export interface RenderScene {
@@ -33,6 +33,16 @@ export interface RenderOptions {
   outDir: string;
   segmentSec?: number;
   ladder?: Rung[];
+  /**
+   * x264 preset and thread count. x264 output is reproducible for a fixed (preset, threads), so these
+   * are part of what makes a rendition hash stable: change them and the hash changes.
+   */
+  preset?: string;
+  threads?: number;
+  /** ffmpeg filter-graph threads (scaling); 1 keeps filtering deterministic */
+  filterThreads?: number;
+  /** x264 params; the default favours render speed (see FAST_STREAM) */
+  x264Params?: string;
   /** AES-128: `keyUri` is written into the playlists; the key itself is never written to outDir. */
   encryption?: { key: Uint8Array; iv: Uint8Array; keyUri: string };
 }
@@ -51,7 +61,33 @@ export interface RenderResult {
   renditionHash: string;
 }
 
-const FADE = 0.04; // 40 ms out + 40 ms in around each join = ~80 ms dip that keeps A/V timing exact
+/** H.264 level_idc (two hex digits) for a frame size and rate, from the level limits table (A-1). */
+export function h264Level(width: number, height: number, fps: number): string {
+  const mbs = Math.ceil(width / 16) * Math.ceil(height / 16);
+  const table: [number, number, number][] = [
+    [0x1e, 40500, 1620],
+    [0x1f, 108000, 3600],
+    [0x20, 216000, 5120],
+    [0x28, 245760, 8192],
+    [0x2a, 522240, 8704],
+    [0x32, 589824, 22080],
+    [0x33, 983040, 36864],
+  ];
+  const hit =
+    table.find(([, maxRate, maxFs]) => mbs * fps <= maxRate && mbs <= maxFs) ??
+    (table.at(-1) as [number, number, number]);
+  return hit[0].toString(16).padStart(2, "0");
+}
+
+/** cheap but deterministic x264 settings for live-ish rendering: no B-frames, light motion search */
+export const FAST_STREAM = "ref=1:bframes=0:rc-lookahead=5:subme=1:me=dia";
+
+/**
+ * Click-free join: a short fade out of the old scene and in of the new one, with no overlap, so audio
+ * stays exactly aligned with the hard video cut. 8 ms keeps the silent moment at a join under the NFR
+ * limit of 20 ms (a longer 40 ms dip measured 85 ms of near-silence).
+ */
+const FADE = 0.008;
 /** Snap a time to the 30 fps frame grid so video and audio cut lengths match exactly. */
 export const snap = (s: number) => Math.round(s * TARGET.fps) / TARGET.fps;
 const num = (n: number) => n.toFixed(6);
@@ -165,108 +201,120 @@ export async function renderEpisode(o: RenderOptions): Promise<RenderResult> {
     writeFileSync(mixRaw, new Uint8Array(mix.buffer));
     const rawIn = ["-f", "f32le", "-ar", String(SR), "-ac", String(CH)];
 
-    // 2. loudness of the final mix, then one command: video concat, ladder, loudnorm, HLS
+    // 2. loudness of the final mix, then one ffmpeg per ladder rung, run concurrently. Each encoder is
+    //    single-threaded because multi-threaded x264 is not reproducible (measured: same input, different
+    //    hashes), so wall time comes from encoding the rungs in parallel, not from threads.
     const m = await measureLoudness(mixRaw, rawIn);
     const vparts = cuts.map(
       (c, i) =>
         `[${i}:v]trim=start=${num(c.inSec)}:end=${num(c.outSec)},setpts=PTS-STARTPTS,fps=${TARGET.fps},setsar=1[v${i}]`,
     );
     const concatV = `${cuts.map((_, i) => `[v${i}]`).join("")}concat=n=${cuts.length}:v=1:a=0[vcat]`;
-    const n = ladder.length;
-    const split = `[vcat]split=${n}${ladder.map((_, i) => `[s${i}]`).join("")}`;
-    const scales = ladder.map(
-      (r, i) => `[s${i}]scale=${r.width}:${r.height}:flags=lanczos,format=yuv420p[v${i}o]`,
-    );
     const wi = cuts.length;
     const aNorm =
-      `[${wi}:a]loudnorm=I=${TARGET.lufs}:TP=${TARGET.truePeak}:LRA=11:measured_I=${m.i}:measured_TP=${m.tp}:measured_LRA=${m.lra}:measured_thresh=${m.thresh}:offset=${m.offset}:linear=true,` +
-      `aresample=${TARGET.sampleRate},aformat=sample_fmts=fltp:channel_layouts=stereo,asplit=${n}${ladder.map((_, i) => `[a${i}o]`).join("")}`;
-    const fc = [...vparts, concatV, split, ...scales, aNorm].join(";");
-
-    const args = [
-      "-y",
-      "-hide_banner",
-      "-loglevel",
-      "error",
-      ...cuts.flatMap((c) => ["-i", c.path]),
-      ...rawIn,
-      "-i",
-      mixRaw,
-      "-filter_complex",
-      fc,
-    ];
-    ladder.forEach((r, i) => {
-      args.push("-map", `[v${i}o]`, "-map", `[a${i}o]`);
-      args.push(
-        `-c:v:${i}`,
-        "libx264",
-        `-profile:v:${i}`,
-        "high",
-        `-b:v:${i}`,
-        `${r.videoKbps}k`,
-        `-maxrate:v:${i}`,
-        `${Math.round(r.videoKbps * 1.2)}k`,
-        `-bufsize:v:${i}`,
-        `${r.videoKbps * 2}k`,
-      );
-      args.push(`-c:a:${i}`, "aac", `-b:a:${i}`, `${r.audioKbps}k`);
-    });
+      `[${wi}:a]volume=${gainFor(m, TARGET.lufs, TARGET.truePeak)}dB,` +
+      `aresample=${TARGET.sampleRate},aformat=sample_fmts=fltp:channel_layouts=stereo[ao]`;
     const gop = TARGET.fps * seg;
-    args.push(
-      "-preset",
-      "medium",
-      "-g",
-      String(gop),
-      "-keyint_min",
-      String(gop),
-      "-sc_threshold",
-      "0",
-      "-force_key_frames",
-      `expr:gte(t,n_forced*${seg})`,
-      "-r",
-      String(TARGET.fps),
-      "-fps_mode",
-      "cfr",
-      "-t",
-      num(total),
-      ...DETERMINISTIC,
-      "-filter_threads",
-      "1",
-      "-filter_complex_threads",
-      "1",
-    );
-    if (o.encryption) {
-      const keyFile = join(work, "enc.key");
-      writeFileSync(keyFile, o.encryption.key);
-      const info = join(work, "keyinfo");
-      writeFileSync(info, `${o.encryption.keyUri}\n${keyFile}\n${hex(o.encryption.iv)}\n`);
-      args.push("-hls_key_info_file", info);
-    }
-    for (let i = 0; i < n; i++) mkdirSync(join(o.outDir, `v${i}`), { recursive: true });
     // ffmpeg's HLS muxer cannot encrypt fMP4 ("Encrypted fmp4 not yet supported"), so encrypted
     // episodes use MPEG-TS segments (hls.js transmuxes them); clear episodes use CMAF fMP4.
     const ts = !!o.encryption;
-    args.push(
-      "-f",
-      "hls",
-      "-hls_time",
-      String(seg),
-      "-hls_playlist_type",
-      "vod",
-      ...(ts
-        ? ["-hls_segment_type", "mpegts"]
-        : ["-hls_segment_type", "fmp4", "-hls_fmp4_init_filename", "init.mp4"]),
-      "-hls_flags",
-      "independent_segments",
-      "-master_pl_name",
-      "master.m3u8",
-      "-var_stream_map",
-      ladder.map((_, i) => `v:${i},a:${i}`).join(" "),
-      "-hls_segment_filename",
-      join(o.outDir, "v%v", ts ? "seg_%05d.ts" : "seg_%05d.m4s"),
-      join(o.outDir, "v%v", "index.m3u8"),
-    );
-    await run("ffmpeg", args);
+    let keyInfo: string | undefined;
+    if (o.encryption) {
+      const keyFile = join(work, "enc.key");
+      writeFileSync(keyFile, o.encryption.key);
+      keyInfo = join(work, "keyinfo");
+      writeFileSync(keyInfo, `${o.encryption.keyUri}\n${keyFile}\n${hex(o.encryption.iv)}\n`);
+    }
+    const encodeRung = async (r: Rung, i: number) => {
+      const fc = [
+        ...vparts,
+        concatV,
+        `[vcat]scale=${r.width}:${r.height}:flags=lanczos,format=yuv420p[vo]`,
+        aNorm,
+      ].join(";");
+      mkdirSync(join(o.outDir, `v${i}`), { recursive: true });
+      await run("ffmpeg", [
+        "-y",
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        ...cuts.flatMap((c) => ["-i", c.path]),
+        ...rawIn,
+        "-i",
+        mixRaw,
+        "-filter_complex",
+        fc,
+        "-map",
+        "[vo]",
+        "-map",
+        "[ao]",
+        "-c:v",
+        "libx264",
+        "-profile:v",
+        "high",
+        "-b:v",
+        `${r.videoKbps}k`,
+        "-maxrate:v",
+        `${Math.round(r.videoKbps * 1.2)}k`,
+        "-bufsize:v",
+        `${r.videoKbps * 2}k`,
+        "-c:a",
+        "aac",
+        "-b:a",
+        `${r.audioKbps}k`,
+        "-preset",
+        o.preset ?? "veryfast",
+        "-x264-params",
+        o.x264Params ?? FAST_STREAM,
+        "-g",
+        String(gop),
+        "-keyint_min",
+        String(gop),
+        "-sc_threshold",
+        "0",
+        "-force_key_frames",
+        `expr:gte(t,n_forced*${seg})`,
+        "-r",
+        String(TARGET.fps),
+        "-fps_mode",
+        "cfr",
+        "-t",
+        num(total),
+        ...deterministic(1),
+        // filtering (decode, concat, scale) may use threads: it is deterministic, unlike the encoder
+        "-filter_threads",
+        String(o.filterThreads ?? 2),
+        "-filter_complex_threads",
+        String(o.filterThreads ?? 2),
+        ...(keyInfo ? ["-hls_key_info_file", keyInfo] : []),
+        "-f",
+        "hls",
+        "-hls_time",
+        String(seg),
+        "-hls_playlist_type",
+        "vod",
+        ...(ts
+          ? ["-hls_segment_type", "mpegts"]
+          : ["-hls_segment_type", "fmp4", "-hls_fmp4_init_filename", "init.mp4"]),
+        "-hls_flags",
+        "independent_segments",
+        "-hls_segment_filename",
+        join(o.outDir, `v${i}`, ts ? "seg_%05d.ts" : "seg_%05d.m4s"),
+        join(o.outDir, `v${i}`, "index.m3u8"),
+      ]);
+    };
+    await Promise.all(ladder.map(encodeRung));
+
+    // master playlist: highest rung first. Codec strings come from the encode settings (High profile,
+    // level from the H.264 table), not from probing, because encrypted rungs cannot be probed without the key.
+    const lines = ["#EXTM3U", "#EXT-X-VERSION:7", "#EXT-X-INDEPENDENT-SEGMENTS"];
+    for (const [i, r] of ladder.entries()) {
+      lines.push(
+        `#EXT-X-STREAM-INF:BANDWIDTH=${(r.videoKbps + r.audioKbps) * 1000},RESOLUTION=${r.width}x${r.height},FRAME-RATE=${TARGET.fps}.000,CODECS="avc1.6400${h264Level(r.width, r.height, TARGET.fps)},mp4a.40.2"`,
+        `v${i}/index.m3u8`,
+      );
+    }
+    writeFileSync(join(o.outDir, "master.m3u8"), `${lines.join("\n")}\n`);
 
     const files: RenderedFile[] = [];
     for (const f of walk(o.outDir).sort()) {

@@ -19,9 +19,10 @@ Nothing from PRD section 6 is dropped. Where the research (`docs/research.md`, 2
 
 ## Media pipeline choices
 
-- **Audio joins are a ~80 ms dip (40 ms fade-out + 40 ms fade-in), not an overlapping crossfade.** An overlap shortens the audio and desyncs it from the hard video cut; a dip keeps timing exact.
+- **Audio joins are a short fade (8 ms out, 8 ms in), not an overlapping crossfade, and not the PRD's ~80 ms.** An overlap shortens the audio and desyncs it from the hard video cut. The PRD asks for both an ~80 ms crossfade (BE-2) and an audio gap of at most 20 ms (NFR); an 80 ms dip measured 85 ms of near-silence, so the measurable NFR won.
 - **Audio is cut sample-exactly in code, not with ffmpeg's `concat`/`atrim`.** Measured: the concat filter sequenced whatever each segment decoded to and lost ~80 ms per join (0.17 s over 2 scenes), which would drift lipsync by half a second in a 10-scene episode. Each scene is now decoded to raw float PCM, cut or zero-padded to exactly `(out-in) * 48000` samples, faded and appended. Trims are snapped to the 30 fps frame grid so video and audio lengths agree.
 - **Encrypted episodes use MPEG-TS segments; clear episodes use CMAF fMP4.** ffmpeg 8.1's HLS muxer refuses to encrypt fMP4 ("Encrypted fmp4 not yet supported").
+- **Each ladder rung is its own single-threaded ffmpeg, run in parallel.** Multi-threaded x264 produced different bytes for identical input (measured), which breaks hash-stable renditions; sliced threads did too. Parallelism comes from encoding rungs concurrently, with cheap deterministic x264 settings (`FAST_STREAM`: no B-frames, light motion search). A 2-minute episode renders in about 37 s on a 12-core machine (the first, single-process version took 94 s).
 - Scene normalization uses two-pass loudnorm with `linear=true` (no dynamic compression). Output is bit-stable on the same ffmpeg build (bitexact flags, single-threaded encode), which is what makes a rendition hash reproducible.
 - Audio leads video by one AAC priming frame (~21 ms) in the encoded HLS; this is encoder delay, not drift, and is tested.
 

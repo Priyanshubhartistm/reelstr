@@ -1,4 +1,4 @@
-import { measureLoudness, type Probe, probe } from "./probe";
+import { gainFor, measureLoudness, type Probe, probe } from "./probe";
 import { run } from "./run";
 
 export const TARGET = {
@@ -18,7 +18,7 @@ export interface NormalizeOptions {
 }
 
 /** Filters that make output bit-for-bit reproducible on the same ffmpeg build. */
-export const DETERMINISTIC = [
+export const deterministic = (threads = 1) => [
   "-map_metadata",
   "-1",
   "-fflags",
@@ -28,8 +28,9 @@ export const DETERMINISTIC = [
   "-flags:a",
   "+bitexact",
   "-threads",
-  "1",
+  String(threads),
 ];
+export const DETERMINISTIC = deterministic(1);
 
 export const videoFilter = (fit: "crop" | "letterbox") =>
   (fit === "crop"
@@ -39,7 +40,7 @@ export const videoFilter = (fit: "crop" | "letterbox") =>
 
 /**
  * BE-1: transcode to 1080x1920, 30 fps CFR, H.264 High, AAC 48 kHz stereo, -14 LUFS / -1 dBTP
- * (two-pass loudnorm). Inputs with no audio get a silent track so later concats never drop audio.
+ * (measured, then a static gain). Inputs with no audio get a silent track so later concats never drop audio.
  */
 export async function normalizeScene(
   input: string,
@@ -57,7 +58,7 @@ export async function normalizeScene(
   if (src.audio) {
     const m = await measureLoudness(input);
     audioFilter =
-      `loudnorm=I=${TARGET.lufs}:TP=${TARGET.truePeak}:LRA=11:measured_I=${m.i}:measured_TP=${m.tp}:measured_LRA=${m.lra}:measured_thresh=${m.thresh}:offset=${m.offset}:linear=true,` +
+      `volume=${gainFor(m, TARGET.lufs, TARGET.truePeak)}dB,` +
       `aresample=${TARGET.sampleRate},aformat=sample_fmts=fltp:channel_layouts=stereo`;
   } else {
     args.push(

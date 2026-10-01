@@ -64,6 +64,14 @@ describe("renderEpisode (BE-2)", () => {
     expect(master.match(/#EXT-X-STREAM-INF/g)?.length).toBe(3);
     expect(master).toContain("RESOLUTION=1080x1920");
     expect(master).toContain("RESOLUTION=480x854");
+    // codec strings: High profile with the right level per rung (4.0 for 1080x1920@30, 3.1 for 720p, 3.1 for 480x854)
+    expect(master).toContain(
+      'RESOLUTION=1080x1920,FRAME-RATE=30.000,CODECS="avc1.640028,mp4a.40.2"',
+    );
+    expect(master).toContain(
+      'RESOLUTION=720x1280,FRAME-RATE=30.000,CODECS="avc1.64001f,mp4a.40.2"',
+    );
+    expect(master).toContain('RESOLUTION=480x854,FRAME-RATE=30.000,CODECS="avc1.64001f,mp4a.40.2"');
     const pl = readFileSync(join(d, "ep", "v0", "index.m3u8"), "utf8");
     expect(pl).toContain("#EXT-X-TARGETDURATION:2");
     expect(pl).toContain("#EXT-X-ENDLIST");
