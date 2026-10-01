@@ -7,7 +7,7 @@ How each thing was checked. Levels, strongest first:
 - **fake**: run against a test double I wrote, from the spec.
 - **untested**: code exists, nothing exercised it.
 
-Run: `bun run check` (lint, types, 188 tests) and `bun run test:e2e` (9 headless-Chrome tests). Browser tests also run against the compose containers with `E2E_COMPOSE=1` (start from fresh volumes: `podman-compose -p reelstr down -v`, because the tests are not idempotent against a relay that kept the last run's stories). Last run: all 9 pass natively and against compose, with the slim Blossom image. **Nothing here has touched a public relay, a real Lightning node, or real money.**
+Run: `bun run check` (lint, types, 191 tests) and `bun run test:e2e` (10 headless-Chrome tests). Browser tests also run against the compose containers with `E2E_COMPOSE=1` (start from fresh volumes: `podman-compose -p reelstr down -v`, because the tests are not idempotent against a relay that kept the last run's stories). Last run: all 10 pass natively (9 against compose, run before captions), with the slim Blossom image. **Nothing here has touched a public relay, a real Lightning node, or real money.**
 
 ## What talks to what
 
@@ -44,7 +44,7 @@ Run: `bun run check` (lint, types, 188 tests) and `bun run test:e2e` (9 headless
 | Agents page | real browser, mock model, real mint | Commission, review, accept, nutzap. |
 | US-K6 edit a published episode | real browser | Desk loads an episode, replaces scenes, publishes a new version. Progress and ratings are keyed by episode coordinate so they survive versions; reports and content-warning opt-ins stay per version. One early run saved progress 0 after a pause and never reproduced. Likely cause found and fixed: the player was rebuilt on any page re-render because `startAt` and `keyHeaders` were effect dependencies; it now initializes only when the source or key changes. **No test reproduces the old failure, so the fix is reasoned, not proven.** |
 | Source Verified | real relay, mock model | `Verifier` follows the relay, re-renders eligible scenes, publishes a signed NIP-32 label (tested: one label, correct verifier and verdict; doctored seed gives mismatch via `verifyScene`). Studio shows the badge only for verifiers the viewer trusts (`reelstr.verifiers` in localStorage or `VITE_VERIFIERS`). No real open model has been re-rendered, and the badge is not covered by a browser test. |
-| Captions | real browser | WebVTT uploaded in the Desk, shown by the player with correct cue timing. Nothing *generates* captions. |
+| Captions | real browser, real speech-to-text | WebVTT upload, and **generation**: the media service transcribes each trimmed scene locally (faster-whisper `small`, CPU, no data leaves the machine), times cues against the episode, and the Desk shows an editable draft before it is attached. Tested end to end with synthesized speech (espeak-ng). Accuracy on real human speech, accents and music is **untested**, and synthetic speech was misheard by the smaller model ("vault" as "fault"), which is why the draft is shown for editing. Needs `.venv-asr` (`requirements-asr.txt`); the media service returns an error without it. |
 
 ## Backend and media
 
@@ -83,5 +83,5 @@ Run: `bun run check` (lint, types, 188 tests) and `bun run test:e2e` (9 headless
 - **Legal is not solved by code.** Custody, money transmission, India VDA tax, and likeness rules need a lawyer before the split service touches other people's money. The split service refuses to start without an explicit acknowledgement.
 - **Encrypted episodes use MPEG-TS**, because ffmpeg cannot encrypt fMP4. Any paying viewer can share the key.
 - **Blossom image runs Node 22**: on Node 24 it segfaulted intermittently. Multi-stage build, 411 MB (was 808); upload and fetch-by-hash checked on the built image.
-- **Fiat top-up** is only a demo partner button (`VITE_FIAT_DEMO`), no real on-ramp. **Not built:** native apps (out of scope); caption generation.
+- **Fiat top-up** is only a demo partner button (`VITE_FIAT_DEMO`), no real on-ramp. **Not built:** native apps (out of scope).
 - **Not exercised:** the `mint` profile in compose (it is a dev-only FakeWallet mint; the real Nutshell is tested natively instead).

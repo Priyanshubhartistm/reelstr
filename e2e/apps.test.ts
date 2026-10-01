@@ -1469,4 +1469,109 @@ describe("Studio and Cinema in a real browser", () => {
     await ctx.close();
     await viewer.ctx.close();
   }, 900_000);
+
+  test("captions: the Desk generates a draft from real speech, the creator edits it, and the player shows the cues", async () => {
+    const { asrAvailable, run } = await import("@reelstr/media");
+    if (!(await asrAvailable()))
+      return console.log("captions e2e skipped: .venv-asr not installed");
+    const { LocalSigner: LS } = await import("@reelstr/nostr");
+    const key = LS.generate();
+    const pk = await key.getPublicKey();
+    const creator = new ReelstrClient({
+      signer: key,
+      relays: [publicRelay],
+      blossom: endpoints.blossom as string,
+      mirrors: endpoints.mirrors as string[],
+      mediaUrl: endpoints.mediaUrl as string,
+      indexerUrl: endpoints.indexerUrl as string,
+      keysUrl: keys.url,
+    });
+    await creator.createStory({ d: "caps", title: "Spoken", logline: "x" });
+    const wav = join(dir, "say.wav");
+    await run("espeak-ng", [
+      "-v",
+      "en-us",
+      "-s",
+      "150",
+      "The vault door is made of steel.",
+      "-w",
+      wav,
+    ]);
+    const clip = join(dir, "say.mp4");
+    await run("ffmpeg", [
+      "-y",
+      "-v",
+      "error",
+      "-f",
+      "lavfi",
+      "-i",
+      "color=c=blue:s=360x640:r=30:d=12",
+      "-i",
+      wav,
+      "-af",
+      "apad=pad_dur=12",
+      "-t",
+      "12",
+      "-c:v",
+      "libx264",
+      "-pix_fmt",
+      "yuv420p",
+      "-c:a",
+      "aac",
+      clip,
+    ]);
+    await creator.publishScene({
+      bytes: new Uint8Array(await Bun.file(clip).arrayBuffer()),
+      title: "Speech",
+      prompt: "p",
+      story: { pubkey: pk, d: "caps" },
+    });
+    const ctx = await browser.newContext({ viewport: { width: 1000, height: 1000 } });
+    await ctx.addInitScript(
+      ([e, m, k]) => {
+        localStorage.setItem("reelstr.endpoints", JSON.stringify(e));
+        localStorage.setItem("reelstr.mint", m as string);
+        localStorage.setItem("reelstr.localkey", k as string);
+      },
+      [endpoints, mintUrl, key.backup()] as const,
+    );
+    const page = await ctx.newPage();
+    await page.goto(`${cinemaUrl}/#/desk`);
+    await page.locator("#d-story").selectOption({ label: "Spoken" });
+    await page.getByRole("button", { name: "Add" }).first().click({ timeout: 30_000 });
+    await page.locator("#m-slug").fill("spoken");
+    await page.locator("#m-st").fill("Spoken");
+    await page.locator("#m-sum").fill("s");
+    await page.locator("#m-t").fill("Say it");
+    await page.locator("#m-f").fill("5");
+    await page.locator("#out0").fill("8");
+    await page.getByRole("button", { name: "Generate captions (draft)" }).click();
+    const draft = page.locator("#m-draft");
+    await draft.waitFor({ timeout: 180_000 });
+    expect((await draft.inputValue()).toLowerCase()).toContain("steel");
+    // the creator fixes what the model got wrong before it is attached
+    await draft.fill((await draft.inputValue()).replace(/fault|vault/i, "VAULT"));
+    await page.getByRole("button", { name: "Use these captions" }).click();
+    await page.getByText("Uploaded generated captions.").waitFor({ timeout: 30_000 });
+    await page.getByRole("button", { name: "Render and publish episode" }).click();
+    await page.getByText("Published episode 1.").waitFor({ timeout: 240_000 });
+    await ctx.close();
+
+    const viewer = await newUser(cinemaUrl);
+    await viewer.page.goto(
+      `${cinemaUrl}/#/watch/${encodeURIComponent(`31811:${pk}:spoken:ep-001`)}`,
+    );
+    await viewer.page.locator("video.player").waitFor({ timeout: T });
+    const cues = await viewer.page.evaluate(async () => {
+      const v = document.querySelector("video.player") as HTMLVideoElement;
+      const t = v.textTracks[0];
+      if (!t) return null;
+      t.mode = "showing";
+      for (let i = 0; i < 100 && (t.cues?.length ?? 0) === 0; i++)
+        await new Promise((r) => setTimeout(r, 100));
+      return Array.from(t.cues ?? []).map((c) => (c as VTTCue).text);
+    });
+    expect(cues?.join(" ")).toContain("VAULT");
+    await viewer.ctx.close();
+  }, 600_000);
 });

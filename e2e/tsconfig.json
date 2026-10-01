@@ -35,6 +35,9 @@
     },
     {
       "path": "../services/agent"
+    },
+    {
+      "path": "../packages/media"
     }
   ]
 }

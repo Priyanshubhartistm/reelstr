@@ -1,0 +1,5 @@
+# Local speech-to-text for caption generation (Python 3.12).
+#   uv venv --python 3.12 .venv-asr && uv pip install --python .venv-asr/bin/python -r requirements-asr.txt
+# av is pinned: faster-whisper 1.2.1 breaks on av 19 (metadata_errors)
+faster-whisper==1.2.1
+av==16.0.1

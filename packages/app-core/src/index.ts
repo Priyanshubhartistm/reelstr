@@ -274,6 +274,19 @@ export class ReelstrClient {
     return cut;
   }
 
+  /** Draft WebVTT captions for an episode (local speech-to-text on the media service). */
+  async generateCaptions(
+    scenes: { sha256: string; urls: string[]; inSec: number; outSec: number }[],
+  ) {
+    return this.mediaJob<{
+      url: string;
+      sha256: string;
+      language: string;
+      cues: number;
+      vtt: string;
+    }>("/captions", { scenes });
+  }
+
   /** Hand the episode key to the key server, authenticated as the curator (NIP-98). */
   async registerEpisodeKey(
     keysUrl: string,

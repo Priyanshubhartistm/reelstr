@@ -78,6 +78,7 @@
         "@reelstr/blossom": "workspace:*",
         "@reelstr/indexer": "workspace:*",
         "@reelstr/keys": "workspace:*",
+        "@reelstr/media": "workspace:*",
         "@reelstr/media-service": "workspace:*",
         "@reelstr/nostr": "workspace:*",
         "@reelstr/protocol": "workspace:*",

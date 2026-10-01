@@ -3,11 +3,13 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { type BlobDescriptor, type BlossomClient, fetchVerified } from "@reelstr/blossom";
 import {
+  captionScenes,
   type NormalizeOptions,
   normalizeScene,
   type Probe,
   type Rung,
   renderEpisode,
+  toVtt,
 } from "@reelstr/media";
 import { sha256Hex } from "@reelstr/protocol";
 
@@ -166,6 +168,39 @@ export async function renderAndPublish(job: RenderJob, hosts: Hosts): Promise<Re
     });
     const pub = await publishHls(out, hosts);
     return { ...pub, durationSec: r.durationSec, renditionHash: r.renditionHash };
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+export interface CaptionJob {
+  scenes: { sha256: string; urls: string[]; inSec: number; outSec: number }[];
+}
+export interface CaptionResult {
+  url: string;
+  sha256: string;
+  language: string;
+  cues: number;
+  /** the draft text, so the creator can read and fix it before publishing */
+  vtt: string;
+}
+
+/** Draft captions for an episode: transcribe each trimmed scene locally, upload the WebVTT. */
+export async function captionEpisode(job: CaptionJob, hosts: Hosts): Promise<CaptionResult> {
+  const dir = work();
+  try {
+    const scenes = [];
+    for (const [i, s] of job.scenes.entries()) {
+      const { bytes } = await fetchVerified(s.urls, s.sha256);
+      const path = join(dir, `${i}.bin`);
+      writeFileSync(path, bytes);
+      scenes.push({ path, inSec: s.inSec, outSec: s.outSec });
+    }
+    const { cues, language } = await captionScenes(scenes);
+    if (cues.length === 0) throw new Error("no speech found in this episode");
+    const vtt = toVtt(cues);
+    const { primary } = await put(hosts, new TextEncoder().encode(vtt), "text/vtt");
+    return { url: primary.url, sha256: primary.sha256, language, cues: cues.length, vtt };
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

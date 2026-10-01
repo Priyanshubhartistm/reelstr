@@ -81,6 +81,8 @@ export function Desk() {
   const [caption, setCaption] = useState<{ url: string; sha256: string; name: string } | null>(
     null,
   );
+  // a generated caption draft the creator reads and fixes before it is attached
+  const [draft, setDraft] = useState<string | null>(null);
   const [bed, setBed] = useState<{ sha: string; poolPct: number } | null>(null);
   const [drag, setDrag] = useState<number | null>(null);
   const [status, setStatus] = useState("");
@@ -211,6 +213,25 @@ export function Desk() {
     });
   const patch = (i: number, p: Partial<Item>) =>
     setItems((xs) => xs.map((x, k) => (k === i ? { ...x, ...p } : x)));
+
+  async function generateCaptions() {
+    setBusy(true);
+    setErr("");
+    setStatus("Listening to the episode (speech to text runs on the media service)…");
+    try {
+      const r = await c.generateCaptions(
+        items.map((i) => ({ sha256: i.sha, urls: [i.url], inSec: i.inSec, outSec: i.outSec })),
+      );
+      setDraft(r.vtt);
+      setMeta((m) => ({ ...m, captionLang: r.language }));
+      setStatus(`Draft ready: ${r.cues} lines. Read it, fix names and rare words, then use it.`);
+    } catch (e) {
+      setStatus("");
+      setErr((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function publish() {
     setBusy(true);
@@ -582,6 +603,41 @@ export function Desk() {
           />
         </div>
         {caption && <p className="muted">Uploaded {caption.name}.</p>}
+        <p>
+          <button
+            type="button"
+            className="ghost"
+            disabled={busy || items.length === 0}
+            onClick={generateCaptions}
+          >
+            Generate captions (draft)
+          </button>
+        </p>
+        {draft !== null && (
+          <>
+            <label htmlFor="m-draft">Caption draft (edit before using)</label>
+            <textarea
+              id="m-draft"
+              rows={8}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              style={{ fontFamily: "monospace" }}
+            />
+            <p>
+              <button
+                type="button"
+                disabled={busy || !draft.trimStart().startsWith("WEBVTT")}
+                onClick={async () => {
+                  const d = await c.blossom.upload(new TextEncoder().encode(draft), "text/vtt");
+                  setCaption({ url: d.url, sha256: d.sha256, name: "generated captions" });
+                  setDraft(null);
+                }}
+              >
+                Use these captions
+              </button>
+            </p>
+          </>
+        )}
         <label htmlFor="m-cw">Content warning (optional)</label>
         <input
           id="m-cw"

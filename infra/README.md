@@ -25,3 +25,6 @@ Notes learned the hard way:
 - The relay default is `POW_BITS=16` for scenes. It advertises this in NIP-11, and the client mines it automatically.
 - The Blossom image runs on **Node 22**. On Node 24 the container segfaulted intermittently with `better-sqlite3` 11.x.
 - Rootless podman accepts TCP connections before the app inside is listening: wait on the app's log line, not just an open port.
+
+## Caption generation
+The media service transcribes speech locally for the Desk's "Generate captions (draft)". Install once: `uv venv --python 3.12 .venv-asr && uv pip install --python .venv-asr/bin/python -r requirements-asr.txt` (the `small` model, about 460 MB, downloads on first use). The compose image for the media service does not include it yet; use the native service for captions.

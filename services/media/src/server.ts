@@ -1,13 +1,13 @@
 import { BlossomClient } from "@reelstr/blossom";
 import { LocalSigner } from "@reelstr/nostr";
 import { verifyHttpAuth } from "@reelstr/protocol";
-import { type Hosts, ingestScene, renderAndPublish } from "./pipeline";
+import { captionEpisode, type Hosts, ingestScene, renderAndPublish } from "./pipeline";
 
 type Job = {
   id: string;
   /** pubkey that created it: only they can read it */
   owner: string;
-  kind: "ingest" | "render";
+  kind: "ingest" | "render" | "captions";
   status: "queued" | "running" | "done" | "failed";
   result?: unknown;
   error?: string;
@@ -27,14 +27,21 @@ export interface MediaServerOpts {
   maxJobsPerHour?: number;
   /** jobs waiting or running across everyone (default 20) */
   maxQueued?: number;
-  run?: { ingest: typeof ingestScene; render: typeof renderAndPublish };
+  run?: {
+    ingest: typeof ingestScene;
+    render: typeof renderAndPublish;
+    captions?: typeof captionEpisode;
+  };
   port?: number;
 }
 
 /** Sequential job runner: ffmpeg is CPU bound, so one at a time. Jobs live in memory (lost on restart). */
 export function createMediaServer(opts: MediaServerOpts) {
   const jobs = new Map<string, Job>();
-  const run = opts.run ?? { ingest: ingestScene, render: renderAndPublish };
+  const run = {
+    captions: captionEpisode,
+    ...(opts.run ?? { ingest: ingestScene, render: renderAndPublish }),
+  };
   const hostOf = (u: string) => new URL(u).host;
   const allowedHosts = new Set(
     opts.allowedHosts ??
@@ -157,6 +164,22 @@ export function createMediaServer(opts: MediaServerOpts) {
       const no = admit(who);
       if (no) return no;
       return Response.json(view(enqueue(who, "render", () => run.render(job, opts.hosts))), {
+        status: 202,
+      });
+    }
+    if (req.method === "POST" && url.pathname === "/captions") {
+      const b = body() as Parameters<typeof captionEpisode>[0] | null;
+      if (!b || !Array.isArray(b.scenes) || b.scenes.length === 0)
+        return Response.json({ error: "need scenes" }, { status: 400 });
+      if (b.scenes.length > 40)
+        return Response.json({ error: "too many scenes (max 40)" }, { status: 400 });
+      for (const sc of b.scenes) {
+        const bad = badUrl(sc.urls);
+        if (bad) return Response.json({ error: bad }, { status: 400 });
+      }
+      const no = admit(who);
+      if (no) return no;
+      return Response.json(view(enqueue(who, "captions", () => run.captions(b, opts.hosts))), {
         status: 202,
       });
     }

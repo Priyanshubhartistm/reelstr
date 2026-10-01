@@ -4,6 +4,7 @@
   "type": "module",
   "dependencies": {
     "@reelstr/blossom": "workspace:*",
+    "@reelstr/media": "workspace:*",
     "@reelstr/indexer": "workspace:*",
     "@reelstr/media-service": "workspace:*",
     "@reelstr/nostr": "workspace:*",

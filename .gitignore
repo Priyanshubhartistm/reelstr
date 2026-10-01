@@ -12,3 +12,4 @@ services/crew/bin/
 services/crew/data/
 .venv-mint/
 demo/.demo-keys.json
+.venv-asr/
