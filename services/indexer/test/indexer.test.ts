@@ -526,3 +526,25 @@ describe("live subscription covers every indexed kind", () => {
     pool.close([relay.url]);
   }, 60_000);
 });
+
+describe("events with old timestamps are still indexed (regression: since:now dropped them)", () => {
+  test("a clock-skewed or backfilled event published after the indexer started is indexed", async () => {
+    const relay = await startRelay();
+    const pool = new RelayPool();
+    const ix = await Indexer.open();
+    await ix.follow([relay.url]);
+    const author = sk();
+    const old = Math.floor(Date.now() / 1000) - 3 * 86400;
+    const story = finalizeEvent(
+      buildStory({ d: "old", title: "Old", logline: "l", createdAt: old }),
+      author,
+    );
+    await pool.publish(story, [relay.url]);
+    for (let i = 0; i < 60 && ix.counts.stored < 1; i++)
+      await new Promise((r) => setTimeout(r, 100));
+    expect(ix.counts.stored).toBe(1);
+    expect((await ix.db.query("select title from stories")).length).toBe(1);
+    await ix.close();
+    pool.close([relay.url]);
+  }, 60_000);
+});

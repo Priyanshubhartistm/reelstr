@@ -845,4 +845,246 @@ describe("Studio and Cinema in a real browser", () => {
     pool.close([publicRelay]);
     await u.ctx.close();
   }, 600_000);
+
+  test("performance: 500-scene tree, publish-to-visible, time to first frame, unlock-to-playback, frames across joins", async () => {
+    const { RelayPool: RP, LocalSigner: LS } = await import("@reelstr/nostr");
+    const { buildScene, buildStory } = await import("@reelstr/protocol");
+    const { sha256 } = await import("@noble/hashes/sha2.js");
+    const { bytesToHex: hexOf } = await import("@noble/hashes/utils.js");
+    const pool = new RP();
+    const out: string[] = [];
+    const ms = (n: number) => `${Math.round(n)} ms`;
+
+    // ---- FE-4: a story with 500 scenes in a branching tree
+    const author = LS.generate();
+    const apk = await author.getPublicKey();
+    await pool.publish(
+      await author.signEvent(buildStory({ d: "big", title: "Big Tree", logline: "500 scenes" })),
+      [publicRelay],
+    );
+    const ids: string[] = [];
+    const evs = [];
+    for (let i = 0; i < 500; i++) {
+      const sha = hexOf(sha256(new TextEncoder().encode(`scene-${i}`)));
+      const parent = i === 0 ? undefined : ids[Math.floor(Math.sqrt(i * 7919) % i)];
+      const ev = await author.signEvent(
+        buildScene({
+          title: `S${i}`,
+          content: `scene ${i}`,
+          video: { url: `https://x.test/${sha}.mp4`, sha256: sha, duration: 12 },
+          story: { pubkey: apk, d: "big" },
+          parent: parent ? { id: parent } : undefined,
+          createdAt: 1_790_000_000 + i,
+        }),
+      );
+      ids.push(ev.id);
+      evs.push(ev);
+    }
+    await Promise.all(evs.map((e) => pool.publish(e, [publicRelay])));
+    const health = await fetch(`${endpoints.indexerUrl}/health`).then((r) => r.json());
+    const reader = await newUser(studioUrl);
+    // wait until the indexer has all 500 (the API is the source for the tree)
+    const probe = new ReelstrClient({
+      signer: LS.generate(),
+      relays: [publicRelay],
+      blossom: endpoints.blossom as string,
+      indexerUrl: endpoints.indexerUrl as string,
+    });
+    const coord = `31810:${apk}:big`;
+    let seen = 0;
+    await until(async () => {
+      seen = (await probe.api<unknown[]>(`/stories/${encodeURIComponent(coord)}/tree`)).length;
+      return seen === 500 ? true : undefined;
+    }, 60_000).catch(async (e: Error) => {
+      const health = await fetch(`${endpoints.indexerUrl}/health`).then((r) => r.text());
+      throw new Error(`${e.message}: indexer had ${seen}/500 scenes; health ${health}`);
+    });
+    const t0 = Date.now();
+    await reader.page.goto(`${studioUrl}/#/story/${encodeURIComponent(coord)}`);
+    await reader.page.waitForFunction(
+      () => document.querySelectorAll(".tree .node").length === 500,
+      null,
+      { timeout: 30_000 },
+    );
+    const treeMs = Date.now() - t0;
+    // render cost alone: re-mount by toggling the route and time the DOM build from cached data
+    out.push(`FE-4 500-node tree, navigate to all nodes in DOM (incl. API fetch): ${ms(treeMs)}`);
+    expect(treeMs).toBeLessThan(1000);
+
+    // ---- publish -> visible in the tree (FE-2 acceptance: < 5 s)
+    const creator = new ReelstrClient({
+      signer: author,
+      relays: [publicRelay],
+      blossom: endpoints.blossom as string,
+      mirrors: endpoints.mirrors as string[],
+      mediaUrl: endpoints.mediaUrl as string,
+      indexerUrl: endpoints.indexerUrl as string,
+      keysUrl: keys.url,
+    });
+    const clip = new Uint8Array(
+      await Bun.file(
+        await makeClip(join(dir, "perf.mp4"), {
+          size: "360x640",
+          fps: 30,
+          sec: 12,
+          freq: 410,
+          gainDb: -20,
+        }),
+      ).arrayBuffer(),
+    );
+    const pub0 = Date.now();
+    const sc = await creator.publishScene({
+      bytes: clip,
+      title: "Perf scene",
+      prompt: "p",
+      story: { pubkey: apk, d: "big" },
+    });
+    const published = Date.now();
+    await until(
+      async () =>
+        (await probe.api<{ id: string }[]>(`/stories/${encodeURIComponent(coord)}/tree`)).some(
+          (n) => n.id === sc.event.id,
+        )
+          ? true
+          : undefined,
+      15_000,
+    );
+    const visibleMs = Date.now() - published;
+    out.push(
+      `FE-2 relay publish -> visible via indexer: ${ms(visibleMs)} (upload+normalize before that: ${ms(published - pub0)})`,
+    );
+    expect(visibleMs).toBeLessThan(5000);
+
+    // ---- episodes: one free, one paid
+    const src = [{ sha256: sc.ingest.normalized.sha256, urls: [sc.ingest.normalized.url] }];
+    const scn = (n: number) =>
+      Array.from({ length: n }, (_, k) => ({
+        id: sc.event.id,
+        sha256: sc.ingest.normalized.sha256,
+        inSec: k * 2,
+        outSec: k * 2 + 2,
+        payee: apk,
+      }));
+    const base = {
+      seriesSlug: "perf",
+      synopsis: "s",
+      scenesSources: [],
+      curatorBps: 0,
+      hostBps: 0,
+      host: apk,
+    };
+    // three 2 s scenes cut from one 12 s clip: two joins
+    const freeCut = await creator.publishCut({
+      ...base,
+      episode: 1,
+      title: "Free",
+      scenes: scn(3),
+      scenesSources: [src[0], src[0], src[0]] as never,
+      price: { amount: 0 },
+      free: true,
+    });
+    const paidCut = await creator.publishCut({
+      ...base,
+      episode: 2,
+      title: "Paid",
+      scenes: scn(3),
+      scenesSources: [src[0], src[0], src[0]] as never,
+      price: { amount: 20 },
+    });
+    await creator.publishSeries({
+      slug: "perf",
+      title: "Perf",
+      summary: "s",
+      episodes: [1, 2],
+      freeEpisodes: 1,
+    });
+    await until(
+      async () =>
+        (await probe.api<{ id: string }[]>("/cuts?series=perf&curator=" + apk)).length === 2
+          ? true
+          : undefined,
+      20_000,
+    );
+
+    // ---- TTFF + frame continuity across joins on the free episode
+    const v = await newUser(cinemaUrl);
+    await v.page.goto(`${cinemaUrl}/#/`);
+    await v.page.evaluate(() => {
+      (window as unknown as { __frames: number[] }).__frames = [];
+    });
+    const t1 = Date.now();
+    await v.page.goto(`${cinemaUrl}/#/watch/${freeCut.id}`);
+    await v.page.locator("video.player").waitFor({ timeout: 30_000 });
+    await v.page.evaluate(() => {
+      const el = document.querySelector("video.player") as HTMLVideoElement;
+      const w = window as unknown as { __frames: number[] };
+      w.__frames = [];
+      const cb = (_n: number, md: { mediaTime: number }) => {
+        w.__frames.push(md.mediaTime);
+        el.requestVideoFrameCallback(cb as never);
+      };
+      el.requestVideoFrameCallback(cb as never);
+    });
+    await v.page.waitForFunction(
+      () => (document.querySelector("video.player") as HTMLVideoElement).currentTime > 0,
+      null,
+      { timeout: 30_000 },
+    );
+    const ttff = Date.now() - t1;
+    out.push(
+      `NFR time to first frame (free episode, local servers, includes page load + API): ${ms(ttff)}`,
+    );
+    expect(ttff).toBeLessThan(2000);
+    await v.page.waitForFunction(
+      () =>
+        (document.querySelector("video.player") as HTMLVideoElement).currentTime > 5.5 ||
+        (document.querySelector("video.player") as HTMLVideoElement).ended,
+      null,
+      { timeout: 30_000 },
+    );
+    const frames = await v.page.evaluate(
+      () => (window as unknown as { __frames: number[] }).__frames,
+    );
+    const gaps = frames
+      .slice(1)
+      .map((t, i) => t - (frames[i] as number))
+      .filter((g) => g > 0);
+    const worst = Math.max(...gaps);
+    out.push(
+      `NFR frames across 2 joins: ${frames.length} frames, worst gap between presented frames ${(worst * 1000).toFixed(1)} ms (1 frame = 33.3 ms)`,
+    );
+    expect(frames.length).toBeGreaterThan(100);
+    expect(worst).toBeLessThan(2 / 30); // never more than one skipped frame
+    await v.ctx.close();
+
+    // ---- FE-8: unlock tap -> playback < 3 s on a funded wallet
+    const w = await newUser(cinemaUrl);
+    await w.page.locator("header.bar").getByRole("link", { name: "Wallet", exact: true }).click();
+    await w.page.getByTestId("balance").waitFor({ timeout: 30_000 });
+    await w.page.locator("#w-amt").fill("100");
+    await w.page.getByRole("button", { name: "Get invoice" }).click();
+    await w.page.getByText("100 sats", { exact: true }).waitFor({ timeout: 60_000 });
+    await w.page.goto(`${cinemaUrl}/#/watch/${paidCut.id}`);
+    await w.page.getByTestId("paywall").waitFor({ timeout: 30_000 });
+    await w.page.getByRole("button", { name: "Unlock for 20 sats" }).waitFor();
+    const tap = Date.now();
+    await w.page.getByRole("button", { name: "Unlock for 20 sats" }).click();
+    await w.page.waitForFunction(
+      () => {
+        const x = document.querySelector("video.player") as HTMLVideoElement | null;
+        return !!x && x.currentTime > 0;
+      },
+      null,
+      { timeout: 30_000 },
+    );
+    const unlockMs = Date.now() - tap;
+    out.push(
+      `FE-8 unlock tap -> playing (nutzap via real Nutshell mint, local servers): ${ms(unlockMs)}`,
+    );
+    expect(unlockMs).toBeLessThan(3000);
+    await w.ctx.close();
+    await reader.ctx.close();
+    pool.close([publicRelay]);
+    console.log(`\n${out.join("\n")}\n`);
+  }, 900_000);
 });

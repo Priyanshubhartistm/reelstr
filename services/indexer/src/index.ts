@@ -28,16 +28,30 @@ export class Indexer {
     return r;
   }
 
-  /** Pull everything currently on the relays, then keep listening. */
-  async follow(relays: string[], opts: { since?: number } = {}) {
-    const filter = { kinds: [...INDEXED_KINDS], since: opts.since };
-    for (const e of await this.pool.query(relays, filter)) await this.ingest(e as Ev);
-    const sub = this.pool.subscribe(
-      relays,
-      { ...filter, since: Math.floor(Date.now() / 1000) - 5 },
-      (e) => void this.ingest(e as Ev),
-    );
-    this.subs.push(sub as unknown as { close: () => void });
+  /**
+   * Index everything on the relays, then keep listening. One subscription with no `since` serves
+   * both: the relay replays what it has, then forwards new events. A `since: now` live filter would
+   * silently drop any event whose created_at is older than the moment we subscribed (clock-skewed
+   * clients, late relaying, backfills). Ingest is idempotent, so replays are harmless.
+   * Resolves once the relays have replayed their history and every replayed event is ingested.
+   */
+  async follow(relays: string[], opts: { since?: number; syncTimeoutMs?: number } = {}) {
+    const inflight = new Set<Promise<unknown>>();
+    const take = (e: Ev) => {
+      const p = this.ingest(e).finally(() => inflight.delete(p));
+      inflight.add(p);
+    };
+    await new Promise<void>((resolve) => {
+      const sub = this.pool.subscribe(
+        relays,
+        { kinds: [...INDEXED_KINDS], since: opts.since },
+        (e) => take(e as Ev),
+        resolve,
+      );
+      this.subs.push(sub as unknown as { close: () => void });
+      setTimeout(resolve, opts.syncTimeoutMs ?? 20_000);
+    });
+    while (inflight.size) await Promise.all([...inflight]);
   }
 
   rebuild() {
