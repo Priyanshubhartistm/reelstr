@@ -20,7 +20,7 @@ bun run test:e2e    # headless Chrome against the built apps
 ```sh
 (cd services/relay && go build -o bin/relay . && ./bin/relay)            # public relay :3334
 PORT=3100 infra/blossom/run.sh                                            # Blossom :3100
-MEDIA_TOKEN=dev bun services/media/src/server.ts                          # media :3200
+bun services/media/src/server.ts                                          # media :3200 (NIP-98 signed requests; MEDIA_ALLOW=pubkey,… to restrict)
 bun services/indexer/src/server.ts                                        # indexer API :3300
 (cd apps/studio && bun run dev)                                           # Studio :5173
 (cd apps/cinema && bun run dev)                                           # Cinema :5174

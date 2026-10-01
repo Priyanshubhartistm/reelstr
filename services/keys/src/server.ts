@@ -4,7 +4,7 @@ import { sha256 } from "@noble/hashes/sha2.js";
 import { bytesToHex, hexToBytes, randomBytes } from "@noble/hashes/utils.js";
 import { decodeInvoice, paymentHashOf } from "@reelstr/bolt11";
 import { LocalSigner } from "@reelstr/nostr";
-import { type EventLike, verifySignature } from "@reelstr/protocol";
+import { type EventLike, verifyHttpAuth, verifySignature } from "@reelstr/protocol";
 import { CashuWallet, parseNutzap, redeemNutzap, verifyNutzap } from "@reelstr/wallet";
 import { type Ledger, openLedger } from "./db";
 import type { LnBackend } from "./ln";
@@ -34,24 +34,6 @@ const CORS = {
   "Access-Control-Allow-Headers": "authorization, content-type",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
 };
-
-/** NIP-98 HTTP auth: a signed kind 27235 event naming this URL and method, at most 60 s old. */
-export function verifyNip98(req: Request): string | null {
-  const h = req.headers.get("authorization");
-  if (!h?.startsWith("Nostr ")) return null;
-  try {
-    const ev = JSON.parse(atob(h.slice(6))) as EventLike & { created_at: number };
-    if (ev.kind !== 27235 || !verifySignature(ev)) return null;
-    if (Math.abs(Date.now() / 1000 - ev.created_at) > 60) return null;
-    const u = ev.tags.find((t) => t[0] === "u")?.[1];
-    const m = ev.tags.find((t) => t[0] === "method")?.[1];
-    if (!u || new URL(u).pathname !== new URL(req.url).pathname || m?.toUpperCase() !== req.method)
-      return null;
-    return ev.pubkey;
-  } catch {
-    return null;
-  }
-}
 
 export async function createKeyServer(o: KeyServerOpts) {
   const ledger = o.ledger ?? openLedger();
@@ -113,9 +95,11 @@ export async function createKeyServer(o: KeyServerOpts) {
       return json({ pubkey, lock_pubkey: lockPub, mints: o.mints });
 
     if (req.method === "POST" && seg[0] === "episodes") {
-      const who = verifyNip98(req);
-      if (!who) return json({ error: "NIP-98 authorization required" }, 401);
-      const b = (await req.json()) as {
+      const text = await req.text();
+      const who = verifyHttpAuth(req, text);
+      if (!who)
+        return json({ error: "NIP-98 authorization required (bound to the request body)" }, 401);
+      const b = JSON.parse(text) as {
         d: string;
         keyHex: string;
         ivHex: string;

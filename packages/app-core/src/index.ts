@@ -10,6 +10,8 @@ import {
   coordinate,
   cutD,
   cutWeights,
+  httpAuthHeader,
+  httpAuthTemplate,
   isForkable,
   KIND,
   parseScene,
@@ -27,7 +29,6 @@ export interface Config {
   /** extra Blossom servers that receive mirrors of everything published */
   mirrors?: string[];
   mediaUrl?: string;
-  mediaToken?: string;
   indexerUrl?: string;
   /** HLS key server: paid episodes are encrypted and their keys registered here */
   keysUrl?: string;
@@ -89,19 +90,36 @@ export class ReelstrClient {
     return this.publish(buildStory(p));
   }
 
+  /** Sign one request to a service that uses NIP-98 (URL, method and body are bound into the signature). */
+  private async signed(
+    url: string,
+    method: string,
+    body?: string,
+  ): Promise<Record<string, string>> {
+    const ev = await this.cfg.signer.signEvent(httpAuthTemplate({ url, method, body }));
+    return {
+      Authorization: httpAuthHeader(ev),
+      ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
+    };
+  }
+
   private async mediaJob<T>(path: string, body: unknown): Promise<T> {
-    const { mediaUrl, mediaToken } = this.cfg;
+    const { mediaUrl } = this.cfg;
     if (!mediaUrl) throw new Error("no media service configured");
-    const h = { Authorization: `Bearer ${mediaToken}`, "Content-Type": "application/json" };
+    const text = JSON.stringify(body);
     const r = await fetch(`${mediaUrl}${path}`, {
       method: "POST",
-      headers: h,
-      body: JSON.stringify(body),
+      headers: await this.signed(`${mediaUrl}${path}`, "POST", text),
+      body: text,
     });
     if (!r.ok) throw new Error(`media service ${path}: ${r.status} ${await r.text()}`);
     const { id } = (await r.json()) as { id: string };
     for (let i = 0; i < 1200; i++) {
-      const j = (await (await fetch(`${mediaUrl}/jobs/${id}`, { headers: h })).json()) as {
+      const j = (await (
+        await fetch(`${mediaUrl}/jobs/${id}`, {
+          headers: await this.signed(`${mediaUrl}/jobs/${id}`, "GET"),
+        })
+      ).json()) as {
         status: string;
         result?: T;
         error?: string;
@@ -237,29 +255,18 @@ export class ReelstrClient {
     cutEventId: string,
   ) {
     const url = `${keysUrl}/episodes`;
-    const auth = await this.cfg.signer.signEvent({
-      kind: 27235,
-      created_at: Math.floor(Date.now() / 1000),
-      tags: [
-        ["u", url],
-        ["method", "POST"],
-      ],
-      content: "",
+    const text = JSON.stringify({
+      d,
+      keyHex: enc.key,
+      ivHex: enc.iv,
+      priceSats,
+      free: false,
+      cutEventId,
     });
     const r = await fetch(url, {
       method: "POST",
-      headers: {
-        Authorization: `Nostr ${btoa(JSON.stringify(auth))}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        d,
-        keyHex: enc.key,
-        ivHex: enc.iv,
-        priceSats,
-        free: false,
-        cutEventId,
-      }),
+      headers: await this.signed(url, "POST", text),
+      body: text,
     });
     if (!r.ok) throw new Error(`key server refused the episode key: ${r.status} ${await r.text()}`);
   }

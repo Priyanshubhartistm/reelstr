@@ -1,6 +1,13 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { LocalSigner } from "@reelstr/nostr";
-import { cleanup, FakeLightning, startFakeMint, startFakeNwc, startRelay } from "@reelstr/testkit";
+import {
+  cleanup,
+  FakeLightning,
+  signedPost,
+  startFakeMint,
+  startFakeNwc,
+  startRelay,
+} from "@reelstr/testkit";
 import {
   CashuWallet,
   keyHeaders,
@@ -40,26 +47,13 @@ const memory = () => {
 const curator = LocalSigner.generate();
 const eventId = "e".repeat(64);
 async function register(d: string, price: number, free = false) {
-  const ev = await curator.signEvent({
-    kind: 27235,
-    created_at: Math.floor(Date.now() / 1000),
-    tags: [
-      ["u", `${srv.url}/episodes`],
-      ["method", "POST"],
-    ],
-    content: "",
-  });
-  await fetch(`${srv.url}/episodes`, {
-    method: "POST",
-    headers: { Authorization: `Nostr ${btoa(JSON.stringify(ev))}` },
-    body: JSON.stringify({
-      d,
-      keyHex: "00".repeat(16),
-      ivHex: "11".repeat(16),
-      priceSats: price,
-      free,
-      cutEventId: eventId,
-    }),
+  await signedPost(curator, `${srv.url}/episodes`, {
+    d,
+    keyHex: "00".repeat(16),
+    ivHex: "11".repeat(16),
+    priceSats: price,
+    free,
+    cutEventId: eventId,
   });
   const pk = await curator.getPublicKey();
   return {

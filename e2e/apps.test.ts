@@ -64,7 +64,6 @@ beforeAll(async () => {
   const svc = LocalSigner.generate();
   process.env.PORT = "0";
   const media = createMediaServer({
-    token: "tok",
     hosts: { primary: new BlossomClient(A.url, svc), mirrors: [new BlossomClient(B.url, svc)] },
     run: { ingest: ingestScene, render: renderAndPublish },
   });
@@ -98,7 +97,6 @@ beforeAll(async () => {
     blossom: A.url,
     mirrors: [B.url],
     mediaUrl: `http://127.0.0.1:${media.port}`,
-    mediaToken: "tok",
     indexerUrl: `http://127.0.0.1:${api.port}`,
     powBits: 0,
   };
@@ -312,7 +310,6 @@ describe("Studio and Cinema in a real browser", () => {
         blossom: endpoints.blossom as string,
         mirrors: endpoints.mirrors as string[],
         mediaUrl: endpoints.mediaUrl as string,
-        mediaToken: "tok",
         indexerUrl: endpoints.indexerUrl as string,
         keysUrl: keys.url,
       });
@@ -526,7 +523,6 @@ describe("Studio and Cinema in a real browser", () => {
         blossom: endpoints.blossom as string,
         mirrors: endpoints.mirrors as string[],
         mediaUrl: endpoints.mediaUrl as string,
-        mediaToken: "tok",
         indexerUrl: endpoints.indexerUrl as string,
         keysUrl: keys.url,
       });
@@ -771,7 +767,6 @@ describe("Studio and Cinema in a real browser", () => {
         relays: [publicRelay],
         blossom: endpoints.blossom as string,
         mediaUrl: endpoints.mediaUrl as string,
-        mediaToken: "tok",
       }),
       wallet: await CashuWallet.open(mintUrl),
       lockPrivkey: lockPriv,

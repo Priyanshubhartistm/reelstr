@@ -46,7 +46,6 @@ beforeAll(async () => {
   process.env.PORT = "0";
   const svc = LocalSigner.generate();
   media = createMediaServer({
-    token: "tok",
     hosts: { primary: new BlossomClient(A.url, svc), mirrors: [] },
     run: { ingest: ingestScene, render: renderAndPublish },
   });
@@ -67,7 +66,6 @@ async function setup(opts: { price?: number } = {}) {
     relays: [relay.url],
     blossom: A.url,
     mediaUrl: `http://127.0.0.1:${media.port}`,
-    mediaToken: "tok",
   });
   const adapters = registry(new MockAdapter("mock-open-1"));
   const closed: GenAdapter = {

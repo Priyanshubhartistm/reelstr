@@ -7,7 +7,7 @@ import { Agent, FalWanAdapter, MockAdapter, registry } from "./index";
 
 /**
  * Run an agent. Environment:
- *   AGENT_NSEC, AGENT_LOCK_PRIVKEY (hex), RELAYS, BLOSSOM_URL, MEDIA_URL, MEDIA_TOKEN, MINT_URL,
+ *   AGENT_NSEC, AGENT_LOCK_PRIVKEY (hex), RELAYS, BLOSSOM_URL, MEDIA_URL, MINT_URL,
  *   PRICE_SATS (default 100), FAL_KEY (optional: enables wan-2.2-t2v), MOCK=1 (enables mock-open-1)
  * Earnings live in an in-memory wallet here: wire a persistent ProofStore before holding real money.
  */
@@ -39,7 +39,6 @@ const agent = new Agent({
     relays,
     blossom: env("BLOSSOM_URL", "http://127.0.0.1:3100"),
     mediaUrl: env("MEDIA_URL", "http://127.0.0.1:3200"),
-    mediaToken: env("MEDIA_TOKEN"),
   }),
   wallet: await CashuWallet.open(mint, new MemoryStore()),
   lockPrivkey: lockPriv,

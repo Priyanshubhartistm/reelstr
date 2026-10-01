@@ -28,7 +28,6 @@ const mk = (who: LocalSigner) =>
     blossom: A.url,
     mirrors: [B.url],
     mediaUrl: `http://127.0.0.1:${media.port}`,
-    mediaToken: "tok",
     indexerUrl: `http://127.0.0.1:${api.port}`,
   });
 
@@ -39,7 +38,6 @@ beforeAll(async () => {
   const svc = LocalSigner.generate();
   process.env.PORT = "0";
   media = createMediaServer({
-    token: "tok",
     hosts: { primary: new BlossomClient(A.url, svc), mirrors: [new BlossomClient(B.url, svc)] },
     run: { ingest: ingestScene, render: renderAndPublish },
   });

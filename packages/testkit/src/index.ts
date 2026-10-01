@@ -139,3 +139,19 @@ export async function startNutshell(opts: { port?: number } = {}) {
   await waitFor(async () => (await fetch(`http://127.0.0.1:${port}/v1/info`)).ok, "nutshell", 200);
   return { url: `http://127.0.0.1:${port}`, port, stop: () => proc.kill() };
 }
+
+/** POST JSON to a NIP-98 protected endpoint, signing URL, method and body as the given signer. */
+export async function signedPost(
+  signer: { signEvent: (t: never) => Promise<unknown> },
+  url: string,
+  body: unknown,
+): Promise<Response> {
+  const { httpAuthHeader, httpAuthTemplate } = await import("@reelstr/protocol");
+  const text = JSON.stringify(body);
+  const ev = await signer.signEvent(httpAuthTemplate({ url, method: "POST", body: text }) as never);
+  return fetch(url, {
+    method: "POST",
+    headers: { Authorization: httpAuthHeader(ev), "Content-Type": "application/json" },
+    body: text,
+  });
+}

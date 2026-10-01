@@ -1,6 +1,7 @@
 export * from "./blob";
 export * from "./coords";
 export * from "./cut";
+export * from "./httpauth";
 export * from "./jobs";
 export * from "./kinds";
 export * from "./labels";

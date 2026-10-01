@@ -1,7 +1,8 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { bytesToHex, randomBytes } from "@noble/hashes/utils.js";
 import { LocalSigner } from "@reelstr/nostr";
-import { FakeLightning, startFakeMint } from "@reelstr/testkit";
+import { httpAuthHeader, httpAuthTemplate } from "@reelstr/protocol";
+import { FakeLightning, signedPost, startFakeMint } from "@reelstr/testkit";
 import { buildNutzap, CashuWallet } from "@reelstr/wallet";
 import { createKeyServer, type LnBackend, openLedger } from "../src";
 
@@ -30,17 +31,12 @@ async function nip98(
   path: string,
   method: string,
   at = Math.floor(Date.now() / 1000),
+  body?: string,
 ) {
-  const ev = await signer.signEvent({
-    kind: 27235,
-    created_at: at,
-    tags: [
-      ["u", `${srv.url}${path}`],
-      ["method", method],
-    ],
-    content: "",
-  });
-  return `Nostr ${btoa(JSON.stringify(ev))}`;
+  const ev = await signer.signEvent(
+    httpAuthTemplate({ url: `${srv.url}${path}`, method, body, createdAt: at }),
+  );
+  return httpAuthHeader(ev);
 }
 const curator = LocalSigner.generate();
 const KEY = "00112233445566778899aabbccddeeff";
@@ -53,20 +49,13 @@ async function register(
   signer = curator,
   eventId = cutEventId,
 ) {
-  return fetch(`${srv.url}/episodes`, {
-    method: "POST",
-    headers: {
-      Authorization: await nip98(signer, "/episodes", "POST"),
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      d,
-      keyHex: KEY,
-      ivHex: "ff".repeat(16),
-      priceSats: price,
-      free,
-      cutEventId: eventId,
-    }),
+  return signedPost(signer, `${srv.url}/episodes`, {
+    d,
+    keyHex: KEY,
+    ivHex: "ff".repeat(16),
+    priceSats: price,
+    free,
+    cutEventId: eventId,
   });
 }
 const keyPath = async (d: string) =>
@@ -304,26 +293,13 @@ describe("funds survive a restart", () => {
     const s1 = await createKeyServer({ mints: [mint.url], ledger });
     const w = await payer(50);
     const c = LocalSigner.generate();
-    const ev = await c.signEvent({
-      kind: 27235,
-      created_at: Math.floor(Date.now() / 1000),
-      tags: [
-        ["u", `${s1.url}/episodes`],
-        ["method", "POST"],
-      ],
-      content: "",
-    });
-    await fetch(`${s1.url}/episodes`, {
-      method: "POST",
-      headers: { Authorization: `Nostr ${btoa(JSON.stringify(ev))}` },
-      body: JSON.stringify({
-        d: "r:ep-001",
-        keyHex: KEY,
-        ivHex: KEY,
-        priceSats: 10,
-        free: false,
-        cutEventId,
-      }),
+    await signedPost(c, `${s1.url}/episodes`, {
+      d: "r:ep-001",
+      keyHex: KEY,
+      ivHex: KEY,
+      priceSats: 10,
+      free: false,
+      cutEventId,
     });
     const zap = await LocalSigner.generate().signEvent(
       buildNutzap({

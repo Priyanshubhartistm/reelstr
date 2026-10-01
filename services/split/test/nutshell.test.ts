@@ -4,7 +4,7 @@ import { bytesToHex, hexToBytes, randomBytes } from "@noble/hashes/utils.js";
 import { createKeyServer, openLedger } from "@reelstr/keys";
 import { LocalSigner, RelayPool } from "@reelstr/nostr";
 import { buildCut, type CutScene, KIND, validateEvent } from "@reelstr/protocol";
-import { cleanup, startNutshell, startRelay } from "@reelstr/testkit";
+import { cleanup, signedPost, startNutshell, startRelay } from "@reelstr/testkit";
 import { buildNutzapInfo, CashuWallet, redeemNutzap, unlockWithNutzap } from "@reelstr/wallet";
 import { runPayouts } from "../src";
 
@@ -28,27 +28,14 @@ describe("key server and split service against the real Nutshell mint", () => {
     const m = need();
     const srv = await createKeyServer({ mints: [m.url] });
     const curator = LocalSigner.generate();
-    const reg = await curator.signEvent({
-      kind: 27235,
-      created_at: Math.floor(Date.now() / 1000),
-      tags: [
-        ["u", `${srv.url}/episodes`],
-        ["method", "POST"],
-      ],
-      content: "",
-    });
     const eventId = "c".repeat(64);
-    await fetch(`${srv.url}/episodes`, {
-      method: "POST",
-      headers: { Authorization: `Nostr ${btoa(JSON.stringify(reg))}` },
-      body: JSON.stringify({
-        d: "n:ep-001",
-        keyHex: KEY,
-        ivHex: KEY,
-        priceSats: 30,
-        free: false,
-        cutEventId: eventId,
-      }),
+    await signedPost(curator, `${srv.url}/episodes`, {
+      d: "n:ep-001",
+      keyHex: KEY,
+      ivHex: KEY,
+      priceSats: 30,
+      free: false,
+      cutEventId: eventId,
     });
     const keyUrl = `${srv.url}/key/${await curator.getPublicKey()}/n:ep-001`;
 
