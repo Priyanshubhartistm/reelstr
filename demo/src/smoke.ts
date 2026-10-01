@@ -43,6 +43,9 @@ await page.locator("#w-amt").fill("100");
 await page.getByRole("button", { name: "Get invoice" }).click();
 await page.getByText("100 sats", { exact: true }).waitFor({ timeout: 60_000 });
 await page.screenshot({ path: `${out}/5-wallet.png` });
+await page.getByRole("button", { name: "Pay ₹100 (demo)" }).click();
+await page.getByText("200 sats", { exact: true }).waitFor({ timeout: 60_000 });
+console.log("fiat demo partner credited 100 sats");
 await page.goto(watchUrl);
 await page.getByRole("button", { name: "Unlock for 21 sats" }).click();
 await page.waitForFunction(
@@ -55,4 +58,11 @@ await page.waitForFunction(
 );
 await page.screenshot({ path: `${out}/6-unlocked.png` });
 console.log("topped up with test sats and unlocked the paid episode");
+// the AI scene in this episode carries the verifier's label (the apps trust the demo verifier)
+await page
+  .getByTestId("source-row")
+  .filter({ hasText: "Source Verified" })
+  .waitFor({ timeout: 60_000 });
+await page.screenshot({ path: `${out}/7-verified.png`, fullPage: true });
+console.log("Source Verified badge shown on the AI scene");
 await browser.close();

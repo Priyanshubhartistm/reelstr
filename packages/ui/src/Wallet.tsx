@@ -83,6 +83,7 @@ export function Wallet() {
               </>
             )}
           </div>
+          {FIAT_DEMO && <FiatDemo topUp={p.topUp} />}
           <h2>Spending</h2>
           <div className="card">
             <label htmlFor="w-cap">Daily spending cap (sats)</label>
@@ -137,6 +138,57 @@ export function Wallet() {
           </div>
         </>
       )}
+    </>
+  );
+}
+
+const FIAT_DEMO = (import.meta as unknown as { env?: Record<string, string | undefined> }).env
+  ?.VITE_FIAT_DEMO;
+/** Rate shown by the demo partner: 1 INR = 1 sat. A real on-ramp supplies its own quote and checkout. */
+const DEMO_SATS_PER_INR = 1;
+
+/**
+ * Stand-in for a fiat on-ramp partner (PRD R3 "explore partner"). It moves no money: it asks the
+ * wallet to top up the same way the invoice flow does, so the flow around it can be shown.
+ */
+function FiatDemo({ topUp }: { topUp: (sats: number) => Promise<unknown> }) {
+  const [inr, setInr] = useState(100);
+  const [busy, setBusy] = useState(false);
+  return (
+    <>
+      <h2>Pay by card or UPI</h2>
+      <div className="card" data-testid="fiat-demo">
+        <p className="muted">
+          Demo partner: nothing is charged. A real on-ramp would take payment here and credit the
+          sats.
+        </p>
+        <label htmlFor="f-inr">Amount (INR)</label>
+        <input
+          id="f-inr"
+          type="number"
+          min="1"
+          value={inr}
+          onChange={(e) => setInr(Number(e.target.value))}
+        />
+        <p>
+          You get {inr * DEMO_SATS_PER_INR} sats.{" "}
+          <button
+            type="button"
+            disabled={busy || inr < 1}
+            onClick={async () => {
+              setBusy(true);
+              try {
+                await topUp(inr * DEMO_SATS_PER_INR);
+              } catch {
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            {busy ? "Processing…" : `Pay ₹${inr} (demo)`}
+          </button>
+        </p>
+      </div>
     </>
   );
 }

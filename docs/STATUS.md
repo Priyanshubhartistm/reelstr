@@ -83,5 +83,5 @@ Run: `bun run check` (lint, types, 188 tests) and `bun run test:e2e` (9 headless
 - **Legal is not solved by code.** Custody, money transmission, India VDA tax, and likeness rules need a lawyer before the split service touches other people's money. The split service refuses to start without an explicit acknowledgement.
 - **Encrypted episodes use MPEG-TS**, because ffmpeg cannot encrypt fMP4. Any paying viewer can share the key.
 - **Blossom image runs Node 22**: on Node 24 it segfaulted intermittently. Multi-stage build, 411 MB (was 808); upload and fetch-by-hash checked on the built image.
-- **Not built:** fiat top-up; native apps (out of scope); caption generation.
+- **Fiat top-up** is only a demo partner button (`VITE_FIAT_DEMO`), no real on-ramp. **Not built:** native apps (out of scope); caption generation.
 - **Not exercised:** the `mint` profile in compose (it is a dev-only FakeWallet mint; the real Nutshell is tested natively instead).

@@ -3,6 +3,7 @@ import {
   go,
   HlsPlayer,
   SceneSequencePlayer,
+  SourceBadge,
   useAsync,
   usePayments,
   useSession,
@@ -313,6 +314,7 @@ export function Watch({ cutRef }: { cutRef: string }) {
         </div>
       )}
       {c && !hidden && <Credits cutId={c.id} priceSats={c.price} />}
+      {c && !hidden && <EpisodeSources cutId={c.id} />}
       {c && !hidden && <Ratings cutId={c.id} cutCoord={c.coord} />}
     </div>
   );
@@ -359,6 +361,36 @@ function FallbackPlayer({
         onEnded={onEnded}
       />
       <p className="muted">Playing scene by scene while the full episode is prepared.</p>
+    </>
+  );
+}
+
+/** Scenes made from a re-renderable manifest, with the viewer's trusted verifiers' verdict. */
+function EpisodeSources({ cutId }: { cutId: string }) {
+  const { client } = useSession();
+  const api = (client as NonNullable<typeof client>).api.bind(client);
+  const rows = useAsync(async () => {
+    const cs = await api<{ scene_id: string }[]>(`/cuts/${cutId}/scenes`);
+    const all = await Promise.all(
+      cs.map((x) =>
+        api<{ id: string; title: string; eligible: boolean } | null>(`/scenes/${x.scene_id}`),
+      ),
+    );
+    return all.filter((x) => x?.eligible) as { id: string; title: string }[];
+  }, [cutId]);
+  if (!rows.data?.length) return null;
+  return (
+    <>
+      <h2>AI scenes in this episode</h2>
+      <p className="muted">
+        Made from a published manifest. "Source Verified" means a verifier you trust re-rendered it
+        and got the same clip.
+      </p>
+      {rows.data.map((r) => (
+        <p key={r.id} data-testid="source-row">
+          {r.title} <SourceBadge sceneId={r.id} />
+        </p>
+      ))}
     </>
   );
 }

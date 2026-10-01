@@ -1,10 +1,12 @@
 import { join } from "node:path";
+import { hexToBytes } from "@noble/hashes/utils.js";
+import { MockAdapter } from "@reelstr/agent";
 import { ReelstrClient } from "@reelstr/app-core";
 import { LocalSigner } from "@reelstr/nostr";
 import { buildRating } from "@reelstr/protocol";
 import { tempDir } from "@reelstr/testkit";
 import { makeScene } from "./footage";
-import type { startStack } from "./stack";
+import { demoKeys, type startStack } from "./stack";
 
 type Stack = Awaited<ReturnType<typeof startStack>>;
 
@@ -19,10 +21,11 @@ const THEMES = {
 /** The people the demo logs in as. Their keys are printed so a presenter can sign in as them. */
 export async function seed(s: Stack, log: (l: string) => void) {
   const dir = tempDir("reelstr-demo-");
+  const k = demoKeys();
   const people = {
-    mara: LocalSigner.generate(),
-    dev: LocalSigner.generate(),
-    ila: LocalSigner.generate(),
+    mara: new LocalSigner(hexToBytes(k.mara as string)),
+    dev: new LocalSigner(hexToBytes(k.dev as string)),
+    ila: new LocalSigner(hexToBytes(k.ila as string)),
   };
   const client = (who: LocalSigner) =>
     new ReelstrClient({ signer: who, ...s.endpoints, powBits: 0 });
@@ -31,6 +34,22 @@ export async function seed(s: Stack, log: (l: string) => void) {
   const ila = client(people.ila);
   const pm = await people.mara.getPublicKey();
   const pi = await people.ila.getPublicKey();
+
+  // a curator follows the creators she works with: the Desk inbox only shows followed authors' scenes (BE-5)
+  const follows = [
+    pm,
+    await people.dev.getPublicKey(),
+    await new LocalSigner(hexToBytes(k.agent as string)).getPublicKey(),
+  ];
+  await ila.pool.publish(
+    await people.ila.signEvent({
+      kind: 3,
+      created_at: Math.floor(Date.now() / 1000),
+      tags: follows.map((p) => ["p", p]),
+      content: "",
+    }),
+    s.endpoints.relays,
+  );
 
   await mara.createStory({
     d: "last-signal",
@@ -75,6 +94,24 @@ export async function seed(s: Stack, log: (l: string) => void) {
     prompt: "walls of old speakers all showing white noise",
   });
 
+  // a scene from an open-weight model with a full manifest: the verifier re-renders it and labels it
+  const aiPrompt = "the radio tower seen from a drone at dawn, mist, slow push-in";
+  const aiBytes = await new MockAdapter("mock-open-1").generate({
+    prompt: aiPrompt,
+    seed: "42",
+    refs: [],
+    loras: [],
+    durationSec: 12,
+  });
+  const ai = await mara.publishScene({
+    bytes: aiBytes,
+    title: "Dawn Over the Tower",
+    prompt: aiPrompt,
+    story,
+    parent: { id: sig.event.id },
+    gen: { model: { name: "mock-open-1", open: true }, seed: "42", refs: [], loras: [] },
+  });
+
   const ref = (e: typeof sig, payee: string) => ({
     id: e.event.id,
     sha256: e.ingest.normalized.sha256,
@@ -111,8 +148,8 @@ export async function seed(s: Stack, log: (l: string) => void) {
     episode: 2,
     title: "Down Below",
     synopsis: "The other way in.",
-    scenes: [ref(sig, pm), ref(stairs, pd), ref(st, pi)],
-    scenesSources: [src(sig), src(stairs), src(st)],
+    scenes: [ref(sig, pm), ref(stairs, pd), ref(st, pi), ref(ai, pm)],
+    scenesSources: [src(sig), src(stairs), src(st), src(ai)],
     price: { amount: 21 },
   });
   await ila.publishSeries({

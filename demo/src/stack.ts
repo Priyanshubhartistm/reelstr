@@ -43,7 +43,10 @@ export function demoKeys() {
     return JSON.parse(readFileSync(KEYFILE, "utf8")) as Record<string, string>;
   } catch {
     const k = Object.fromEntries(
-      ["verifier", "agent", "agentLock"].map((n) => [n, bytesToHex(randomBytes(32))]),
+      ["verifier", "agent", "agentLock", "mara", "dev", "ila"].map((n) => [
+        n,
+        bytesToHex(randomBytes(32)),
+      ]),
     );
     writeFileSync(KEYFILE, JSON.stringify(k));
     return k;
@@ -140,6 +143,7 @@ export async function startStack(log: (s: string) => void) {
 
   const appEnv = {
     VITE_MINT: mint.url,
+    VITE_FIAT_DEMO: "1",
     VITE_VERIFIERS: await verifierSigner.getPublicKey(),
   };
   mkdirSync(join(ROOT, "demo"), { recursive: true });
