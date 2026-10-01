@@ -1,4 +1,4 @@
-import { go, type TreeNode, TreeView, useAsync, useSession } from "@reelstr/ui";
+import { go, SourceBadge, type TreeNode, TreeView, useAsync, useSession } from "@reelstr/ui";
 import { useState } from "react";
 
 interface Story {
@@ -171,7 +171,8 @@ export function StoryPage({ coord }: { coord: string }) {
                     {" "}
                     · <span className="ok">re-render eligible</span>
                   </>
-                )}
+                )}{" "}
+                <SourceBadge sceneId={scene.data.id} />
               </p>
               <button type="button" onClick={() => go("compose", coord, sel.id)}>
                 Fork / continue from here

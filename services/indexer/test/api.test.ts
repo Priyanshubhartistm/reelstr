@@ -1,7 +1,7 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { type Ev, Indexer } from "../src";
+import type { Ev } from "../src";
 import { createApi } from "../src/server";
 import { openIx } from "./open";
 

@@ -931,7 +931,7 @@ describe("Studio and Cinema in a real browser", () => {
       evs.push(ev);
     }
     await Promise.all(evs.map((e) => pool.publish(e, [publicRelay])));
-    const health = await fetch(`${endpoints.indexerUrl}/health`).then((r) => r.json());
+    const _health = await fetch(`${endpoints.indexerUrl}/health`).then((r) => r.json());
     const reader = await newUser(studioUrl);
     // wait until the indexer has all 500 (the API is the source for the tree)
     const probe = new ReelstrClient({
@@ -1050,7 +1050,7 @@ describe("Studio and Cinema in a real browser", () => {
     });
     await until(
       async () =>
-        (await probe.api<{ id: string }[]>("/cuts?series=perf&curator=" + apk)).length === 2
+        (await probe.api<{ id: string }[]>(`/cuts?series=perf&curator=${apk}`)).length === 2
           ? true
           : undefined,
       20_000,
@@ -1095,7 +1095,7 @@ describe("Studio and Cinema in a real browser", () => {
     const frames = await v.page.evaluate(
       () => (window as unknown as { __frames: number[] }).__frames,
     );
-    const gaps = frames
+    const _gaps = frames
       .slice(1)
       .map((t, i) => t - (frames[i] as number))
       .filter((g) => g > 0);
@@ -1451,7 +1451,7 @@ describe("Studio and Cinema in a real browser", () => {
       () => (document.querySelector("video.player") as HTMLVideoElement).currentTime,
     );
     expect(src).toBeGreaterThan(savedBefore - 1.5); // resumed, not restarted from 0
-    await viewer.page.waitForFunction((h) => document.body.innerText.includes("Ep 1"), null, {
+    await viewer.page.waitForFunction((_h) => document.body.innerText.includes("Ep 1"), null, {
       timeout: 10_000,
     });
     await viewer.page.waitForFunction(

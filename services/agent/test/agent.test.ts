@@ -23,6 +23,7 @@ import {
   type GenAdapter,
   MockAdapter,
   registry,
+  Verifier,
   verificationTemplate,
   verifyScene,
 } from "../src";
@@ -233,6 +234,9 @@ describe("generation agent (NP-5, NP-6, PY-4)", () => {
   }, 240_000);
 });
 
+const labels = (sceneId: string) =>
+  pool.query([relay.url], { kinds: [KIND.LABEL], "#e": [sceneId] });
+
 describe("Source Verified", () => {
   test("a true manifest re-renders byte-identically; a doctored seed or prompt is a mismatch; closed models are ineligible", async () => {
     const w = await setup();
@@ -274,6 +278,44 @@ describe("Source Verified", () => {
     );
     expect(parseVerification(label as never)).toMatchObject({ verdict: "verified", exact: true });
     expect(validateEvent(label as never).ok).toBe(true);
+    w.agent.stop();
+  }, 300_000);
+});
+
+describe("Verifier service", () => {
+  test("follows the relay, publishes a signed verified label for a true scene, once", async () => {
+    const w = await setup();
+    const job = await requestJob(w.r, {
+      agent: w.pk,
+      prompt: "rooftop rain",
+      story: w.story,
+      model: "mock-open-1",
+      seed: 7,
+      durationSec: 6,
+      bidSats: 100,
+    });
+    const result = await awaitResult(w.r, job.id, w.pk, 120_000);
+    const scene = JSON.parse(result.content);
+    await pool.publish(scene, [relay.url]); // the agent's draft is a signed scene; publishing it is the commissioner's call
+    const verifierKey = LocalSigner.generate();
+    const v = new Verifier({
+      signer: verifierKey,
+      pool,
+      relays: [relay.url],
+      adapters: w.adapters,
+    });
+    v.start(60);
+    await v.idle();
+    for (let i = 0; i < 100 && !(await labels(scene.id)).length; i++) await Bun.sleep(150);
+    await v.idle();
+    const got = (await labels(scene.id)).map((e) => parseVerification(e as never));
+    expect(got).toHaveLength(1);
+    expect(got[0]).toMatchObject({
+      verdict: "verified",
+      exact: true,
+      verifier: await verifierKey.getPublicKey(),
+    });
+    v.stop();
     w.agent.stop();
   }, 300_000);
 });

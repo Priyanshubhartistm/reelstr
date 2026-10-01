@@ -6,4 +6,5 @@ export * from "./sequence";
 export * from "./session";
 export * from "./split";
 export * from "./tree";
+export * from "./verified";
 export * from "./Wallet";

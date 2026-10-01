@@ -54,6 +54,7 @@ export function SceneSequencePlayer({
   const total = clipsDuration(clips);
   const key = clips.map((c) => `${c.src}|${c.inSec}|${c.outSec}`).join(",");
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: clips identity is tracked by `key`; `els` holds stable refs
   const park = useCallback(
     (slot: 0 | 1, i: number, at?: number) => {
       const v = els[slot].current;
@@ -77,10 +78,10 @@ export function SceneSequencePlayer({
       if (v.readyState >= 1) seek();
       else v.addEventListener("loadedmetadata", seek, { once: true });
     },
-    // biome-ignore lint/correctness/useExhaustiveDependencies: clips identity is tracked by `key`
     [key],
   );
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `els` holds stable refs, `clips` is tracked by length
   const swap = useCallback(() => {
     const s = state.current;
     if (s.idx + 1 >= clips.length) {
