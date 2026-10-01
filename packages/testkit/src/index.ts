@@ -103,6 +103,7 @@ export function cleanup() {
   for (const d of dirs.splice(0)) rmSync(d, { recursive: true, force: true });
 }
 
+export { startBunker } from "./fake-bunker";
 export { FakeLightning } from "./fake-ln";
 export { startFakeMint } from "./fake-mint";
 export { startFakeNwc } from "./fake-nwc";

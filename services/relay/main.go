@@ -32,6 +32,7 @@ var baseKinds = []int{
 	7375, 7376, 17375, // NIP-60 wallet
 	5,                   // deletions
 	13194, 23194, 23195, // NIP-47 wallet connect (info, request, response)
+	24133, 27235, // NIP-46 remote signing, NIP-98 HTTP auth (when a deployment relays them)
 }
 
 const sceneKind = 34236

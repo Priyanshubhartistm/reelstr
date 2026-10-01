@@ -14,6 +14,7 @@ import {
   startBlossom,
   startCrewRelay,
   startFakeMint,
+  startNutshell,
   startRelay,
   tempDir,
 } from "@reelstr/testkit";
@@ -76,9 +77,12 @@ beforeAll(async () => {
     () => ix.close(),
   );
   const ln = new FakeLightning();
-  const fakeMint = await startFakeMint({ lightning: ln });
+  // the real Nutshell mint when installed (requirements-mint.txt), else our test double
+  const nut = await startNutshell();
+  const fakeMint = nut ?? (await startFakeMint({ lightning: ln }));
   stops.push(() => fakeMint.stop());
   mintUrl = fakeMint.url;
+  console.log(`e2e mint: ${nut ? "real Nutshell" : "fake mint"}`);
   keys = await createKeyServer({
     mints: [mintUrl],
     ln: {
@@ -646,4 +650,103 @@ describe("Studio and Cinema in a real browser", () => {
     expect(v.errors).toEqual([]);
     await v.ctx.close();
   }, 600_000);
+
+  test("sign in with a NIP-07 extension and with a NIP-46 bunker; the key never enters the page", async () => {
+    const { LocalSigner: LS } = await import("@reelstr/nostr");
+    const { startBunker } = await import("@reelstr/testkit");
+    const probe = new (await import("@reelstr/nostr")).RelayPool();
+    const storyTitles = async (pk: string) =>
+      (await probe.query([publicRelay], { kinds: [31810], authors: [pk] })).map(
+        (e) => e.tags.find((t) => t[0] === "title")?.[1],
+      );
+
+    // --- NIP-07: window.nostr is a thin bridge to a signer that lives outside the page (like a real extension)
+    const ext = LS.generate();
+    const extPk = await ext.getPublicKey();
+    const ctx = await browser.newContext({ viewport: { width: 1000, height: 900 } });
+    const calls: string[] = [];
+    await ctx.exposeFunction("__ext", async (op: string, a: string, b: string) => {
+      calls.push(op);
+      if (op === "pk") return extPk;
+      if (op === "sign") return JSON.stringify(await ext.signEvent(JSON.parse(a)));
+      if (op === "enc") return ext.nip44Encrypt(a, b);
+      return ext.nip44Decrypt(a, b);
+    });
+    await ctx.addInitScript(
+      ([e, m, c]) => {
+        localStorage.setItem("reelstr.endpoints", JSON.stringify(e));
+        localStorage.setItem("reelstr.mint", m as string);
+        localStorage.setItem("reelstr.crewRelay", c as string);
+        const x = (window as unknown as { __ext: (...a: string[]) => Promise<string> }).__ext;
+        (window as unknown as { nostr: unknown }).nostr = {
+          getPublicKey: () => x("pk", "", ""),
+          signEvent: async (t: unknown) => JSON.parse(await x("sign", JSON.stringify(t), "")),
+          nip44: {
+            encrypt: (p: string, t: string) => x("enc", p, t),
+            decrypt: (p: string, t: string) => x("dec", p, t),
+          },
+        };
+      },
+      [endpoints, mintUrl, crewUrl] as const,
+    );
+    const page = await ctx.newPage();
+    const errs: string[] = [];
+    page.on("pageerror", (e) => errs.push(e.message));
+    await page.goto(studioUrl);
+    await page.getByRole("button", { name: "Use NIP-07 extension" }).click();
+    await page
+      .locator("header.bar")
+      .getByText(`${extPk.slice(0, 8)}…`)
+      .waitFor({ timeout: 30_000 });
+    await page.getByLabel("Title").first().fill("Signed by an extension");
+    await page.getByLabel("Logline").fill("The page never sees the key.");
+    await page.getByRole("button", { name: "Create story" }).click();
+    for (let i = 0; i < 100 && !(await storyTitles(extPk)).includes("Signed by an extension"); i++)
+      await Bun.sleep(150);
+    expect(await storyTitles(extPk)).toContain("Signed by an extension");
+    expect(calls).toContain("sign");
+    // nothing in the page's storage looks like a secret key
+    const stored = await page.evaluate(() => JSON.stringify({ ...localStorage }));
+    expect(stored).not.toMatch(/nsec1/);
+    expect(errs).toEqual([]);
+    await ctx.close();
+
+    // --- NIP-46: paste a bunker:// URL; every signature is made by the bunker
+    const bunker = await startBunker({ relay: publicRelay });
+    const c2 = await browser.newContext({ viewport: { width: 1000, height: 900 } });
+    await c2.addInitScript(
+      ([e, m]) => {
+        localStorage.setItem("reelstr.endpoints", JSON.stringify(e));
+        localStorage.setItem("reelstr.mint", m as string);
+      },
+      [endpoints, mintUrl] as const,
+    );
+    const p2 = await c2.newPage();
+    const errs2: string[] = [];
+    p2.on("pageerror", (e) => errs2.push(e.message));
+    await p2.goto(studioUrl);
+    await p2.getByPlaceholder("bunker://… or name@domain").fill(bunker.uri);
+    await p2.getByRole("button", { name: "Connect (NIP-46)" }).click();
+    await p2
+      .locator("header.bar")
+      .getByText(`${bunker.userPubkey.slice(0, 8)}…`)
+      .waitFor({ timeout: 60_000 });
+    await p2.getByLabel("Title").first().fill("Signed by a bunker");
+    await p2.getByLabel("Logline").fill("Remote signing.");
+    await p2.getByRole("button", { name: "Create story" }).click();
+    for (
+      let i = 0;
+      i < 200 && !(await storyTitles(bunker.userPubkey)).includes("Signed by a bunker");
+      i++
+    )
+      await Bun.sleep(150);
+    expect(await storyTitles(bunker.userPubkey)).toContain("Signed by a bunker");
+    expect(bunker.calls.map((c) => c.method)).toEqual(
+      expect.arrayContaining(["connect", "get_public_key", "sign_event"]),
+    );
+    expect(errs2).toEqual([]);
+    bunker.stop();
+    probe.close([publicRelay]);
+    await c2.close();
+  }, 300_000);
 });
