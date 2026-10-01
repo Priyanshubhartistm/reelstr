@@ -1,4 +1,12 @@
-import { go, LoginGate, PaymentsProvider, useRoute, useSession, Wallet } from "@reelstr/ui";
+import {
+  go,
+  LoginGate,
+  PaymentsProvider,
+  Settings,
+  useRoute,
+  useSession,
+  Wallet,
+} from "@reelstr/ui";
 import { Agents } from "./Agents";
 import { Composer } from "./Composer";
 import { Crew } from "./Crew";
@@ -29,6 +37,7 @@ function Shell() {
           <a href="#/crew">Crew</a>
           <a href="#/wallet">Wallet</a>
           <a href="#/earnings">Earnings</a>
+          <a href="#/settings">Settings</a>
         </nav>
         <span className="grow" />
         <span className="muted" title={pubkey ?? ""}>
@@ -46,6 +55,7 @@ function Shell() {
         {page === "earnings" ? <Earnings /> : null}
         {page === "crew" ? <Crew /> : null}
         {page === "wallet" ? <Wallet /> : null}
+        {page === "settings" ? <Settings /> : null}
         {page === "agents" ? <Agents coord={arg} /> : null}
         {!page ? <StoriesList /> : null}
       </div>

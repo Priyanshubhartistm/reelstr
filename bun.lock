@@ -84,6 +84,7 @@
         "@reelstr/protocol": "workspace:*",
         "@reelstr/testkit": "workspace:*",
         "@reelstr/wallet": "workspace:*",
+        "nostr-tools": "2.25.2",
         "playwright-core": "latest",
       },
     },

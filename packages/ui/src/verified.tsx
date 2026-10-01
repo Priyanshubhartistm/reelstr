@@ -22,6 +22,12 @@ export function trustedVerifiers(): string[] {
     .filter(Boolean);
 }
 
+export function setTrustedVerifiers(list: string[]) {
+  try {
+    localStorage.setItem(KEY, list.join(","));
+  } catch {}
+}
+
 /**
  * "Source Verified" only when a verifier the viewer trusts reports `verified`. It means the manifest
  * re-rendered to this clip with that engine, not who made it. Untrusted labels never earn the badge.

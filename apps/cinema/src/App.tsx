@@ -1,4 +1,4 @@
-import { LoginGate, PaymentsProvider, useRoute, useSession, Wallet } from "@reelstr/ui";
+import { LoginGate, PaymentsProvider, Settings, useRoute, useSession, Wallet } from "@reelstr/ui";
 import { Desk } from "./Desk";
 import { Home, SeriesPage } from "./Home";
 import { Watch } from "./Watch";
@@ -26,6 +26,7 @@ function Shell() {
           <a href="#/">Watch</a>
           <a href="#/wallet">Wallet</a>
           <a href="#/desk">Curator desk</a>
+          <a href="#/settings">Settings</a>
         </nav>
         <span className="grow" />
         <span className="muted" title={pubkey ?? ""}>
@@ -39,6 +40,7 @@ function Shell() {
         {page === "series" && arg ? <SeriesPage coord={arg} /> : null}
         {page === "desk" ? <Desk /> : null}
         {page === "wallet" ? <Wallet /> : null}
+        {page === "settings" ? <Settings /> : null}
         {!page ? <Home /> : null}
       </div>
     </>

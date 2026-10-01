@@ -1582,4 +1582,82 @@ describe("Studio and Cinema in a real browser", () => {
     expect(cues?.join(" ")).toContain("VAULT");
     await viewer.ctx.close();
   }, 600_000);
+
+  test("Settings: trusting a verifier by npub is what earns the Source Verified badge; removing it takes it away", async () => {
+    const { LocalSigner: LS } = await import("@reelstr/nostr");
+    const { buildVerification } = await import("@reelstr/protocol");
+    const nip19 = await import("nostr-tools/nip19");
+    const author = LS.generate();
+    const apk = await author.getPublicKey();
+    const c = new ReelstrClient({
+      signer: author,
+      relays: [publicRelay],
+      blossom: endpoints.blossom as string,
+      mirrors: endpoints.mirrors as string[],
+      mediaUrl: endpoints.mediaUrl as string,
+      indexerUrl: endpoints.indexerUrl as string,
+    });
+    await c.createStory({ d: "badge", title: `Badge ${RUN}`, logline: "x" });
+    const clip = new Uint8Array(
+      await Bun.file(
+        await makeClip(join(dir, "badge.mp4"), {
+          size: "360x640",
+          fps: 30,
+          sec: 12,
+          freq: 410,
+          gainDb: -20,
+        }),
+      ).arrayBuffer(),
+    );
+    const scene = await c.publishScene({
+      bytes: clip,
+      title: "Badge scene",
+      prompt: "p",
+      story: { pubkey: apk, d: "badge" },
+      gen: { model: { name: "mock-open-1", open: true }, seed: "1", refs: [], loras: [] },
+    });
+    const verifier = LS.generate();
+    const vpk = await verifier.getPublicKey();
+    await c.pool.publish(
+      await verifier.signEvent(
+        buildVerification({
+          sceneId: scene.event.id,
+          sceneSha256: scene.ingest.normalized.sha256,
+          verdict: "verified",
+          exact: true,
+          similarity: 1,
+          engine: "mock-open-1",
+        }),
+      ),
+      [publicRelay],
+    );
+    await until(async () =>
+      (await c.api<unknown[]>(`/verifications/${scene.event.id}`)).length === 1 ? true : undefined,
+    );
+
+    const u = await newUser(studioUrl);
+    const story = `#/story/${encodeURIComponent(`31810:${apk}:badge`)}`;
+    const open = async () => {
+      await u.page.goto(`${studioUrl}/${story}`);
+      await u.page.locator(".tree .node").first().click({ timeout: T });
+      await u.page.getByText("Badge scene").first().waitFor({ timeout: T });
+    };
+    await open();
+    expect(await u.page.getByText("Source Verified").count()).toBe(0); // a verdict from someone nobody trusts earns nothing
+    await u.page.goto(`${studioUrl}/#/settings`);
+    await u.page.locator("#v-add").fill("not a key");
+    await u.page.getByRole("button", { name: "Trust" }).click();
+    await u.page.getByText(/not a valid public key/).waitFor();
+    await u.page.locator("#v-add").fill(nip19.npubEncode(vpk));
+    await u.page.getByRole("button", { name: "Trust" }).click();
+    await u.page.getByText(`${vpk.slice(0, 12)}…`).waitFor();
+    await open();
+    await u.page.getByText("Source Verified").first().waitFor({ timeout: T });
+    await u.page.goto(`${studioUrl}/#/settings`);
+    await u.page.getByRole("button", { name: "Remove" }).click();
+    await open();
+    expect(await u.page.getByText("Source Verified").count()).toBe(0);
+    expect(u.errors).toEqual([]);
+    await u.ctx.close();
+  }, 300_000);
 });

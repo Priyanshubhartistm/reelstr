@@ -4,6 +4,7 @@ export * from "./payments";
 export * from "./player";
 export * from "./sequence";
 export * from "./session";
+export * from "./settings";
 export * from "./split";
 export * from "./tree";
 export * from "./verified";
