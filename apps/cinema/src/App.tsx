@@ -17,7 +17,7 @@ function Shell() {
   const route = useRoute();
   const { pubkey, logout } = useSession();
   const [page, arg] = route;
-  if (page === "watch" && arg) return <Watch cutId={arg} />;
+  if (page === "watch" && arg) return <Watch cutRef={arg} />;
   return (
     <>
       <header className="bar">

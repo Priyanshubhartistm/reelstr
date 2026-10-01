@@ -59,6 +59,11 @@ export function Desk() {
   }, [story, showAll]);
 
   const [items, setItems] = useState<Item[]>([]);
+  // editing a published episode: publishing creates a new version of the same episode (same d tag)
+  const [editing, setEditing] = useState<{ episode: number; coord: string } | null>(null);
+  // timeline slot whose scene is being replaced: the next scene chosen from the list takes its place
+  const [replaceIdx, setReplaceIdx] = useState<number | null>(null);
+  const mine = useAsync(() => c.api<CutRow[]>(`/cuts?curator=${me}`), [c]);
   const [meta, setMeta] = useState({
     slug: "",
     seriesTitle: "",
@@ -83,21 +88,99 @@ export function Desk() {
   const [busy, setBusy] = useState(false);
 
   const src = (s: SceneRow) => s.video_url || `${endpoints.blossom}/${s.video_sha}.mp4`;
-  const add = (s: SceneRow) =>
-    setItems((xs) => [
-      ...xs,
-      {
-        uid: crypto.randomUUID(),
-        id: s.id,
-        sha: s.video_sha,
-        url: src(s),
-        title: s.title,
-        duration: Number(s.duration),
-        inSec: 0,
-        outSec: Number(s.duration),
-        payee: s.payee,
-      },
-    ]);
+  const itemOf = (s: SceneRow): Item => ({
+    uid: crypto.randomUUID(),
+    id: s.id,
+    sha: s.video_sha,
+    url: src(s),
+    title: s.title,
+    duration: Number(s.duration),
+    inSec: 0,
+    outSec: Number(s.duration),
+    payee: s.payee,
+  });
+  const add = (s: SceneRow) => {
+    if (replaceIdx !== null) {
+      setItems((xs) => xs.map((x, k) => (k === replaceIdx ? itemOf(s) : x)));
+      setReplaceIdx(null);
+    } else setItems((xs) => [...xs, itemOf(s)]);
+  };
+
+  /** Load a published episode into the editor: scenes with their trims, plus everything else the Cut carried. */
+  async function loadForEdit(
+    cut: CutRow & {
+      synopsis?: string;
+      captions?: string;
+      audio_bed?: string | null;
+      content_warning?: string | null;
+    },
+  ) {
+    setErr("");
+    try {
+      const rows = await c.api<
+        { scene_id: string; sha: string; in_sec: number; out_sec: number; payee: string }[]
+      >(`/cuts/${cut.id}/scenes`);
+      const loaded: Item[] = [];
+      for (const r of rows) {
+        const sc = await c.api<SceneRow>(`/scenes/${r.scene_id}`);
+        loaded.push({
+          ...itemOf(sc),
+          inSec: Number(r.in_sec),
+          outSec: Number(r.out_sec),
+          payee: r.payee,
+        });
+      }
+      const credits = await c.api<{ pubkey: string; role: string; weight: number }[]>(
+        `/cuts/${cut.id}/credits`,
+      );
+      const w = (role: string) => credits.find((x) => x.role === role);
+      const sers =
+        await c.api<
+          { slug: string; curator: string; title: string; summary: string; free: number }[]
+        >("/series");
+      const ser = sers.find((x) => x.slug === cut.series_slug && x.curator === me);
+      setItems(loaded);
+      setEditing({ episode: cut.episode, coord: cut.coord });
+      setMeta((m) => ({
+        ...m,
+        slug: cut.series_slug,
+        seriesTitle: ser?.title ?? m.seriesTitle,
+        summary: ser?.summary ?? m.summary,
+        free: ser?.free ?? m.free,
+        title: cut.title,
+        synopsis: cut.synopsis ?? "",
+        price: Number(cut.price),
+        curatorPct: (w("curator")?.weight ?? 0) / 100,
+        hostPct: (w("host")?.weight ?? 0) / 100,
+        host: w("host")?.pubkey && w("host")?.pubkey !== me ? (w("host")?.pubkey as string) : "",
+        warning: cut.content_warning ?? "",
+      }));
+      const caps = JSON.parse(cut.captions ?? "[]") as {
+        url: string;
+        lang: string;
+        sha256?: string;
+      }[];
+      setCaption(
+        caps[0]
+          ? {
+              url: caps[0].url,
+              sha256: caps[0].sha256 ?? "",
+              name: `existing ${caps[0].lang} captions`,
+            }
+          : null,
+      );
+      const bedRow = cut.audio_bed
+        ? (JSON.parse(cut.audio_bed) as { sha256: string; poolBps: number })
+        : null;
+      setBed(bedRow ? { sha: bedRow.sha256, poolPct: bedRow.poolBps / 100 } : null);
+      setStatus(
+        `Editing episode ${cut.episode}. Publishing creates a new version; viewers keep their place and ratings.`,
+      );
+    } catch (e) {
+      setErr((e as Error).message);
+    }
+  }
+
   const total = items.reduce((a, i) => a + (i.outSec - i.inSec), 0);
   const host = meta.host || me;
 
@@ -134,7 +217,9 @@ export function Desk() {
     setErr("");
     try {
       const existing = await c.api<CutRow[]>(`/cuts?series=${meta.slug}&curator=${me}`);
-      const episode = Math.max(0, ...existing.map((e) => e.episode)) + 1;
+      const episode = editing
+        ? editing.episode
+        : Math.max(0, ...existing.map((e) => e.episode)) + 1;
       setStatus("Rendering the episode (trims, joins, HLS ladder)… this can take a minute.");
       await c.publishCut({
         seriesSlug: meta.slug,
@@ -166,11 +251,17 @@ export function Desk() {
         slug: meta.slug,
         title: meta.seriesTitle || meta.slug,
         summary: meta.summary,
-        episodes: [...existing.map((e) => e.episode), episode].sort((a, b) => a - b),
+        episodes: [...new Set([...existing.map((e) => e.episode), episode])].sort((a, b) => a - b),
         freeEpisodes: meta.free,
       });
-      setStatus(`Published episode ${episode}.`);
+      setStatus(
+        editing
+          ? `Published a new version of episode ${episode}.`
+          : `Published episode ${episode}.`,
+      );
       setItems([]);
+      setEditing(null);
+      setReplaceIdx(null);
     } catch (e) {
       setErr((e as Error).message);
       setStatus("");
@@ -231,7 +322,7 @@ export function Desk() {
                   </span>
                 )}
                 <button type="button" className="ghost" onClick={() => add(s)}>
-                  Add
+                  {replaceIdx !== null ? `Use as scene ${replaceIdx + 1}` : "Add"}
                 </button>
               </div>
             ))}
@@ -239,8 +330,36 @@ export function Desk() {
         </>
       )}
 
+      <h2>Edit a published episode</h2>
+      <p className="muted">
+        Load one of your episodes, change or replace scenes, and publish a new version. It keeps the
+        same episode number, so viewers keep their place, ratings and unlocks.
+      </p>
+      <div className="row">
+        <select
+          aria-label="Your published episodes"
+          value={editing?.coord ?? ""}
+          onChange={(e) => {
+            const cut = mine.data?.find((x) => x.coord === e.target.value);
+            if (cut) void loadForEdit(cut);
+            else {
+              setEditing(null);
+              setItems([]);
+            }
+          }}
+        >
+          <option value="">New episode</option>
+          {mine.data?.map((x) => (
+            <option key={x.coord} value={x.coord}>
+              {x.series_slug} · Ep {x.episode} · {x.title}
+            </option>
+          ))}
+        </select>
+      </div>
+
       <h2>
-        Episode timeline <span className="muted">{total.toFixed(1)} s</span>
+        {editing ? `Editing episode ${editing.episode}` : "Episode timeline"}{" "}
+        <span className="muted">{total.toFixed(1)} s</span>
       </h2>
       {items.length === 0 && (
         <p className="muted">Add scenes above, then drag to reorder and set trims.</p>
@@ -291,6 +410,14 @@ export function Desk() {
                     onClick={() => setItems((xs) => xs.filter((_, k) => k !== i))}
                   >
                     Remove
+                  </button>{" "}
+                  <button
+                    type="button"
+                    className="ghost"
+                    aria-pressed={replaceIdx === i}
+                    onClick={() => setReplaceIdx(replaceIdx === i ? null : i)}
+                  >
+                    {replaceIdx === i ? "Cancel replace" : "Replace"}
                   </button>
                 </span>
               </div>
@@ -505,7 +632,11 @@ export function Desk() {
       {split.weights.length > 0 && <SplitTable weights={split.weights} priceSats={meta.price} />}
       <p>
         <button type="button" disabled={!ready} onClick={publish}>
-          {busy ? "Publishing…" : "Render and publish episode"}
+          {busy
+            ? "Publishing…"
+            : editing
+              ? "Render and publish new version"
+              : "Render and publish episode"}
         </button>
       </p>
       {status && <p className="ok">{status}</p>}

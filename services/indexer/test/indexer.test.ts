@@ -390,11 +390,11 @@ describe("labels in the index (FE-11, FE-13, Source Verified)", () => {
     ])
       await ix.ingest(e);
     await ix.ingest(rate(u1, 1, T2 - 100)); // an older rating from u1 arriving late must not win
-    const [s] = await ratingSummary(ix.db, [cutId]);
-    expect(s).toEqual({ cut_id: cutId, count: 3, average: 4 });
-    expect((await reviews(ix.db, cutId)).length).toBe(3);
+    const [s] = await ratingSummary(ix.db, [cutCoord]);
+    expect(s).toEqual({ cut_coord: cutCoord, count: 3, average: 4 });
+    expect((await reviews(ix.db, cutCoord)).length).toBe(3);
     expect(
-      ((await reviews(ix.db, cutId)) as { review: string }[]).some(
+      ((await reviews(ix.db, cutCoord)) as { review: string }[]).some(
         (r) => r.review === "changed my mind",
       ),
     ).toBe(true);
@@ -520,7 +520,10 @@ describe("live subscription covers every indexed kind", () => {
     for (let i = 0; i < 60 && ix.counts.stored < 3; i++)
       await new Promise((r) => setTimeout(r, 100));
     expect(ix.counts.stored).toBe(3);
-    expect((await ratingSummary(ix.db, [cutId]))[0]).toMatchObject({ count: 1, average: 5 });
+    expect((await ratingSummary(ix.db, [`31811:${"8".repeat(64)}:s:ep-001`]))[0]).toMatchObject({
+      count: 1,
+      average: 5,
+    });
     expect(await reportCounts(ix.db, [cutId])).toEqual({ [cutId]: 1 });
     expect((await verifications(ix.db, "7".repeat(64))).length).toBe(1);
     await ix.close();
@@ -547,5 +550,50 @@ describe("events with old timestamps are still indexed (regression: since:now dr
     expect((await ix.db.query("select title from stories")).length).toBe(1);
     await ix.close();
     pool.close([relay.url]);
+  }, 60_000);
+});
+
+describe("ratings follow the episode, not one version of it (US-K6)", () => {
+  test("a rating given to version 1 still counts after the curator publishes version 2 of the same episode", async () => {
+    const ix = await openIx();
+    const cur = sk();
+    const rater = sk();
+    const pk = getPublicKey(cur);
+    const mkCut = (title: string, at: number) =>
+      finalizeEvent(
+        buildCut({
+          curator: pk,
+          seriesSlug: "s",
+          episode: 1,
+          title,
+          synopsis: "x",
+          scenes: [{ id: "c".repeat(64), sha256: "d".repeat(64), inSec: 0, outSec: 70, payee: pk }],
+          price: { amount: 5 },
+          curatorBps: 0,
+          hostBps: 0,
+          host: pk,
+          createdAt: at,
+        }),
+        cur,
+      ) as Ev;
+    const v1 = mkCut("v1", 1_790_200_000);
+    const v2 = mkCut("v2", 1_790_200_100);
+    expect(v1.id).not.toBe(v2.id);
+    const coord = `31811:${pk}:s:ep-001`;
+    await ix.ingest(v1);
+    await ix.ingest(
+      finalizeEvent(
+        buildRating({ stars: 5, cutId: v1.id, cutCoord: coord, createdAt: 1_790_200_050 }),
+        rater,
+      ) as Ev,
+    );
+    await ix.ingest(v2);
+    expect(
+      (await ix.db.query<{ title: string }>("select title from cuts")).map((c) => c.title),
+    ).toEqual(["v2"]);
+    expect(await ratingSummary(ix.db, [coord])).toEqual([
+      { cut_coord: coord, count: 1, average: 5 },
+    ]);
+    await ix.close();
   }, 60_000);
 });

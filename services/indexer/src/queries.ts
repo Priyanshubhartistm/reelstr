@@ -147,29 +147,30 @@ export async function seriesEpisodes(db: Db, seriesCoord: string) {
 }
 
 export interface RatingSummary {
-  cut_id: string;
+  /** the episode coordinate (stable across new versions of the Cut) */
+  cut_coord: string;
   count: number;
   average: number;
 }
 
-/** FE-13: average and count per Cut; one rating per rater (newest wins). */
-export async function ratingSummary(db: Db, cutIds: string[]): Promise<RatingSummary[]> {
-  if (cutIds.length === 0) return [];
-  const rows = await db.query<{ cut_id: string; n: string; avg: number }>(
-    `select cut_id, count(*) as n, avg(stars)::float8 as avg from ratings where cut_id = any($1) group by cut_id`,
-    [cutIds],
+/** FE-13: average and count per episode coordinate; one rating per rater (newest wins). */
+export async function ratingSummary(db: Db, coords: string[]): Promise<RatingSummary[]> {
+  if (coords.length === 0) return [];
+  const rows = await db.query<{ cut_coord: string; n: string; avg: number }>(
+    `select cut_coord, count(*) as n, avg(stars)::float8 as avg from ratings where cut_coord = any($1) group by cut_coord`,
+    [coords],
   );
   return rows.map((r) => ({
-    cut_id: r.cut_id,
+    cut_coord: r.cut_coord,
     count: Number(r.n),
     average: Math.round(Number(r.avg) * 100) / 100,
   }));
 }
 
-export async function reviews(db: Db, cutId: string) {
+export async function reviews(db: Db, cutCoord: string) {
   return db.query(
-    "select rater, stars, review, created_at from ratings where cut_id = $1 order by created_at desc limit 100",
-    [cutId],
+    "select rater, stars, review, created_at from ratings where cut_coord = $1 order by created_at desc limit 100",
+    [cutCoord],
   );
 }
 

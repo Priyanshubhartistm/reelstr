@@ -1278,4 +1278,194 @@ describe("Studio and Cinema in a real browser", () => {
     expect(v.errors).toEqual([]);
     await v.ctx.close();
   }, 300_000);
+
+  test("US-K6: replace a scene in a live episode; viewers keep their unlock, place and rating", async () => {
+    const { LocalSigner: LS } = await import("@reelstr/nostr");
+    const curatorKey = LS.generate();
+    const cpk = await curatorKey.getPublicKey();
+    const creator = new ReelstrClient({
+      signer: curatorKey,
+      relays: [publicRelay],
+      blossom: endpoints.blossom as string,
+      mirrors: endpoints.mirrors as string[],
+      mediaUrl: endpoints.mediaUrl as string,
+      indexerUrl: endpoints.indexerUrl as string,
+      keysUrl: keys.url,
+    });
+    await creator.createStory({ d: "k6", title: "Revisions", logline: "x" });
+    const bytes = async (n: string, f: number) =>
+      new Uint8Array(
+        await Bun.file(
+          await makeClip(join(dir, `${n}.mp4`), {
+            size: "360x640",
+            fps: 30,
+            sec: 12,
+            freq: f,
+            gainDb: -20,
+          }),
+        ).arrayBuffer(),
+      );
+    const sA = await creator.publishScene({
+      bytes: await bytes("k6a", 300),
+      title: "Original scene",
+      prompt: "p",
+      story: { pubkey: cpk, d: "k6" },
+    });
+    const sB = await creator.publishScene({
+      bytes: await bytes("k6b", 700),
+      title: "Better scene",
+      prompt: "p",
+      story: { pubkey: cpk, d: "k6" },
+    });
+    const srcOf = (x: typeof sA) => ({
+      sha256: x.ingest.normalized.sha256,
+      urls: [x.ingest.normalized.url],
+    });
+    const v1 = await creator.publishCut({
+      seriesSlug: "revs",
+      episode: 1,
+      title: "The cut",
+      synopsis: "Original synopsis",
+      curatorBps: 1000,
+      hostBps: 0,
+      host: cpk,
+      price: { amount: 20 },
+      scenes: [{ id: sA.event.id, sha256: srcOf(sA).sha256, inSec: 0, outSec: 8, payee: cpk }],
+      scenesSources: [srcOf(sA)],
+    });
+    await creator.publishSeries({
+      slug: "revs",
+      title: "Revisions",
+      summary: "s",
+      episodes: [1],
+      freeEpisodes: 0,
+    });
+    const coord = `31811:${cpk}:revs:ep-001`;
+    await until(
+      async () =>
+        (await creator.api<{ id: string }[]>(`/cuts?series=revs&curator=${cpk}`)).some(
+          (x) => x.id === v1.id,
+        )
+          ? true
+          : undefined,
+      20_000,
+    );
+
+    // ---- a viewer unlocks, watches a few seconds, and rates it
+    const viewer = await newUser(cinemaUrl);
+    await viewer.page
+      .locator("header.bar")
+      .getByRole("link", { name: "Wallet", exact: true })
+      .click();
+    await viewer.page.getByTestId("balance").waitFor({ timeout: 30_000 });
+    await viewer.page.locator("#w-amt").fill("100");
+    await viewer.page.getByRole("button", { name: "Get invoice" }).click();
+    await viewer.page.getByText("100 sats", { exact: true }).waitFor({ timeout: 60_000 });
+    await viewer.page.goto(`${cinemaUrl}/#/watch/${encodeURIComponent(coord)}`);
+    await viewer.page.getByRole("button", { name: "Unlock for 20 sats" }).click();
+    const playing = () =>
+      viewer.page.waitForFunction(
+        () => {
+          const x = document.querySelector("video.player") as HTMLVideoElement | null;
+          return !!x && x.readyState >= 3 && x.currentTime > 0.3;
+        },
+        null,
+        { timeout: 60_000 },
+      );
+    await playing();
+    await viewer.page.waitForFunction(
+      (c) => {
+        const p = JSON.parse(localStorage.getItem("reelstr.progress") ?? "{}");
+        return (p[c]?.t ?? 0) >= 3;
+      },
+      coord,
+      { timeout: 30_000 },
+    );
+    await viewer.page.evaluate(() =>
+      (document.querySelector("video.player") as HTMLVideoElement).pause(),
+    );
+    await viewer.page.locator("label").filter({ hasText: "4 stars" }).click();
+    await viewer.page.getByRole("button", { name: "Rate this episode" }).click();
+    await viewer.page.getByText("Thanks, your rating is published.").waitFor({ timeout: 30_000 });
+    const savedBefore = await viewer.page.evaluate(
+      (c) => JSON.parse(localStorage.getItem("reelstr.progress") ?? "{}")[c].t as number,
+      coord,
+    );
+    expect(savedBefore).toBeGreaterThanOrEqual(3);
+
+    // ---- the curator replaces the scene through the Desk (signed in as the same key)
+    const ctx = await browser.newContext({ viewport: { width: 1000, height: 1000 } });
+    await ctx.addInitScript(
+      ([e, m, k]) => {
+        localStorage.setItem("reelstr.endpoints", JSON.stringify(e));
+        localStorage.setItem("reelstr.mint", m as string);
+        localStorage.setItem("reelstr.localkey", k as string);
+      },
+      [endpoints, mintUrl, curatorKey.backup()] as const,
+    );
+    const page = await ctx.newPage();
+    const errs: string[] = [];
+    page.on(
+      "pageerror",
+      (e) => !/relay connection closed by us/.test(e.message) && errs.push(e.message),
+    );
+    await page.goto(`${cinemaUrl}/#/desk`);
+    await page
+      .locator("header.bar")
+      .getByText(`${cpk.slice(0, 8)}…`)
+      .waitFor({ timeout: 30_000 });
+    await page.locator("#d-story").selectOption({ label: "Revisions" });
+    await page
+      .getByLabel("Your published episodes")
+      .selectOption({ label: "revs · Ep 1 · The cut" });
+    await page.getByRole("heading", { name: /Editing episode 1/ }).waitFor({ timeout: 30_000 });
+    // the scene, trims, price and synopsis all came across
+    expect(await page.locator("#out0").inputValue()).toBe("8");
+    expect(await page.locator("#m-p").inputValue()).toBe("20");
+    expect(await page.locator("#m-syn").inputValue()).toBe("Original synopsis");
+    await page.getByRole("button", { name: "Replace" }).click();
+    await page.getByRole("button", { name: "Use as scene 1" }).first().click();
+    await page.locator("li", { hasText: "Better scene" }).waitFor({ timeout: 10_000 });
+    await page.locator("#out0").fill("8");
+    await page.getByRole("button", { name: "Render and publish new version" }).click();
+    await page.getByText("Published a new version of episode 1.").waitFor({ timeout: 240_000 });
+
+    // ---- same episode, new version
+    const after = await until(async () => {
+      const all = await creator.api<{ id: string; coord: string; hls_url: string | null }[]>(
+        `/cuts?series=revs&curator=${cpk}`,
+      );
+      return all.length === 1 && all[0]?.id !== v1.id ? all[0] : undefined;
+    }, 60_000);
+    expect(after.coord).toBe(coord);
+    expect(keys.ledger.episode(`${cpk}/revs:ep-001`)?.cut_event_id).toBe(after.id); // the key server pins the new version
+    const scenes = await creator.api<{ scene_id: string }[]>(`/cuts/${after.id}/scenes`);
+    expect(scenes.map((x) => x.scene_id)).toEqual([sB.event.id]);
+
+    // ---- the viewer: still unlocked, resumes near where they were, rating intact, new version plays
+    await viewer.page.goto(`${cinemaUrl}/#/`);
+    await viewer.page.goto(`${cinemaUrl}/#/watch/${encodeURIComponent(coord)}`);
+    expect(await viewer.page.getByTestId("paywall").count()).toBe(0);
+    await playing();
+    const src = await viewer.page.evaluate(
+      () => (document.querySelector("video.player") as HTMLVideoElement).currentTime,
+    );
+    expect(src).toBeGreaterThan(savedBefore - 1.5); // resumed, not restarted from 0
+    await viewer.page.waitForFunction((h) => document.body.innerText.includes("Ep 1"), null, {
+      timeout: 10_000,
+    });
+    await viewer.page.waitForFunction(
+      () =>
+        document
+          .querySelector("[data-testid=rating-summary]")
+          ?.textContent?.includes("4.0 from 1 rating"),
+      null,
+      { timeout: 30_000 },
+    );
+    // an old event-id link still resolves (by id it no longer exists, but the coordinate does)
+    expect(errs).toEqual([]);
+    expect(viewer.errors).toEqual([]);
+    await ctx.close();
+    await viewer.ctx.close();
+  }, 900_000);
 });

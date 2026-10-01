@@ -99,7 +99,7 @@ export async function applyDerived(db: Db, e: Ev): Promise<void> {
         await db.query("delete from cut_weights where cut_id=$1", [old.id]);
         await db.query("delete from cuts where coord=$1", [coord]);
       }
-      await db.query("insert into cuts values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)", [
+      await db.query("insert into cuts values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)", [
         coord,
         e.id,
         e.pubkey,
@@ -112,6 +112,8 @@ export async function applyDerived(db: Db, e: Ev): Promise<void> {
         e.created_at,
         c.contentWarning ?? null,
         JSON.stringify(c.captions),
+        c.synopsis,
+        c.audioBed ? JSON.stringify(c.audioBed) : null,
       ]);
       for (const [i, s] of c.scenes.entries())
         await db.query("insert into cut_scenes values ($1,$2,$3,$4,$5,$6,$7)", [
@@ -184,13 +186,16 @@ export async function applyDerived(db: Db, e: Ev): Promise<void> {
       if (e.tags.some((t) => t[0] === "L" && t[1] === NS_RATING)) {
         const r = parseRating(e);
         const [old] = await db.query<{ created_at: string }>(
-          "select created_at from ratings where cut_id=$1 and rater=$2",
-          [r.cutId, r.rater],
+          "select created_at from ratings where cut_coord=$1 and rater=$2",
+          [r.cutCoord, r.rater],
         );
-        if (old && Number(old.created_at) >= e.created_at) break; // one rating per rater per Cut: the newest wins
-        await db.query("delete from ratings where cut_id=$1 and rater=$2", [r.cutId, r.rater]);
+        if (old && Number(old.created_at) >= e.created_at) break; // one rating per rater per episode (by coordinate, so it survives new versions): the newest wins
+        await db.query("delete from ratings where cut_coord=$1 and rater=$2", [
+          r.cutCoord,
+          r.rater,
+        ]);
         await db.query("insert into ratings values ($1,$2,$3,$4,$5)", [
-          r.cutId,
+          r.cutCoord,
           r.rater,
           r.stars,
           r.review,

@@ -32,12 +32,18 @@ export function createApi(ix: Indexer, port = Number(process.env.PORT ?? 3300)) 
         if (seg[0] === "stories" && seg[2] === "tree" && seg[1])
           return json(await storyTree(ix.db, seg[1]));
         if (seg[0] === "cuts" && seg.length === 1) {
+          // optional filters: ?series=<slug>&curator=<pubkey>, or ?curator=<pubkey> alone
           const series = u.searchParams.get("series");
+          const curator = u.searchParams.get("curator");
+          const where = [series ? "series_slug = $" : "", curator ? "curator = $" : ""].filter(
+            Boolean,
+          );
+          const params = [series, curator].filter((x): x is string => !!x);
+          const clause = where.length
+            ? `where ${where.map((w, i) => `${w}${i + 1}`).join(" and ")}`
+            : "";
           return json(
-            await ix.db.query(
-              `select * from cuts ${series ? "where series_slug = $1 and curator = $2" : ""} order by series_slug, episode`,
-              series ? [series, u.searchParams.get("curator")] : [],
-            ),
+            await ix.db.query(`select * from cuts ${clause} order by series_slug, episode`, params),
           );
         }
         if (seg[0] === "cuts" && seg[2] === "credits" && seg[1])

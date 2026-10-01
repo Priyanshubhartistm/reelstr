@@ -42,7 +42,9 @@ export async function migrate(db: Db) {
       episode int not null, title text not null, duration double precision not null,
       price bigint not null, hls_url text, created_at bigint not null,
       content_warning text,
-      captions text not null default '[]'
+      captions text not null default '[]',
+      synopsis text not null default '',
+      audio_bed text
     );
     create table if not exists cut_scenes (
       cut_id text not null, pos int not null, scene_id text not null, sha text not null,
@@ -66,8 +68,8 @@ export async function migrate(db: Db) {
     create table if not exists zaps (receipt_id text primary key, recipient text not null, msats bigint not null);
     create table if not exists follows (pubkey text not null, followed text not null, primary key (pubkey, followed));
     create table if not exists ratings (
-      cut_id text not null, rater text not null, stars int not null, review text not null, created_at bigint not null,
-      primary key (cut_id, rater)
+      cut_coord text not null, rater text not null, stars int not null, review text not null, created_at bigint not null,
+      primary key (cut_coord, rater)
     );
     create table if not exists reports (id text primary key, target text not null, reporter text not null, reason text not null, created_at bigint not null);
     create index if not exists reports_target on reports(target);

@@ -68,12 +68,20 @@ export function Ratings({ cutId, cutCoord }: { cutId: string; cutCoord: string }
   const { client } = useSession();
   const c = client as NonNullable<typeof client>;
   const sum = useAsync(
-    async () => (await c.api<{ count: number; average: number }[]>(`/ratings?cuts=${cutId}`))[0],
-    [cutId],
+    async () =>
+      (
+        await c.api<{ count: number; average: number }[]>(
+          `/ratings?cuts=${encodeURIComponent(cutCoord)}`,
+        )
+      )[0],
+    [cutCoord],
   );
   const list = useAsync(
-    () => c.api<{ rater: string; stars: number; review: string }[]>(`/ratings/${cutId}`),
-    [cutId],
+    () =>
+      c.api<{ rater: string; stars: number; review: string }[]>(
+        `/ratings/${encodeURIComponent(cutCoord)}`,
+      ),
+    [cutCoord],
   );
   const [stars, setStars] = useState(0);
   const [review, setReview] = useState("");

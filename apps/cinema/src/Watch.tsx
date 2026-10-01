@@ -31,13 +31,18 @@ const savedToken = (keyUrl: string): Unlock | null => {
 };
 
 /** FE-7 / FE-8: full-screen vertical player, paywall sheet, auto-next, resume. */
-export function Watch({ cutId }: { cutId: string }) {
+/**
+ * `cutRef` is an episode coordinate (stable across new versions of the Cut) or, for old links, an event id.
+ * Resume position is keyed by the coordinate so it survives the curator replacing a scene (US-K6);
+ * reports and content-warning opt-ins stay per version, because a revised Cut deserves a fresh look.
+ */
+export function Watch({ cutRef }: { cutRef: string }) {
   const { client, endpoints } = useSession();
   const pay = usePayments();
   const api = (client as NonNullable<typeof client>).api.bind(client);
   const cut = useAsync(async () => {
     const all = await api<CutRow[]>("/cuts");
-    const c = all.find((x) => x.id === cutId);
+    const c = all.find((x) => x.coord === cutRef || x.id === cutRef);
     if (!c) throw new Error("episode not found");
     const series = (await api<SeriesRow[]>("/series")).find(
       (s) => s.curator === c.curator && s.slug === c.series_slug,
@@ -51,27 +56,29 @@ export function Watch({ cutId }: { cutId: string }) {
       next: siblings.find((x) => x.episode > c.episode),
       index: siblings.findIndex((x) => x.id === c.id),
     };
-  }, [cutId]);
+  }, [cutRef]);
   const last = useRef(0);
   const [unlock, setUnlock] = useState<Unlock | null>(null);
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
   const [tip, setTip] = useState(100);
   const [tipMsg, setTipMsg] = useState("");
-  const [hidden, setHidden] = useState(() => hiddenIds().has(cutId));
+  const [reportedNow, setHidden] = useState(false);
   const [, bump] = useState(0);
 
   const c = cut.data?.c;
+  const hidden = reportedNow || (!!c && hiddenIds().has(c.id));
   const warning = (c as (CutRow & { content_warning?: string | null }) | undefined)
     ?.content_warning;
-  const blurred = !!warning && !isRevealed(cutId);
+  const blurred = !!c && !!warning && !isRevealed(c.id);
   const paid =
     !!c && Number(c.price) > 0 && (cut.data?.index ?? 0) >= (cut.data?.series?.free ?? 0);
   const d = c?.coord.split(":").slice(2).join(":");
   const keyUrl = c && d ? `${endpoints.keysUrl}/key/${c.curator}/${encodeURIComponent(d)}` : "";
   const have = unlock ?? (keyUrl ? savedToken(keyUrl) : null);
   const locked = paid && !have;
-  const start = loadProgress()[cutId]?.t ?? 0;
+  const progress = loadProgress();
+  const start = (c && (progress[c.coord]?.t ?? progress[c.id]?.t)) || 0;
 
   async function unlockNow(how: "nutzap" | "lightning") {
     if (!c) return;
@@ -149,7 +156,7 @@ export function Watch({ cutId }: { cutId: string }) {
             type="button"
             className="ghost"
             onClick={() => {
-              import("./moderation").then((m) => m.unhide(cutId));
+              import("./moderation").then((m) => m.unhide((c as CutRow).id));
               setHidden(false);
             }}
           >
@@ -164,7 +171,7 @@ export function Watch({ cutId }: { cutId: string }) {
           <button
             type="button"
             onClick={() => {
-              reveal(cutId);
+              reveal((c as CutRow).id);
               bump((n) => n + 1);
             }}
           >
@@ -185,15 +192,15 @@ export function Watch({ cutId }: { cutId: string }) {
           onProgress={(t) => {
             if (t - last.current > 2) {
               last.current = t;
-              saveProgress(c.id, t, {
+              saveProgress(c.coord, t, {
                 series: c.series_slug,
                 title: `${c.series_slug} · Ep ${c.episode}`,
               });
             }
           }}
           onEnded={() => {
-            saveProgress(c.id, 0);
-            if (cut.data?.next) go("watch", cut.data.next.id);
+            saveProgress(c.coord, 0);
+            if (cut.data?.next) go("watch", cut.data.next.coord);
           }}
         />
       )}
@@ -212,15 +219,15 @@ export function Watch({ cutId }: { cutId: string }) {
           onProgress={(t) => {
             if (t - last.current > 2) {
               last.current = t;
-              saveProgress(c.id, t, {
+              saveProgress(c.coord, t, {
                 series: c.series_slug,
                 title: `${c.series_slug} · Ep ${c.episode}`,
               });
             }
           }}
           onEnded={() => {
-            saveProgress(c.id, 0);
-            if (cut.data?.next) go("watch", cut.data.next.id);
+            saveProgress(c.coord, 0);
+            if (cut.data?.next) go("watch", cut.data.next.coord);
           }}
         />
       )}

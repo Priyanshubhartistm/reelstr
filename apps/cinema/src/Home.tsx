@@ -39,7 +39,7 @@ export function Home() {
           <h2>Continue watching</h2>
           <div className="grid">
             {progress.map(([id, p]) => (
-              <a key={id} className="card" href={`#/watch/${id}`}>
+              <a key={id} className="card" href={`#/watch/${encodeURIComponent(id)}`}>
                 <strong>{p.title ?? "Episode"}</strong>
                 <div className="muted">{Math.floor(p.t)} s in</div>
               </a>
@@ -78,14 +78,14 @@ export function SeriesPage({ coord }: { coord: string }) {
   );
   const hidden = hiddenIds();
   const ratings = useAsync(async () => {
-    const ids = (eps.data ?? []).map((e) => e.id);
+    const ids = (eps.data ?? []).map((e) => e.coord);
     return ids.length
-      ? await api<{ cut_id: string; count: number; average: number }[]>(
-          `/ratings?cuts=${ids.join(",")}`,
+      ? await api<{ cut_coord: string; count: number; average: number }[]>(
+          `/ratings?cuts=${ids.map(encodeURIComponent).join(",")}`,
         )
       : [];
   }, [eps.data?.length]);
-  const rated = new Map((ratings.data ?? []).map((r) => [r.cut_id, r]));
+  const rated = new Map((ratings.data ?? []).map((r) => [r.cut_coord, r]));
   return (
     <>
       <p>
@@ -99,14 +99,14 @@ export function SeriesPage({ coord }: { coord: string }) {
           ?.filter((e) => !hidden.has(e.id))
           .map((e, i) => (
             <div key={e.id} className="row" style={{ alignItems: "center", padding: ".4rem 0" }}>
-              <a href={`#/watch/${e.id}`}>
+              <a href={`#/watch/${encodeURIComponent(e.coord)}`}>
                 <strong>Ep {e.episode}</strong> · {e.title}
               </a>
               <span className="muted">{Math.round(Number(e.duration))} s</span>
-              {rated.get(e.id) ? (
+              {rated.get(e.coord) ? (
                 <span>
-                  <Stars value={rated.get(e.id)?.average ?? 0} />{" "}
-                  <span className="muted">({rated.get(e.id)?.count})</span>
+                  <Stars value={rated.get(e.coord)?.average ?? 0} />{" "}
+                  <span className="muted">({rated.get(e.coord)?.count})</span>
                 </span>
               ) : (
                 <span className="muted">unrated</span>
