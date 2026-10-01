@@ -5,7 +5,7 @@ Date: 2026-09-30. Method: 5 wave-1 researchers + 2 wave-2 (gap, expert/demand), 
 ## Brief (restated)
 
 Question: is an open-source Nostr-native micro-drama platform (10-15 s AI scenes, forkable, curators cut 60-120 s episodes, per-episode sats, splits declared in signed events) worth building, and which PRD claims are wrong, stale, or risky?
-Decision: what Ansh builds first (Bitshala hackathon/fellowship), what to cut, what to verify before code.
+Decision: what to build first (Bitshala hackathon/fellowship), what to cut, what to verify before code.
 Answered = each load-bearing PRD claim tagged with dated sources; prior art and risks mapped.
 
 ## Answer first (BLUF)
@@ -53,7 +53,7 @@ What holds up: NIP-71 kinds, Blossom, hls.js + MMS on iPhone, R2/Bunny delivery 
 ### F5. Payments: rails exist, proof and custody are open
 - NIP-61 is `draft`; a nutzap is mint-signed and self-proving on *signature* but not on *spend state* (verifier must query the mint; inference). cashu-ts is at 5.0.0-rc.11 (2026-09-22), still an RC. Amethyst 1.12.0 ships NIP-60/61.
 - Mint trust: operator controls keys and BTC; no fallback if the operator vanishes [med]. No 2026 rug found (absence of evidence).
-- FinCEN (2019 guidance, secondary summaries of PDF): custody is the line; viewer-wallet-direct splits are the unhosted side. No law-firm analysis of zap splits found. **This makes the PRD's BE-7 split service the legally heaviest component.** India: VDA gains taxed 30% + 1% TDS (relevant to Ansh personally receiving sats); FIU-IND registration for VDA service providers.
+- FinCEN (2019 guidance, secondary summaries of PDF): custody is the line; viewer-wallet-direct splits are the unhosted side. No law-firm analysis of zap splits found. **This makes the PRD's BE-7 split service the legally heaviest component.** India: VDA gains taxed 30% + 1% TDS (relevant to the builder personally receiving sats); FIU-IND registration for VDA service providers.
 - Apple 3.1.1 bans crypto unlocks in native apps; web/PWA is the only iOS route (no explicit PWA statement found; inference). US link-out commission unsettled (SCOTUS cert granted 2026-06-30); EU 15% link-out + 5% CTC from 2026-10-01.
 - Zap base is small: ~2.7K senders in one Feb-2026 week; all-time 6.44M zaps / 41.76 BTC [low-med aggregator]. Lightning small-payment fee and onboarding failure data: NOT FOUND (twice).
 - Implication: for R0-R1 use tips via zap splits (PRD PY-1), which are non-custodial. Defer per-episode unlock and the split service until legal input and a demand signal.
