@@ -1,0 +1,26 @@
+{
+  "name": "@reelstr/demo",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "start": "bun src/index.ts",
+    "start:empty": "bun src/index.ts --no-seed"
+  },
+  "dependencies": {
+    "@cashu/cashu-ts": "4.11.0",
+    "@noble/hashes": "latest",
+    "@reelstr/agent": "workspace:*",
+    "@reelstr/app-core": "workspace:*",
+    "@reelstr/blossom": "workspace:*",
+    "@reelstr/indexer": "workspace:*",
+    "@reelstr/keys": "workspace:*",
+    "@reelstr/media": "workspace:*",
+    "@reelstr/media-service": "workspace:*",
+    "@reelstr/nostr": "workspace:*",
+    "@reelstr/protocol": "workspace:*",
+    "@reelstr/testkit": "workspace:*",
+    "@reelstr/wallet": "workspace:*",
+    "playwright-core": "latest"
+  }
+}

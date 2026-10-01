@@ -48,6 +48,26 @@
         "vite": "8.3.1",
       },
     },
+    "demo": {
+      "name": "@reelstr/demo",
+      "version": "0.1.0",
+      "dependencies": {
+        "@cashu/cashu-ts": "4.11.0",
+        "@noble/hashes": "latest",
+        "@reelstr/agent": "workspace:*",
+        "@reelstr/app-core": "workspace:*",
+        "@reelstr/blossom": "workspace:*",
+        "@reelstr/indexer": "workspace:*",
+        "@reelstr/keys": "workspace:*",
+        "@reelstr/media": "workspace:*",
+        "@reelstr/media-service": "workspace:*",
+        "@reelstr/nostr": "workspace:*",
+        "@reelstr/protocol": "workspace:*",
+        "@reelstr/testkit": "workspace:*",
+        "@reelstr/wallet": "workspace:*",
+        "playwright-core": "latest",
+      },
+    },
     "e2e": {
       "name": "@reelstr/e2e",
       "dependencies": {
@@ -298,6 +318,8 @@
     "@reelstr/cinema": ["@reelstr/cinema@workspace:apps/cinema"],
 
     "@reelstr/crew": ["@reelstr/crew@workspace:services/crew"],
+
+    "@reelstr/demo": ["@reelstr/demo@workspace:demo"],
 
     "@reelstr/e2e": ["@reelstr/e2e@workspace:e2e"],
 
