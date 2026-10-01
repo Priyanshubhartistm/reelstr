@@ -1,8 +1,9 @@
 import { afterAll, describe, expect, test } from "bun:test";
+import { join } from "node:path";
 import { bytesToHex, randomBytes } from "@noble/hashes/utils.js";
 import { LocalSigner } from "@reelstr/nostr";
 import { httpAuthHeader, httpAuthTemplate } from "@reelstr/protocol";
-import { FakeLightning, signedPost, startFakeMint } from "@reelstr/testkit";
+import { FakeLightning, signedPost, startFakeMint, tempDir } from "@reelstr/testkit";
 import { buildNutzap, CashuWallet } from "@reelstr/wallet";
 import { createKeyServer, type LnBackend, openLedger } from "../src";
 
@@ -288,7 +289,7 @@ describe("paid episodes: Lightning (L402-style)", () => {
 
 describe("funds survive a restart", () => {
   test("the service wallet reloads its proofs from the ledger", async () => {
-    const path = `/tmp/claude-1000/-home-anshtyagi/f0501ddb-8b46-431f-8978-2ee03dd9c1e3/scratchpad/ledger-${Date.now()}.db`;
+    const path = join(tempDir("reelstr-ledger-"), "ledger.db");
     const ledger = openLedger(path);
     const s1 = await createKeyServer({ mints: [mint.url], ledger });
     const w = await payer(50);
