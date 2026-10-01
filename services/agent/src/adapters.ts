@@ -86,8 +86,9 @@ export class MockAdapter implements GenAdapter {
 }
 
 /**
- * Wan 2.2 through fal.ai's queue API. NOT exercised by the test suite (it needs a paid key);
- * treat it as a starting point and run it once by hand before relying on it. Wan 2.2 weights are
+ * Wan 2.2 through fal.ai's queue API (auth `Key <key>`, queue.fal.run, status/result URLs from the
+ * submit response: checked against the @fal-ai/client source). Tested against a mock queue; never
+ * run against the live service (it needs a paid key), so do one real call before relying on it. Wan 2.2 weights are
  * Apache-2.0, so scenes from this adapter are legitimately "open". fal clips are ~5 s at 16 fps, so
  * `durationSec` above ~5 needs several calls stitched; this adapter refuses rather than guess.
  */
@@ -101,6 +102,7 @@ export class FalWanAdapter implements GenAdapter {
     private readonly endpoint = "fal-ai/wan/v2.2-a14b/text-to-video",
     private readonly fetchFn: (input: string, init?: RequestInit) => Promise<Response> = (i, o) =>
       fetch(i, o),
+    private readonly pollMs = 2000,
   ) {}
 
   async generate(req: GenRequest): Promise<Uint8Array> {
@@ -124,7 +126,7 @@ export class FalWanAdapter implements GenAdapter {
       };
       if (st.status === "COMPLETED") break;
       if (st.status === "FAILED") throw new Error("fal job failed");
-      await new Promise((r) => setTimeout(r, 2000));
+      await new Promise((r) => setTimeout(r, this.pollMs));
     }
     const out = (await (await this.fetchFn(q.response_url, { headers })).json()) as {
       video?: { url: string };

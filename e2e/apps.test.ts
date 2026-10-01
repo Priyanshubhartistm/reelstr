@@ -749,4 +749,105 @@ describe("Studio and Cinema in a real browser", () => {
     probe.close([publicRelay]);
     await c2.close();
   }, 300_000);
+
+  test("Agents page: commission a scene from a bot, review the delivery, accept and pay by nutzap", async () => {
+    const { Agent, MockAdapter, registry } = await import("@reelstr/agent");
+    const { CashuWallet } = await import("@reelstr/wallet");
+    const { getPubKeyFromPrivKey } = await import("@cashu/cashu-ts");
+    const { hexToBytes, bytesToHex, randomBytes } = await import("@noble/hashes/utils.js");
+    const { RelayPool: RP, LocalSigner: LS } = await import("@reelstr/nostr");
+    const pool = new RP();
+    // the agent: its own key, a mock open-weight model, earnings in a wallet at the same mint
+    const agentSigner = LS.generate();
+    const lockPriv = bytesToHex(randomBytes(32));
+    const agent = new Agent({
+      signer: agentSigner,
+      pool,
+      relays: [publicRelay],
+      adapters: registry(new MockAdapter("mock-open-1")),
+      priceSats: 100,
+      client: new ReelstrClient({
+        signer: agentSigner,
+        relays: [publicRelay],
+        blossom: endpoints.blossom as string,
+        mediaUrl: endpoints.mediaUrl as string,
+        mediaToken: "tok",
+      }),
+      wallet: await CashuWallet.open(mintUrl),
+      lockPrivkey: lockPriv,
+      lockPubkey: bytesToHex(getPubKeyFromPrivKey(hexToBytes(lockPriv))),
+      mints: [mintUrl],
+      name: "browser-test-bot",
+    });
+    await agent.start(5);
+
+    const u = await newUser(studioUrl);
+    await u.page.getByLabel("Title").first().fill("Agent Story");
+    await u.page.getByLabel("Logline").fill("Made by a bot.");
+    await u.page.getByRole("button", { name: "Create story" }).click();
+    await u.page.getByRole("link", { name: /Agent Story/ }).waitFor({ timeout: T });
+
+    // fund the wallet from Studio (the real mint settles its own quotes)
+    await u.page.locator("header.bar").getByRole("link", { name: "Wallet", exact: true }).click();
+    await u.page.getByTestId("balance").waitFor({ timeout: 30_000 });
+    await u.page.locator("#w-amt").fill("300");
+    await u.page.getByRole("button", { name: "Get invoice" }).click();
+    await u.page.getByText("300 sats", { exact: true }).waitFor({ timeout: 60_000 });
+
+    await u.page.locator("header.bar").getByRole("link", { name: "Agents", exact: true }).click();
+    await diagnose(u, () =>
+      u.page
+        .locator("#ag-agent option", { hasText: "browser-test-bot" })
+        .waitFor({ state: "attached", timeout: 30_000 }),
+    );
+    await u.page
+      .locator("#ag-agent")
+      .selectOption({ label: "browser-test-bot · 100 sats · mock-open-1" });
+    await u.page.locator("#ag-story").selectOption({ label: "Agent Story" });
+    await u.page.locator("#ag-prompt").fill("a neon alley in the rain");
+    await u.page.locator("#ag-seed").fill("1234");
+    await u.page.locator("#ag-dur").fill("6");
+    await u.page.getByRole("button", { name: "Request scene" }).click();
+    await diagnose(u, () => u.page.getByTestId("delivery").waitFor({ timeout: 180_000 }));
+    // review: a playable vertical clip, and nothing is public yet
+    const delivered = u.page.getByTestId("delivery").locator("video");
+    await delivered.waitFor();
+    await u.page.waitForFunction(
+      () => {
+        const v = document.querySelector("[data-testid=delivery] video") as HTMLVideoElement | null;
+        return !!v && v.readyState >= 2 && v.videoHeight > v.videoWidth;
+      },
+      null,
+      { timeout: 60_000 },
+    );
+    const before = (await pool.query([publicRelay], { kinds: [34236] })).filter((e) =>
+      e.tags.some((t) => t[0] === "p" && t[3] === "commissioner"),
+    );
+    expect(before).toEqual([]);
+
+    await u.page.getByRole("button", { name: "Accept and pay 100 sats" }).click();
+    await diagnose(u, () =>
+      u.page
+        .getByText(/Accepted\. The scene is published and 100 sats went to the agent/)
+        .waitFor({ timeout: 90_000 }),
+    );
+    for (let i = 0; i < 120 && agent.paid.length === 0; i++) await Bun.sleep(250);
+    expect(agent.paid).toHaveLength(1);
+    expect(agent.paid[0]?.sats).toBe(100);
+    const scenes = (await pool.query([publicRelay], { kinds: [34236] })).filter((e) =>
+      e.tags.some((t) => t[0] === "p" && t[3] === "commissioner"),
+    );
+    expect(scenes).toHaveLength(1);
+    expect(scenes[0]?.pubkey).toBe(await agentSigner.getPublicKey());
+    // the user's wallet went down by exactly the bid, and the agent holds it
+    await u.page.locator("header.bar").getByRole("link", { name: "Wallet", exact: true }).click();
+    await u.page.getByText("200 sats", { exact: true }).waitFor({ timeout: 60_000 });
+    expect((agent as unknown as { o: { wallet: { balance(): number } } }).o.wallet.balance()).toBe(
+      100,
+    );
+    expect(u.errors).toEqual([]);
+    agent.stop();
+    pool.close([publicRelay]);
+    await u.ctx.close();
+  }, 600_000);
 });

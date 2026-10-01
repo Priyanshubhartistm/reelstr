@@ -1,7 +1,6 @@
-import { LoginGate, PaymentsProvider, useRoute, useSession } from "@reelstr/ui";
+import { LoginGate, PaymentsProvider, useRoute, useSession, Wallet } from "@reelstr/ui";
 import { Desk } from "./Desk";
 import { Home, SeriesPage } from "./Home";
-import { Wallet } from "./Wallet";
 import { Watch } from "./Watch";
 
 export function App() {

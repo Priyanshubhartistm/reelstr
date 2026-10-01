@@ -5,3 +5,4 @@ export * from "./player";
 export * from "./session";
 export * from "./split";
 export * from "./tree";
+export * from "./Wallet";
