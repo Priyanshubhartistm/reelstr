@@ -5,6 +5,7 @@ set -euo pipefail
 B="${B:-https://4-194-209-138.sslip.io/reelstr}"
 cd "$(dirname "$0")/../web"
 VITE_TESTNET=1 \
+VITE_VERIFIERS="${VERIFIERS:-8b375d64fe61cfe8e779a4d7d46babc0b25326260f85ed4a9e16c900336000ae}" \
 VITE_RELAYS="${B/https/wss}/relay" \
 VITE_CREW_RELAY="${B/https/wss}/crew" \
 VITE_BLOSSOM="$B/blossom" VITE_MEDIA_URL="$B/media" \

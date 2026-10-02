@@ -186,7 +186,7 @@ export function StoriesList() {
 }
 
 export function StoryPage({ coord }: { coord: string }) {
-  const { client, endpoints, pubkey } = useSession();
+  const { client, endpoints } = useSession();
   const api = (client as NonNullable<typeof client>).api.bind(client);
   const tree = useAsync(
     () => api<TreeNode[]>(`/stories/${encodeURIComponent(coord)}/tree`),
@@ -207,7 +207,6 @@ export function StoryPage({ coord }: { coord: string }) {
         seed?: string;
       })
     : undefined;
-  const mine = pubkey && coord.split(":")[1] === pubkey;
 
   const usedCount = tree.data?.filter((n) => n.used).length ?? 0;
   return (
@@ -225,7 +224,7 @@ export function StoryPage({ coord }: { coord: string }) {
         </p>
         <div className="row tight" style={{ marginTop: "1rem" }}>
           <button type="button" onClick={() => go("compose", coord)}>
-            {mine ? "Add the first scene" : "Start a new branch"}
+            {(tree.data?.length ?? 0) === 0 ? "Add the first scene" : "Start a new branch"}
           </button>
         </div>
         <div className="stats">

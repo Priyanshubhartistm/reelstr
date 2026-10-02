@@ -1720,3 +1720,14 @@ ol.guide li.done::before {
 .bar {
   padding-top: calc(0.55rem + env(safe-area-inset-top));
 }
+
+/* header: one line, nothing clipped, at laptop widths */
+:root {
+  --page: clamp(1200px, 66vw, 1600px);
+}
+.bar nav a {
+  padding: 0 0.6rem;
+}
+.bar .signout {
+  white-space: nowrap;
+}
