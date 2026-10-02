@@ -21,6 +21,7 @@ x-service: &svc
     URL_REWRITE: "${BLOSSOM_PUBLIC_URL:-http://localhost:3100}=http://blossom:3100,${MINT_URL:-http://localhost:3338}=http://mint:3338"
 services:
   relay:
+    image: localhost/reelstr-relay:latest
     build: ../services/relay
     environment:
       POW_BITS: "${POW_BITS:-16}"
@@ -29,6 +30,7 @@ services:
     restart: unless-stopped
 
   blossom:
+    image: localhost/reelstr-blossom:latest
     build: ./blossom
     environment:
       BLOSSOM_PUBLIC_URL: "${BLOSSOM_PUBLIC_URL:-http://localhost:3100}"
@@ -61,6 +63,7 @@ services:
     profiles: ["mint"]
 
   crew:
+    image: localhost/reelstr-crew:latest
     build: ../services/crew
     environment:
       RELAY_SECRET: "${CREW_RELAY_SECRET:?set CREW_RELAY_SECRET (64 hex): group state is signed by it}"
@@ -159,6 +162,7 @@ services:
     profiles: ["verifier"]
 
   web:
+    image: localhost/reelstr-web:latest
     build:
       context: ..
       target: web

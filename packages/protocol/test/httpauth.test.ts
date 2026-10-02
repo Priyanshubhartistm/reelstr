@@ -34,18 +34,18 @@ describe("NIP-98 behind a reverse proxy that strips a path prefix", () => {
     const body = '{"a":1}';
     const ok = signed("https://pub/reelstr/media/ingest", "POST", body);
     expect(verifyHttpAuth(req("http://127.0.0.1:3200/ingest", ok, body), body)).toBe(pk);
-    // strict: a signature for the unprefixed path no longer verifies, nor one for a different endpoint
+    // a caller inside the private network signs the plain path and is accepted too
     expect(
       verifyHttpAuth(
-        req(
-          "http://127.0.0.1:3200/ingest",
-          signed("http://127.0.0.1:3200/ingest", "POST", body),
-          body,
-        ),
+        req("http://127.0.0.1:3200/ingest", signed("http://media:3200/ingest", "POST", body), body),
         body,
       ),
-    ).toBeNull();
+    ).toBe(pk);
+    // still bound to one endpoint, one method and the body
     expect(verifyHttpAuth(req("http://127.0.0.1:3200/render", ok, body), body)).toBeNull();
+    expect(
+      verifyHttpAuth(req("http://127.0.0.1:3200/ingest", ok, '{"a":2}'), '{"a":2}'),
+    ).toBeNull();
     // a signature made for another service's prefix does not work here
     expect(
       verifyHttpAuth(
