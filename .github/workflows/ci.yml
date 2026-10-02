@@ -1,9 +1,12 @@
 name: CI
 
+# Manual only for now: the repo owner's GitHub account is locked for a billing issue, so every automatic run
+# failed in 2 seconds ("job was not started because your account is locked due to a billing issue") and
+# emailed everyone. Once billing is fixed, restore the triggers:
+#   push: { branches: [master] }
+#   pull_request:
 on:
-  push:
-    branches: [master]
-  pull_request:
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.ref }}
