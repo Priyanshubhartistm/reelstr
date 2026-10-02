@@ -10,6 +10,7 @@ import {
   useState,
 } from "react";
 import { type Endpoints, loadEndpoints, saveEndpoints } from "./config";
+import { FilmArt, Wordmark } from "./shell";
 
 interface Session {
   client: ReelstrClient | null;
@@ -85,81 +86,96 @@ export function LoginGate({ children, title }: { children: ReactNode; title: str
   const run = (f: () => Promise<void>) => f().catch((e: Error) => setErr(e.message));
   return (
     <main className="gate">
-      <h1>{title}</h1>
-      <p className="muted">Sign in with a Nostr key. Your private key never leaves your signer.</p>
-      <section>
-        <h2>Browser extension</h2>
-        <button type="button" onClick={() => run(async () => login(new Nip07Signer()))}>
-          Use NIP-07 extension
-        </button>
-      </section>
-      <section>
-        <h2>Remote signer</h2>
-        <input
-          placeholder="bunker://… or name@domain"
-          value={bunker}
-          onChange={(e) => setBunker(e.target.value)}
-        />
-        <button
-          type="button"
-          disabled={!bunker}
-          onClick={() => run(async () => login(await Nip46Signer.connect(bunker)))}
-        >
-          Connect (NIP-46)
-        </button>
-      </section>
-      <section>
-        <h2>New key</h2>
-        {!fresh ? (
-          <button type="button" onClick={() => setFresh(LocalSigner.generate())}>
-            Generate a key
+      <div className="gate-hero hero">
+        <a className="brand" href="#/" style={{ color: "var(--hero-fg)" }}>
+          <Wordmark />
+        </a>
+        <h1>{title}</h1>
+        <p className="muted">
+          Sign in with a Nostr key. Your private key never leaves your signer.
+        </p>
+        <ul className="points">
+          <li>No account to create and no email to give.</li>
+          <li>Every split and every payout is public.</li>
+          <li>Pay per episode in sats, or watch the free ones.</li>
+        </ul>
+        <FilmArt />
+      </div>
+      <div className="gate-forms">
+        <section>
+          <h2>Browser extension</h2>
+          <button type="button" onClick={() => run(async () => login(new Nip07Signer()))}>
+            Use NIP-07 extension
           </button>
-        ) : (
-          <>
-            <p>Save this secret key somewhere safe. If you lose it, your account is gone.</p>
-            <code className="nsec">{fresh.backup()}</code>
-            <label className="check">
-              <input
-                type="checkbox"
-                checked={confirmed}
-                onChange={(e) => setConfirmed(e.target.checked)}
-              />{" "}
-              I saved my key
-            </label>
-            <button
-              type="button"
-              disabled={!confirmed}
-              onClick={() =>
-                run(async () => {
-                  try {
-                    localStorage.setItem(NSEC_KEY, fresh.backup());
-                  } catch {}
-                  await login(fresh);
-                })
-              }
-            >
-              Continue
+        </section>
+        <section>
+          <h2>Remote signer</h2>
+          <input
+            placeholder="bunker://… or name@domain"
+            value={bunker}
+            onChange={(e) => setBunker(e.target.value)}
+          />
+          <button
+            type="button"
+            disabled={!bunker}
+            onClick={() => run(async () => login(await Nip46Signer.connect(bunker)))}
+          >
+            Connect (NIP-46)
+          </button>
+        </section>
+        <section>
+          <h2>New key</h2>
+          {!fresh ? (
+            <button type="button" onClick={() => setFresh(LocalSigner.generate())}>
+              Generate a key
             </button>
-          </>
-        )}
-      </section>
-      <section>
-        <h2>Existing key</h2>
-        <input
-          type="password"
-          placeholder="nsec1…"
-          value={nsec}
-          onChange={(e) => setNsec(e.target.value)}
-        />
-        <button
-          type="button"
-          disabled={!nsec}
-          onClick={() => run(async () => login(LocalSigner.fromNsec(nsec)))}
-        >
-          Use this key
-        </button>
-      </section>
-      {err && <p className="error">{err}</p>}
+          ) : (
+            <>
+              <p>Save this secret key somewhere safe. If you lose it, your account is gone.</p>
+              <code className="nsec">{fresh.backup()}</code>
+              <label className="check">
+                <input
+                  type="checkbox"
+                  checked={confirmed}
+                  onChange={(e) => setConfirmed(e.target.checked)}
+                />{" "}
+                I saved my key
+              </label>
+              <button
+                type="button"
+                disabled={!confirmed}
+                onClick={() =>
+                  run(async () => {
+                    try {
+                      localStorage.setItem(NSEC_KEY, fresh.backup());
+                    } catch {}
+                    await login(fresh);
+                  })
+                }
+              >
+                Continue
+              </button>
+            </>
+          )}
+        </section>
+        <section>
+          <h2>Existing key</h2>
+          <input
+            type="password"
+            placeholder="nsec1…"
+            value={nsec}
+            onChange={(e) => setNsec(e.target.value)}
+          />
+          <button
+            type="button"
+            disabled={!nsec}
+            onClick={() => run(async () => login(LocalSigner.fromNsec(nsec)))}
+          >
+            Use this key
+          </button>
+        </section>
+        {err && <p className="error">{err}</p>}
+      </div>
     </main>
   );
 }

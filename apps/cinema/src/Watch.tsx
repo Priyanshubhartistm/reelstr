@@ -142,181 +142,201 @@ export function Watch({ cutRef }: { cutRef: string }) {
     }
   }
 
+  const onProgress = (t: number) => {
+    if (!c) return;
+    if (t - last.current > 2) {
+      last.current = t;
+      saveProgress(c.coord, t, {
+        series: c.series_slug,
+        title: `${c.series_slug} · Ep ${c.episode}`,
+      });
+    }
+  };
+  const onEnded = () => {
+    if (!c) return;
+    saveProgress(c.coord, 0);
+    if (cut.data?.next) go("watch", cut.data.next.coord);
+  };
+
   return (
-    <div style={{ maxWidth: 480, margin: "0 auto", padding: "8px 12px" }}>
-      <p>
-        <a href={cut.data?.series ? `#/series/${encodeURIComponent(cut.data.series.coord)}` : "#/"}>
+    <>
+      <p style={{ margin: "0 0 1rem" }}>
+        <a
+          className="label"
+          style={{ textDecoration: "none" }}
+          href={cut.data?.series ? `#/series/${encodeURIComponent(cut.data.series.coord)}` : "#/"}
+        >
           ← {cut.data?.series?.title ?? "Back"}
         </a>
       </p>
       {cut.error && <p className="error">{cut.error}</p>}
-      {hidden && (
-        <div className="card" data-testid="hidden-notice">
-          <p>You reported this episode, so it is hidden for you.</p>
-          <button
-            type="button"
-            className="ghost"
-            onClick={() => {
-              unhide((c as CutRow).id);
-              setHidden(false);
-              bump((n) => n + 1); // hidden is derived from storage, so a no-op setHidden would not re-render
-            }}
-          >
-            Show it again
-          </button>
-        </div>
-      )}
-      {!hidden && blurred && (
-        <div className="card" data-testid="warning">
-          <h2 style={{ marginTop: 0 }}>Content warning</h2>
-          <p>{warning}</p>
-          <button
-            type="button"
-            onClick={() => {
-              reveal((c as CutRow).id);
-              bump((n) => n + 1);
-            }}
-          >
-            Show anyway
-          </button>
-        </div>
-      )}
-      {c && !hidden && !blurred && !c.hls_url && paid && (
-        // raw scene blobs are public, so playing them for a paid episode would bypass the paywall
-        <p className="muted">
-          This episode is still being prepared and will be available to unlock shortly.
-        </p>
-      )}
-      {c && !hidden && !blurred && !c.hls_url && !paid && (
-        <FallbackPlayer
-          cut={c}
-          startAt={start}
-          onProgress={(t) => {
-            if (t - last.current > 2) {
-              last.current = t;
-              saveProgress(c.coord, t, {
-                series: c.series_slug,
-                title: `${c.series_slug} · Ep ${c.episode}`,
-              });
-            }
-          }}
-          onEnded={() => {
-            saveProgress(c.coord, 0);
-            if (cut.data?.next) go("watch", cut.data.next.coord);
-          }}
-        />
-      )}
-      {c?.hls_url && !locked && !hidden && !blurred && (
-        <HlsPlayer
-          key={`${c.id}-${have?.kind}`}
-          src={c.hls_url}
-          keyHeaders={have ? keyHeaders(have) : undefined}
-          captions={(
-            JSON.parse((c as CutRow & { captions?: string }).captions ?? "[]") as {
-              url: string;
-              lang: string;
-            }[]
-          ).map((x) => ({ src: x.url, lang: x.lang, label: x.lang }))}
-          startAt={start > 0 && start < Number(c.duration) - 2 ? start : 0}
-          onProgress={(t) => {
-            if (t - last.current > 2) {
-              last.current = t;
-              saveProgress(c.coord, t, {
-                series: c.series_slug,
-                title: `${c.series_slug} · Ep ${c.episode}`,
-              });
-            }
-          }}
-          onEnded={() => {
-            saveProgress(c.coord, 0);
-            if (cut.data?.next) go("watch", cut.data.next.coord);
-          }}
-        />
-      )}
-      {c && locked && !hidden && !blurred && (
-        <div className="card" role="dialog" aria-label="Unlock episode" data-testid="paywall">
-          <h2 style={{ marginTop: 0 }}>Keep watching</h2>
-          <p>
-            Ep {c.episode} is {c.price} sats. The first {cut.data?.series?.free ?? 0} episodes are
-            free.
-          </p>
-          <p className="muted">
-            Creators whose scenes are in this episode are paid from it; the split is public below.
-          </p>
-          {pay.wallet ? (
-            <p>
-              Balance: <strong>{pay.balance} sats</strong> · spent today {pay.guard.spent()}/
-              {pay.capSats}
-            </p>
-          ) : (
-            <p className="muted">
-              Connect a wallet to unlock. <a href="#/wallet">Open wallet</a>
-            </p>
-          )}
-          <p>
-            <button
-              type="button"
-              disabled={busy || !pay.wallet || pay.balance < Number(c.price)}
-              onClick={() => unlockNow("nutzap")}
-            >
-              {busy ? "Unlocking…" : `Unlock for ${c.price} sats`}
-            </button>{" "}
-            {pay.nwc && (
+      <div className="watch">
+        <div>
+          {hidden && (
+            <div className="card" data-testid="hidden-notice">
+              <div className="label">Hidden</div>
+              <p>You reported this episode, so it is hidden for you.</p>
               <button
                 type="button"
                 className="ghost"
-                disabled={busy}
-                onClick={() => unlockNow("lightning")}
+                onClick={() => {
+                  unhide((c as CutRow).id);
+                  setHidden(false);
+                  bump((n) => n + 1); // hidden is derived from storage, so a no-op setHidden would not re-render
+                }}
               >
-                Pay with Lightning wallet
+                Show it again
               </button>
-            )}
-          </p>
-          {pay.wallet && pay.balance < Number(c.price) && (
-            <p className="muted">
-              Balance is too low. <a href="#/wallet">Top up</a>
-            </p>
+            </div>
           )}
-          {err && <p className="error">{err}</p>}
-        </div>
-      )}
-      {c && (
-        <h2>
-          Ep {c.episode} · {c.title}
-        </h2>
-      )}
-      {cut.data?.next && (
-        <p className="muted">Next: Ep {cut.data.next.episode} plays automatically.</p>
-      )}
-      {c && pay.nwc && (
-        <div className="card" style={{ margin: "12px 0" }}>
-          <div className="row" style={{ alignItems: "flex-end" }}>
-            <div>
-              <label htmlFor="tip">Tip the creators (sats)</label>
-              <input
-                id="tip"
-                type="number"
-                min="1"
-                value={tip}
-                onChange={(e) => setTip(Number(e.target.value))}
+          {!hidden && blurred && (
+            <div className="card" data-testid="warning">
+              <div className="label">Heads up</div>
+              <h2 style={{ margin: "0.3rem 0" }}>Content warning</h2>
+              <p>{warning}</p>
+              <button
+                type="button"
+                onClick={() => {
+                  reveal((c as CutRow).id);
+                  bump((n) => n + 1);
+                }}
+              >
+                Show anyway
+              </button>
+            </div>
+          )}
+          {c && !hidden && !blurred && !c.hls_url && paid && (
+            // raw scene blobs are public, so playing them for a paid episode would bypass the paywall
+            <div className="card empty">
+              <strong>Almost ready</strong>
+              This episode is still being prepared and will be available to unlock shortly.
+            </div>
+          )}
+          {c && !hidden && !blurred && !c.hls_url && !paid && (
+            <div className="phone">
+              <FallbackPlayer cut={c} startAt={start} onProgress={onProgress} onEnded={onEnded} />
+            </div>
+          )}
+          {c?.hls_url && !locked && !hidden && !blurred && (
+            <div className="phone">
+              <HlsPlayer
+                key={`${c.id}-${have?.kind}`}
+                src={c.hls_url}
+                keyHeaders={have ? keyHeaders(have) : undefined}
+                captions={(
+                  JSON.parse((c as CutRow & { captions?: string }).captions ?? "[]") as {
+                    url: string;
+                    lang: string;
+                  }[]
+                ).map((x) => ({ src: x.url, lang: x.lang, label: x.lang }))}
+                startAt={start > 0 && start < Number(c.duration) - 2 ? start : 0}
+                onProgress={onProgress}
+                onEnded={onEnded}
               />
             </div>
-            <button type="button" className="ghost" onClick={sendTip}>
-              Zap the split
-            </button>
-          </div>
-          {tipMsg && <p className="muted">{tipMsg}</p>}
+          )}
+          {c && locked && !hidden && !blurred && (
+            <div className="hero" role="dialog" aria-label="Unlock episode" data-testid="paywall">
+              <div className="label">Episode {c.episode} · locked</div>
+              <h2 style={{ margin: "0.35rem 0 0.9rem" }}>Keep watching</h2>
+              <div className="figure">
+                {c.price}
+                <small>sats</small>
+              </div>
+              <p className="muted" style={{ marginTop: "0.9rem" }}>
+                Ep {c.episode} is {c.price} sats. The first {cut.data?.series?.free ?? 0} episodes
+                are free. Creators whose scenes are in this episode are paid from it; the split is
+                public.
+              </p>
+              {pay.wallet ? (
+                <p>
+                  Balance: <strong>{pay.balance} sats</strong> · spent today{" "}
+                  <span className="num">
+                    {pay.guard.spent()}/{pay.capSats}
+                  </span>
+                </p>
+              ) : (
+                <p className="muted">
+                  Connect a wallet to unlock. <a href="#/wallet">Open wallet</a>
+                </p>
+              )}
+              <div className="row tight" style={{ marginTop: "0.9rem" }}>
+                <button
+                  type="button"
+                  disabled={busy || !pay.wallet || pay.balance < Number(c.price)}
+                  onClick={() => unlockNow("nutzap")}
+                >
+                  {busy ? "Unlocking…" : `Unlock for ${c.price} sats`}
+                </button>
+                {pay.nwc && (
+                  <button
+                    type="button"
+                    className="ghost"
+                    disabled={busy}
+                    onClick={() => unlockNow("lightning")}
+                  >
+                    Pay with Lightning wallet
+                  </button>
+                )}
+              </div>
+              {pay.wallet && pay.balance < Number(c.price) && (
+                <p className="muted">
+                  Balance is too low. <a href="#/wallet">Top up</a>
+                </p>
+              )}
+              {err && <p className="error">{err}</p>}
+            </div>
+          )}
         </div>
-      )}
-      {c && !hidden && (
+
         <div>
-          <ReportButton eventId={c.id} author={c.curator} onHidden={() => setHidden(true)} />
+          {c && (
+            <>
+              <div className="between">
+                <span className="label">Episode {c.episode}</span>
+                <span className="pill">
+                  <span className="num">{Math.round(Number(c.duration))}</span> s
+                </span>
+              </div>
+              <h1 style={{ marginTop: "0.3rem" }}>
+                Ep {c.episode} · {c.title}
+              </h1>
+            </>
+          )}
+          {cut.data?.next && (
+            <p className="muted">Next: Ep {cut.data.next.episode} plays automatically.</p>
+          )}
+          {c && pay.nwc && (
+            <div className="card" style={{ margin: "12px 0" }}>
+              <div className="row" style={{ alignItems: "flex-end" }}>
+                <div>
+                  <label htmlFor="tip">Tip the creators (sats)</label>
+                  <input
+                    id="tip"
+                    type="number"
+                    min="1"
+                    value={tip}
+                    onChange={(e) => setTip(Number(e.target.value))}
+                  />
+                </div>
+                <button type="button" className="ghost" onClick={sendTip}>
+                  Zap the split
+                </button>
+              </div>
+              {tipMsg && <p className="muted">{tipMsg}</p>}
+            </div>
+          )}
+          {c && !hidden && (
+            <div style={{ margin: "0.75rem 0" }}>
+              <ReportButton eventId={c.id} author={c.curator} onHidden={() => setHidden(true)} />
+            </div>
+          )}
+          {c && !hidden && <Credits cutId={c.id} priceSats={c.price} />}
+          {c && !hidden && <EpisodeSources cutId={c.id} />}
+          {c && !hidden && <Ratings cutId={c.id} cutCoord={c.coord} />}
         </div>
-      )}
-      {c && !hidden && <Credits cutId={c.id} priceSats={c.price} />}
-      {c && !hidden && <EpisodeSources cutId={c.id} />}
-      {c && !hidden && <Ratings cutId={c.id} cutCoord={c.coord} />}
-    </div>
+      </div>
+    </>
   );
 }
 
@@ -360,7 +380,9 @@ function FallbackPlayer({
         onProgress={(t) => onProgress(t)}
         onEnded={onEnded}
       />
-      <p className="muted">Playing scene by scene while the full episode is prepared.</p>
+      <p className="muted" style={{ textAlign: "center", margin: "0.5rem 0 0" }}>
+        Playing scene by scene while the full episode is prepared.
+      </p>
     </>
   );
 }

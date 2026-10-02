@@ -1,4 +1,12 @@
-import { go, SourceBadge, type TreeNode, TreeView, useAsync, useSession } from "@reelstr/ui";
+import {
+  FilmArt,
+  go,
+  SourceBadge,
+  type TreeNode,
+  TreeView,
+  useAsync,
+  useSession,
+} from "@reelstr/ui";
 import { useState } from "react";
 
 interface Story {
@@ -21,6 +29,13 @@ interface SceneRow {
   eligible: boolean;
   gen: string;
 }
+
+/** A stable colour per story, so a world always looks like itself. */
+const tone = (coord: string) => {
+  let h = 0;
+  for (const ch of coord) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return `tone-${h % 4}`;
+};
 
 export function StoriesList() {
   const { client } = useSession();
@@ -61,49 +76,101 @@ export function StoriesList() {
     }
   }
 
+  const n = stories.data?.length ?? 0;
   return (
     <>
-      <h1>Stories</h1>
-      <p className="muted">
-        A story is a world: a logline, a cast, a style. Anyone can add scenes to it.
-      </p>
+      <section className="hero">
+        <FilmArt />
+        <div className="label">Reelstr Studio</div>
+        <h1>Build a world. Add the next scene.</h1>
+        <p className="muted" style={{ maxWidth: "38rem" }}>
+          A story is a logline, a cast and a style. Anyone can add a scene to it or branch from one,
+          and curators cut the best branches into episodes that pay everyone who made a scene.
+        </p>
+        <div className="stats">
+          <div className="hero-inset stat">
+            <span className="label">Stories</span>
+            <span className="num">{n}</span>
+          </div>
+        </div>
+      </section>
+
+      <div className="label" style={{ margin: "1.5rem 0 0.6rem" }}>
+        Stories
+      </div>
       {stories.error && <p className="error">{stories.error}</p>}
       <div className="grid">
         {stories.data?.map((s) => (
-          <a key={s.coord} className="card" href={`#/story/${encodeURIComponent(s.coord)}`}>
-            <strong>{s.title}</strong>
-            <p className="muted">{s.logline}</p>
+          <a
+            key={s.coord}
+            className={`cover ${tone(s.coord)}`}
+            href={`#/story/${encodeURIComponent(s.coord)}`}
+          >
+            <div>
+              <div className="cover-title">{s.title}</div>
+              <p>{s.logline}</p>
+            </div>
+            <div className="between">
+              <span className="pill">Open the tree</span>
+              <span className="label" style={{ color: "inherit", opacity: 0.7 }}>
+                {s.pubkey.slice(0, 6)}
+              </span>
+            </div>
           </a>
         ))}
-        {stories.data?.length === 0 && <p className="muted">No stories yet. Start one below.</p>}
       </div>
-      <h2>New story</h2>
-      <div className="card">
-        <label htmlFor="st-title">Title</label>
-        <input
-          id="st-title"
-          value={form.title}
-          onChange={(e) => setForm({ ...form, title: e.target.value })}
-        />
-        <label htmlFor="st-logline">Logline</label>
-        <input
-          id="st-logline"
-          value={form.logline}
-          onChange={(e) => setForm({ ...form, logline: e.target.value })}
-        />
-        <label htmlFor="st-cast">Cast (one character per line)</label>
-        <textarea
-          id="st-cast"
-          rows={3}
-          value={form.cast}
-          onChange={(e) => setForm({ ...form, cast: e.target.value })}
-        />
-        <p>
-          <button type="button" disabled={busy || !form.title || !form.logline} onClick={create}>
-            {busy ? "Publishing…" : "Create story"}
-          </button>
-        </p>
-        {err && <p className="error">{err}</p>}
+      {stories.data?.length === 0 && (
+        <div className="card empty">
+          <strong>No stories yet</strong>
+          Start one below.
+        </div>
+      )}
+
+      <div className="cols" style={{ marginTop: "1.5rem" }}>
+        <div className="card card-soft">
+          <h3>How it works</h3>
+          <ol className="steps">
+            <li>
+              <b>Start a story.</b> A title, a logline and the characters.
+            </li>
+            <li>
+              <b>Add scenes.</b> Upload a 10 to 15 second clip, or commission a bot. Branch from any
+              scene.
+            </li>
+            <li>
+              <b>Curators cut episodes.</b> Scenes used in an episode earn their share of each
+              unlock.
+            </li>
+          </ol>
+        </div>
+        <div className="card">
+          <h3>New story</h3>
+          <label htmlFor="st-title">Title</label>
+          <input
+            id="st-title"
+            value={form.title}
+            onChange={(e) => setForm({ ...form, title: e.target.value })}
+          />
+          <label htmlFor="st-logline">Logline</label>
+          <input
+            id="st-logline"
+            value={form.logline}
+            onChange={(e) => setForm({ ...form, logline: e.target.value })}
+          />
+          <label htmlFor="st-cast">Cast (one character per line)</label>
+          <textarea
+            id="st-cast"
+            rows={3}
+            value={form.cast}
+            onChange={(e) => setForm({ ...form, cast: e.target.value })}
+          />
+          <p>
+            <button type="button" disabled={busy || !form.title || !form.logline} onClick={create}>
+              {busy ? "Publishing…" : "Create story"}
+            </button>
+          </p>
+          {err && <p className="error">{err}</p>}
+        </div>
       </div>
     </>
   );
@@ -133,59 +200,78 @@ export function StoryPage({ coord }: { coord: string }) {
     : undefined;
   const mine = pubkey && coord.split(":")[1] === pubkey;
 
+  const usedCount = tree.data?.filter((n) => n.used).length ?? 0;
   return (
     <>
-      <p>
-        <a href="#/">← Stories</a>
-      </p>
-      <h1>{story.data?.title ?? "Story"}</h1>
-      <p className="muted">{story.data?.logline}</p>
-      <p>
-        <button type="button" onClick={() => go("compose", coord)}>
-          {mine ? "Add the first scene" : "Start a new branch"}
-        </button>{" "}
-        <span className="pill">{tree.data?.length ?? 0} scenes</span>{" "}
-        <span className="pill">green = used in an episode</span>
-      </p>
+      <section className="hero">
+        <a href="#/" className="label" style={{ textDecoration: "none" }}>
+          ← Stories
+        </a>
+        <h1>{story.data?.title ?? "Story"}</h1>
+        <p className="muted" style={{ maxWidth: "38rem" }}>
+          {story.data?.logline}
+        </p>
+        <div className="row tight" style={{ marginTop: "1rem" }}>
+          <button type="button" onClick={() => go("compose", coord)}>
+            {mine ? "Add the first scene" : "Start a new branch"}
+          </button>
+        </div>
+        <div className="stats">
+          <div className="hero-inset stat">
+            <span className="label">Scenes</span>
+            <span className="num">{tree.data?.length ?? 0}</span>
+          </div>
+          <div className="hero-inset stat">
+            <span className="label">In episodes</span>
+            <span className="num">{usedCount}</span>
+          </div>
+        </div>
+      </section>
+
+      <div className="between" style={{ margin: "0.25rem 0 0.6rem" }}>
+        <span className="label">Scene tree</span>
+        <span className="pill pill-fair">green = used in an episode</span>
+      </div>
       {tree.error && <p className="error">{tree.error}</p>}
       {tree.data && tree.data.length > 0 && (
         <TreeView nodes={tree.data} selected={sel?.id} onSelect={setSel} />
       )}
+      {tree.data?.length === 0 && (
+        <div className="card empty">
+          <strong>No scenes yet</strong>
+          Add the first one to start the tree.
+        </div>
+      )}
       {sel && scene.data && (
-        <div className="card" style={{ marginTop: 16 }}>
-          <div className="row">
-            <div>
-              <h2 style={{ marginTop: 0 }}>{scene.data.title}</h2>
-              <p>{scene.data.content}</p>
-              <p className="muted">
-                {Number(scene.data.duration).toFixed(1)} s · {scene.data.license} · by{" "}
-                {scene.data.author.slice(0, 8)}…
-                {gen?.model && (
-                  <>
-                    {" "}
-                    · {gen.model.name} ({gen.model.open ? "open weights" : "closed"})
-                  </>
-                )}
-                {scene.data.eligible && (
-                  <>
-                    {" "}
-                    · <span className="ok">re-render eligible</span>
-                  </>
-                )}{" "}
-                <SourceBadge sceneId={scene.data.id} />
-              </p>
-              <button type="button" onClick={() => go("compose", coord, sel.id)}>
-                Fork / continue from here
-              </button>
-            </div>
+        <div className="watch" style={{ marginTop: "0.5rem" }}>
+          <div className="phone">
             {/* biome-ignore lint/a11y/useMediaCaption: raw scenes have no transcript; curated episodes get captions in the player */}
             <video
               className="player"
-              style={{ maxWidth: 240 }}
               controls
               playsInline
               src={scene.data.video_url || `${endpoints.blossom}/${scene.data.video_sha}.mp4`}
             />
+          </div>
+          <div>
+            <div className="label">Scene</div>
+            <h2 style={{ margin: "0.25rem 0 0.5rem" }}>{scene.data.title}</h2>
+            <p>{scene.data.content}</p>
+            <div className="row tight" style={{ margin: "0.75rem 0" }}>
+              <span className="pill num">{Number(scene.data.duration).toFixed(1)} s</span>
+              <span className="pill">{scene.data.license}</span>
+              <span className="pill num">by {scene.data.author.slice(0, 8)}…</span>
+              {gen?.model && (
+                <span className="pill">
+                  {gen.model.name} ({gen.model.open ? "open weights" : "closed"})
+                </span>
+              )}
+              {scene.data.eligible && <span className="pill pill-fair">re-render eligible</span>}
+              <SourceBadge sceneId={scene.data.id} />
+            </div>
+            <button type="button" onClick={() => go("compose", coord, sel.id)}>
+              Fork / continue from here
+            </button>
           </div>
         </div>
       )}

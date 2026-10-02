@@ -106,137 +106,173 @@ export function Composer({
 
   return (
     <>
-      <p>
-        <a href={`#/story/${encodeURIComponent(coord)}`}>← Story</a>
-      </p>
-      <h1>{parent ? "Fork or continue" : "New scene"}</h1>
-      {parent && (
-        <p className="muted">
-          Following scene <code>{parent.slice(0, 10)}…</code>. Its story, license and generation
-          manifest carry over, and the original creator is credited automatically.
-        </p>
-      )}
-      <div className="card">
-        <label htmlFor="c-file">Clip (MP4 or MOV, up to 20 s, up to 200 MB)</label>
-        <input
-          id="c-file"
-          type="file"
-          accept="video/mp4,video/quicktime,video/*"
-          onChange={(e) => setFile(e.target.files?.[0])}
-        />
-        <div className="row">
-          <div>
-            <label htmlFor="c-title">Title</label>
-            <input
-              id="c-title"
-              value={f.title}
-              onChange={(e) => setF({ ...f, title: e.target.value })}
-            />
-          </div>
-          <div>
-            <label htmlFor="c-fit">If not vertical</label>
-            <select
-              id="c-fit"
-              value={f.fit}
-              onChange={(e) => setF({ ...f, fit: e.target.value as "crop" | "letterbox" })}
-            >
-              <option value="crop">Crop to fill</option>
-              <option value="letterbox">Letterbox</option>
-            </select>
-          </div>
-        </div>
-        <label htmlFor="c-prompt">Prompt / description / dialogue</label>
-        <textarea
-          id="c-prompt"
-          rows={3}
-          value={f.prompt}
-          onChange={(e) => setF({ ...f, prompt: e.target.value })}
-        />
-        <h2>Manifest</h2>
-        <p className="muted">
-          Open-weight models with a seed and hashed references make a scene re-renderable.
-        </p>
-        <div className="row">
-          <div>
-            <label htmlFor="c-model">Model</label>
-            <input
-              id="c-model"
-              placeholder="wan-2.2-t2v"
-              value={f.model}
-              onChange={(e) => setF({ ...f, model: e.target.value })}
-            />
-          </div>
-          <div>
-            <label htmlFor="c-seed">Seed</label>
-            <input
-              id="c-seed"
-              value={f.seed}
-              onChange={(e) => setF({ ...f, seed: e.target.value })}
-            />
-          </div>
-        </div>
-        <label className="check">
-          <input
-            type="checkbox"
-            checked={f.open}
-            onChange={(e) => setF({ ...f, open: e.target.checked })}
-          />{" "}
-          Open-weight model
-        </label>
-        <label htmlFor="c-refs">Reference image SHA-256s (comma separated)</label>
-        <input id="c-refs" value={f.refs} onChange={(e) => setF({ ...f, refs: e.target.value })} />
-        <label htmlFor="c-loras">LoRA SHA-256s (comma separated)</label>
-        <input
-          id="c-loras"
-          value={f.loras}
-          onChange={(e) => setF({ ...f, loras: e.target.value })}
-        />
-        {!parent && (
-          <>
-            <label htmlFor="c-license">License</label>
-            <select
-              id="c-license"
-              value={f.license}
-              onChange={(e) => setF({ ...f, license: e.target.value })}
-            >
-              <option>CC-BY-SA-4.0</option>
-              <option>CC-BY-4.0</option>
-              <option>CC0-1.0</option>
-              <option value="All-Rights-Reserved">All rights reserved (not forkable)</option>
-            </select>
-            <p className="muted">
-              A license covers the human-authored layer: your script, selection and edit. Raw AI
-              output may not be copyrightable.
-            </p>
-          </>
+      <section className="hero">
+        <a
+          href={`#/story/${encodeURIComponent(coord)}`}
+          className="label"
+          style={{ textDecoration: "none" }}
+        >
+          ← Story
+        </a>
+        <h1>{parent ? "Fork or continue" : "New scene"}</h1>
+        {parent ? (
+          <p className="muted" style={{ maxWidth: "38rem" }}>
+            Following scene <code>{parent.slice(0, 10)}…</code>. Its story, license and generation
+            manifest carry over, and the original creator is credited automatically.
+          </p>
+        ) : (
+          <p className="muted" style={{ maxWidth: "38rem" }}>
+            Upload a short vertical clip. It is normalized, stored by its hash on Blossom, and
+            published as a scene anyone can fork.
+          </p>
         )}
-        <label htmlFor="c-draft">Crew room (optional)</label>
-        <input
-          id="c-draft"
-          placeholder="leave empty to publish publicly"
-          value={draftTo}
-          onChange={(e) => setDraftTo(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-"))}
-        />
-        <p className="muted">
-          Fill this to post the scene as a private draft in your crew room instead of publishing it.
-        </p>
-        <p>
-          <button
-            type="button"
-            disabled={busy || !file || !f.title || !f.prompt || (!!parent && !parentEv.data)}
-            onClick={publish}
-          >
-            {busy
-              ? "Working…"
-              : draftTo
-                ? "Post as crew draft"
-                : parent
-                  ? "Publish fork"
-                  : "Publish scene"}
-          </button>
-        </p>
-        {msg && <p className="ok">{msg}</p>}
-        {err && <p className="error">{err}</p>}
+      </section>
+      <div className="compose">
+        <div>
+          <div className="card">
+            <h3>Your clip</h3>
+            <label htmlFor="c-file">Clip (MP4 or MOV, up to 20 s, up to 200 MB)</label>
+            <input
+              id="c-file"
+              type="file"
+              accept="video/mp4,video/quicktime,video/*"
+              onChange={(e) => setFile(e.target.files?.[0])}
+            />
+            <div className="row">
+              <div>
+                <label htmlFor="c-title">Title</label>
+                <input
+                  id="c-title"
+                  value={f.title}
+                  onChange={(e) => setF({ ...f, title: e.target.value })}
+                />
+              </div>
+              <div>
+                <label htmlFor="c-fit">If not vertical</label>
+                <select
+                  id="c-fit"
+                  value={f.fit}
+                  onChange={(e) => setF({ ...f, fit: e.target.value as "crop" | "letterbox" })}
+                >
+                  <option value="crop">Crop to fill</option>
+                  <option value="letterbox">Letterbox</option>
+                </select>
+              </div>
+            </div>
+            <label htmlFor="c-prompt">Prompt / description / dialogue</label>
+            <textarea
+              id="c-prompt"
+              rows={3}
+              value={f.prompt}
+              onChange={(e) => setF({ ...f, prompt: e.target.value })}
+            />
+          </div>
+          <div className="card">
+            <h3>Manifest</h3>
+            <p className="muted">
+              Open-weight models with a seed and hashed references make a scene re-renderable.
+            </p>
+            <div className="row">
+              <div>
+                <label htmlFor="c-model">Model</label>
+                <input
+                  id="c-model"
+                  placeholder="wan-2.2-t2v"
+                  value={f.model}
+                  onChange={(e) => setF({ ...f, model: e.target.value })}
+                />
+              </div>
+              <div>
+                <label htmlFor="c-seed">Seed</label>
+                <input
+                  id="c-seed"
+                  value={f.seed}
+                  onChange={(e) => setF({ ...f, seed: e.target.value })}
+                />
+              </div>
+            </div>
+            <label className="check">
+              <input
+                type="checkbox"
+                checked={f.open}
+                onChange={(e) => setF({ ...f, open: e.target.checked })}
+              />{" "}
+              Open-weight model
+            </label>
+            <label htmlFor="c-refs">Reference image SHA-256s (comma separated)</label>
+            <input
+              id="c-refs"
+              value={f.refs}
+              onChange={(e) => setF({ ...f, refs: e.target.value })}
+            />
+            <label htmlFor="c-loras">LoRA SHA-256s (comma separated)</label>
+            <input
+              id="c-loras"
+              value={f.loras}
+              onChange={(e) => setF({ ...f, loras: e.target.value })}
+            />
+          </div>
+        </div>
+        <aside>
+          <div className="card">
+            <h3>Publish</h3>
+            {!parent && (
+              <>
+                <label htmlFor="c-license">License</label>
+                <select
+                  id="c-license"
+                  value={f.license}
+                  onChange={(e) => setF({ ...f, license: e.target.value })}
+                >
+                  <option>CC-BY-SA-4.0</option>
+                  <option>CC-BY-4.0</option>
+                  <option>CC0-1.0</option>
+                  <option value="All-Rights-Reserved">All rights reserved (not forkable)</option>
+                </select>
+                <p className="muted">
+                  A license covers the human-authored layer: your script, selection and edit. Raw AI
+                  output may not be copyrightable.
+                </p>
+              </>
+            )}
+            <label htmlFor="c-draft">Crew room (optional)</label>
+            <input
+              id="c-draft"
+              placeholder="leave empty to publish publicly"
+              value={draftTo}
+              onChange={(e) => setDraftTo(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-"))}
+            />
+            <p className="muted">
+              Fill this to post the scene as a private draft in your crew room instead of publishing
+              it.
+            </p>
+            <p>
+              <button
+                type="button"
+                disabled={busy || !file || !f.title || !f.prompt || (!!parent && !parentEv.data)}
+                onClick={publish}
+              >
+                {busy
+                  ? "Working…"
+                  : draftTo
+                    ? "Post as crew draft"
+                    : parent
+                      ? "Publish fork"
+                      : "Publish scene"}
+              </button>
+            </p>
+            {msg && <p className="ok">{msg}</p>}
+            {err && <p className="error">{err}</p>}
+          </div>
+          <div className="card card-soft">
+            <h3>What gets published</h3>
+            <ul className="steps" style={{ paddingLeft: "1.1rem" }}>
+              <li>The clip, normalized to 1080×1920 at 30 fps.</li>
+              <li>Your prompt and manifest, signed with your key.</li>
+              <li>Credit for you, and for whoever you forked from.</li>
+            </ul>
+          </div>
+        </aside>
       </div>
     </>
   );

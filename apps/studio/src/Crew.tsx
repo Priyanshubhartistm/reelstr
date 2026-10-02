@@ -82,30 +82,52 @@ export function Crew() {
   if (!room)
     return (
       <>
-        <h1>Crew rooms</h1>
-        <p className="muted">
-          Work on scenes privately with your crew. Nothing in a room is visible on public relays
-          until someone releases it.
-        </p>
-        <div className="card">
-          <label htmlFor="cr-url">Crew relay</label>
-          <input id="cr-url" value={url} onChange={(e) => setUrl(e.target.value)} />
-          <label htmlFor="cr-group">Room id</label>
-          <input
-            id="cr-group"
-            placeholder="vault-crew"
-            value={group}
-            onChange={(e) => setGroup(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-"))}
-          />
-          <p>
-            <button type="button" disabled={!group} onClick={() => open(true)}>
-              Create room
-            </button>{" "}
-            <button type="button" className="ghost" disabled={!group} onClick={() => open(false)}>
-              Open room
-            </button>
+        <section className="hero">
+          <div className="label">Crew rooms</div>
+          <h1>Work on scenes in private</h1>
+          <p className="muted" style={{ maxWidth: "38rem" }}>
+            Work on scenes privately with your crew. Nothing in a room is visible on public relays
+            until someone releases it.
           </p>
-          {err && <p className="error">{err}</p>}
+        </section>
+        <div className="cols">
+          <div className="card">
+            <h3>Open or create a room</h3>
+            <label htmlFor="cr-url">Crew relay</label>
+            <input id="cr-url" value={url} onChange={(e) => setUrl(e.target.value)} />
+            <label htmlFor="cr-group">Room id</label>
+            <input
+              id="cr-group"
+              placeholder="vault-crew"
+              value={group}
+              onChange={(e) => setGroup(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-"))}
+            />
+            <p>
+              <button type="button" disabled={!group} onClick={() => open(true)}>
+                Create room
+              </button>{" "}
+              <button type="button" className="ghost" disabled={!group} onClick={() => open(false)}>
+                Open room
+              </button>
+            </p>
+            {err && <p className="error">{err}</p>}
+          </div>
+          <div className="card card-soft">
+            <h3>How a room works</h3>
+            <ol className="steps">
+              <li>
+                <b>Create a room</b> on a crew relay. Only people you invite can read it.
+              </li>
+              <li>
+                <b>Post drafts</b> from the scene composer with "Post as crew draft", and chat about
+                them.
+              </li>
+              <li>
+                <b>Release</b> the ones you want. The author publishes a clean copy to the public
+                relays; the room never does.
+              </li>
+            </ol>
+          </div>
         </div>
       </>
     );
@@ -124,16 +146,25 @@ export function Crew() {
           ← Rooms
         </button>
       </p>
-      <h1>{group}</h1>
+      <section className="hero">
+        <div className="label">Private room</div>
+        <h1>{group}</h1>
+        <p className="muted">
+          Only invited members can read this. Nothing here is public until released.
+        </p>
+      </section>
       <div className="row" style={{ alignItems: "flex-start" }}>
         <div style={{ flex: 2 }}>
           <h2 style={{ marginTop: 0 }}>Chat</h2>
           <div className="card" data-testid="chat" style={{ maxHeight: 320, overflow: "auto" }}>
             {chat.length === 0 && <p className="muted">No messages yet.</p>}
             {chat.map((m) => (
-              <p key={m.id} style={{ margin: ".25rem 0" }}>
-                <strong title={m.from}>{m.from === pubkey ? "you" : short(m.from)}</strong> {m.text}
-              </p>
+              <div key={m.id} className={`bubble ${m.from === pubkey ? "mine" : ""}`}>
+                <span className="label" title={m.from}>
+                  {m.from === pubkey ? "you" : short(m.from)}
+                </span>
+                <div>{m.text}</div>
+              </div>
             ))}
           </div>
           <div className="row" style={{ marginTop: 8 }}>

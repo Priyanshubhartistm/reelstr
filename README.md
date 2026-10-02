@@ -4,6 +4,8 @@
 
 > Status: a complete local build and a working demo, not a launched product. Nothing has run on a public relay or with real money yet. Read [Honest status](#honest-status) before relying on any of it.
 
+![Reelstr Cinema](docs/ui/c-home-d.png)
+
 ## The idea
 
 Serialized short drama (the Pocket FM / ReelShort model) works, but the platforms own the audience, the catalog and the money. Reelstr asks what it looks like when none of those are owned by one company.
@@ -75,7 +77,7 @@ infra/       compose file, Blossom image, regtest notes
 docs/        architecture, status, deviations, protocol draft, research
 ```
 
-Architecture: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). Market and feasibility research: [`docs/research.md`](docs/research.md).
+Architecture: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). Design system: [`docs/DESIGN.md`](docs/DESIGN.md). Market and feasibility research: [`docs/research.md`](docs/research.md).
 
 ## Contributing
 

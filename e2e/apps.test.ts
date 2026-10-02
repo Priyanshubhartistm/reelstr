@@ -530,7 +530,7 @@ describe("Studio and Cinema in a real browser", () => {
     const bob = await newUser(studioUrl);
     await bob.page.locator("header.bar").getByRole("link", { name: "Crew", exact: true }).click();
     const bobPk = await bob.page.evaluate(
-      () => document.querySelector("span.muted[title]")?.getAttribute("title") ?? "",
+      () => document.querySelector("header.bar .who")?.getAttribute("title") ?? "",
     );
     await alice.page.locator("#cr-inv").fill(bobPk);
     await alice.page.getByRole("button", { name: "Add to crew" }).click();

@@ -27,7 +27,12 @@ export function Stars({
           <span
             key={n}
             aria-hidden="true"
-            style={{ color: n <= Math.round(value) ? "var(--accent)" : "var(--muted)" }}
+            style={{
+              color:
+                n <= Math.round(value)
+                  ? "var(--accent)"
+                  : "color-mix(in oklab, var(--ink) 28%, transparent)",
+            }}
           >
             {n <= Math.round(value) ? "★" : "☆"}
           </span>
@@ -44,7 +49,10 @@ export function Stars({
             display: "inline-block",
             margin: 0,
             cursor: "pointer",
-            color: n <= value ? "var(--accent)" : "var(--muted)",
+            color:
+              n <= value ? "var(--accent)" : "color-mix(in oklab, var(--ink) 28%, transparent)",
+            textTransform: "none",
+            letterSpacing: 0,
             fontSize: "1.3rem",
           }}
         >
@@ -180,7 +188,7 @@ export function ReportButton({
   }
   return (
     <>
-      <button type="button" className="ghost" onClick={() => setOpen(!open)}>
+      <button type="button" className="ghost sm" onClick={() => setOpen(!open)}>
         Report
       </button>
       {open && (

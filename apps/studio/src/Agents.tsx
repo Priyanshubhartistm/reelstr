@@ -98,108 +98,146 @@ export function Agents({ coord }: { coord?: string }) {
     ?.slice(4);
   return (
     <>
-      <h1>Agents</h1>
-      <p className="muted">
-        Generation agents are bots with their own keys. You pay only after you accept the scene, in
-        sats, from your wallet. The scene credits the agent as author and you as commissioner.
-      </p>
-      {agents.error && <p className="error">{agents.error}</p>}
-      {agents.data?.length === 0 && <p className="muted">No agents found on your relays.</p>}
-      <div className="card">
-        <label htmlFor="ag-agent">Agent</label>
-        <select
-          id="ag-agent"
-          value={agent}
-          onChange={(e) => {
-            setAgent(e.target.value);
-            setF({ ...f, model: "" });
-          }}
-        >
-          <option value="">Choose…</option>
-          {agents.data?.map((a) => (
-            <option key={a.pubkey} value={a.pubkey}>
-              {a.name} · {a.priceSats} sats · {a.models.join(", ")}
-            </option>
-          ))}
-        </select>
-        <label htmlFor="ag-story">Story</label>
-        <select id="ag-story" value={story} onChange={(e) => setStory(e.target.value)}>
-          <option value="">Choose…</option>
-          {stories.data?.map((s) => (
-            <option key={s.coord} value={s.coord}>
-              {s.title}
-            </option>
-          ))}
-        </select>
-        <label htmlFor="ag-prompt">Prompt</label>
-        <textarea
-          id="ag-prompt"
-          rows={3}
-          value={f.prompt}
-          onChange={(e) => setF({ ...f, prompt: e.target.value })}
-        />
-        <div className="row">
-          <div>
-            <label htmlFor="ag-model">Model</label>
-            <select
-              id="ag-model"
-              value={f.model || chosen?.models[0] || ""}
-              onChange={(e) => setF({ ...f, model: e.target.value })}
-            >
-              {(chosen?.models ?? []).map((m) => (
-                <option key={m}>{m}</option>
-              ))}
-            </select>
+      <section className="hero">
+        <div className="label">Generation agents</div>
+        <h1>Commission a scene from a bot</h1>
+        <p className="muted" style={{ maxWidth: "38rem" }}>
+          Agents are bots with their own keys. You pay only after you accept the scene, in sats,
+          from your wallet. The scene credits the agent as author and you as commissioner.
+        </p>
+        <div className="stats">
+          <div className="hero-inset stat">
+            <span className="label">Agents on your relays</span>
+            <span className="num">{agents.data?.length ?? 0}</span>
           </div>
-          <div>
-            <label htmlFor="ag-seed">Seed (optional)</label>
-            <input
-              id="ag-seed"
-              value={f.seed}
-              onChange={(e) => setF({ ...f, seed: e.target.value })}
-            />
-          </div>
-          <div>
-            <label htmlFor="ag-dur">Seconds</label>
-            <input
-              id="ag-dur"
-              type="number"
-              min="4"
-              max="20"
-              value={f.duration}
-              onChange={(e) => setF({ ...f, duration: Number(e.target.value) })}
-            />
-          </div>
-          <div>
-            <label htmlFor="ag-bid">Bid (sats)</label>
-            <input
-              id="ag-bid"
-              type="number"
-              min="0"
-              placeholder={String(chosen?.priceSats ?? 0)}
-              value={f.bid || ""}
-              onChange={(e) => setF({ ...f, bid: Number(e.target.value) })}
-            />
+          <div className="hero-inset stat">
+            <span className="label">Your wallet</span>
+            <span className="num">{pay.wallet ? `${pay.balance} sats` : "none"}</span>
           </div>
         </div>
-        <p>
-          <button type="button" disabled={busy || !chosen || !story || !f.prompt} onClick={order}>
-            {busy ? "Working…" : "Request scene"}
-          </button>
-        </p>
+      </section>
+      {agents.error && <p className="error">{agents.error}</p>}
+      {agents.data?.length === 0 && (
+        <div className="card empty">
+          <strong>No agents found</strong>
+          None of your relays has an agent profile yet.
+        </div>
+      )}
+      <div className="cols">
+        <div className="card">
+          <h3>New request</h3>
+          <label htmlFor="ag-agent">Agent</label>
+          <select
+            id="ag-agent"
+            value={agent}
+            onChange={(e) => {
+              setAgent(e.target.value);
+              setF({ ...f, model: "" });
+            }}
+          >
+            <option value="">Choose…</option>
+            {agents.data?.map((a) => (
+              <option key={a.pubkey} value={a.pubkey}>
+                {a.name} · {a.priceSats} sats · {a.models.join(", ")}
+              </option>
+            ))}
+          </select>
+          <label htmlFor="ag-story">Story</label>
+          <select id="ag-story" value={story} onChange={(e) => setStory(e.target.value)}>
+            <option value="">Choose…</option>
+            {stories.data?.map((s) => (
+              <option key={s.coord} value={s.coord}>
+                {s.title}
+              </option>
+            ))}
+          </select>
+          <label htmlFor="ag-prompt">Prompt</label>
+          <textarea
+            id="ag-prompt"
+            rows={3}
+            value={f.prompt}
+            onChange={(e) => setF({ ...f, prompt: e.target.value })}
+          />
+          <div className="row">
+            <div>
+              <label htmlFor="ag-model">Model</label>
+              <select
+                id="ag-model"
+                value={f.model || chosen?.models[0] || ""}
+                onChange={(e) => setF({ ...f, model: e.target.value })}
+              >
+                {(chosen?.models ?? []).map((m) => (
+                  <option key={m}>{m}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="ag-seed">Seed (optional)</label>
+              <input
+                id="ag-seed"
+                value={f.seed}
+                onChange={(e) => setF({ ...f, seed: e.target.value })}
+              />
+            </div>
+            <div>
+              <label htmlFor="ag-dur">Seconds</label>
+              <input
+                id="ag-dur"
+                type="number"
+                min="4"
+                max="20"
+                value={f.duration}
+                onChange={(e) => setF({ ...f, duration: Number(e.target.value) })}
+              />
+            </div>
+            <div>
+              <label htmlFor="ag-bid">Bid (sats)</label>
+              <input
+                id="ag-bid"
+                type="number"
+                min="0"
+                placeholder={String(chosen?.priceSats ?? 0)}
+                value={f.bid || ""}
+                onChange={(e) => setF({ ...f, bid: Number(e.target.value) })}
+              />
+            </div>
+          </div>
+          <p>
+            <button type="button" disabled={busy || !chosen || !story || !f.prompt} onClick={order}>
+              {busy ? "Working…" : "Request scene"}
+            </button>
+          </p>
+        </div>
+        <div className="card card-soft">
+          <h3>How paying works</h3>
+          <ol className="steps">
+            <li>
+              <b>You send a signed request</b> naming the agent, your prompt and the most you will
+              pay.
+            </li>
+            <li>
+              <b>The agent generates and replies</b> with a signed scene. Nothing is published yet
+              and you have paid nothing.
+            </li>
+            <li>
+              <b>You review it.</b> If you accept, the scene is published and the agent is paid with
+              a nutzap. Otherwise nothing happens.
+            </li>
+          </ol>
+          <p className="muted">
+            Open-weight models with a seed make the scene re-renderable, so a verifier can check it.
+          </p>
+        </div>
       </div>
       {delivery && scene && (
-        <div className="card" style={{ marginTop: 12 }} data-testid="delivery">
-          <h2 style={{ marginTop: 0 }}>Delivered scene</h2>
+        <div className="card" data-testid="delivery">
+          <div className="label">Delivered</div>
+          <h2 style={{ margin: "0.2rem 0 0.75rem" }}>Delivered scene</h2>
           {videoUrl && (
             // biome-ignore lint/a11y/useMediaCaption: generated preview without a transcript
-            <video
-              className="player"
-              style={{ maxWidth: 240 }}
-              controls
-              playsInline
-              src={videoUrl}
-            />
+            <div className="phone" style={{ width: "min(100%, 15rem)", margin: "0 0 1rem" }}>
+              <video className="player" controls playsInline src={videoUrl} />
+            </div>
           )}
           <p>
             {pay.wallet ? (
@@ -221,7 +259,7 @@ export function Agents({ coord }: { coord?: string }) {
       )}
       {status && <p className="ok">{status}</p>}
       {err && <p className="error">{err}</p>}
-      <p className="muted">
+      <p className="muted num" style={{ fontSize: "0.8rem" }}>
         Signed in as {pubkey?.slice(0, 8)}… · kind {KIND.JOB_REQUEST}/{KIND.JOB_RESULT}{" "}
         request/result events
       </p>

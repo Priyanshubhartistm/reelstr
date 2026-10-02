@@ -164,6 +164,8 @@
       "name": "@reelstr/ui",
       "version": "0.1.0",
       "dependencies": {
+        "@fontsource-variable/jetbrains-mono": "^5.3.0",
+        "@fontsource-variable/outfit": "^5.3.0",
         "@reelstr/app-core": "workspace:*",
         "@reelstr/nostr": "workspace:*",
         "@reelstr/protocol": "workspace:*",
@@ -303,6 +305,10 @@
     "@cashu/cashu-ts": ["@cashu/cashu-ts@4.11.0", "", { "dependencies": { "@noble/curves": "^2.4.0", "@noble/hashes": "^2.4.0", "@scure/base": "^2.4.0", "@scure/bip32": "^2.4.0" } }, "sha512-euNst5ZZCCAYDpIs9qXm0CElJYgvUargsODu+WvlI7SiRCVjTEPOIoeSsdBuEfj30qYfyufBopEDipVzS0d22Q=="],
 
     "@electric-sql/pglite": ["@electric-sql/pglite@0.5.8", "", {}, "sha512-n9tsbUOhwx2epK1V0ZG9Ar4SHWUju04dhmzZXiSBXwBoleOvIfals33NAaWgagQVAL4Rbvx/Ptsu3P+pA09f6Q=="],
+
+    "@fontsource-variable/jetbrains-mono": ["@fontsource-variable/jetbrains-mono@5.3.0", "", {}, "sha512-F32xpS2NsGYoQi2ADSkKTgpJj7ozajsGgDJ8woTnqjmIB+dxDIqImjl4pXZVEExu8UFZ2ndhmX18EBS/hdz3Lw=="],
+
+    "@fontsource-variable/outfit": ["@fontsource-variable/outfit@5.3.0", "", {}, "sha512-fPb5XnYK0k7SbR++HEmm4+ZqDszmLKQ+sPRUr8oQ/KNC0vy6r6hazJFe8iYozv4cqlHbvJ/JECkJWrfDodUMVQ=="],
 
     "@noble/ciphers": ["@noble/ciphers@2.1.1", "", {}, "sha512-bysYuiVfhxNJuldNXlFEitTVdNnYUc+XNJZd7Qm2a5j1vZHgY+fazadNFWFaMK/2vye0JVlxV3gHmC0WDfAOQw=="],
 

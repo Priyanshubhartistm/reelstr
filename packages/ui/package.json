@@ -5,13 +5,15 @@
   "main": "src/index.ts",
   "types": "src/index.ts",
   "dependencies": {
+    "@fontsource-variable/jetbrains-mono": "^5.3.0",
+    "@fontsource-variable/outfit": "^5.3.0",
     "@reelstr/app-core": "workspace:*",
     "@reelstr/nostr": "workspace:*",
     "@reelstr/protocol": "workspace:*",
+    "@reelstr/wallet": "workspace:*",
     "hls.js": "1.7.3",
     "react": "19.3.0",
-    "react-dom": "19.3.0",
-    "@reelstr/wallet": "workspace:*"
+    "react-dom": "19.3.0"
   },
   "devDependencies": {
     "@types/react": "19.3.0",

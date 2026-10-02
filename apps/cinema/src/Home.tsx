@@ -1,5 +1,5 @@
 import type { Weight } from "@reelstr/protocol";
-import { go, SplitTable, useAsync, useSession } from "@reelstr/ui";
+import { FilmArt, go, SplitTable, useAsync, useSession } from "@reelstr/ui";
 import { Stars } from "./Feedback";
 import { hiddenIds } from "./moderation";
 import { loadProgress } from "./progress";
@@ -24,6 +24,13 @@ export interface CutRow {
   series_slug: string;
 }
 
+/** A stable colour per series, so the same show always looks like itself. */
+const tone = (coord: string) => {
+  let h = 0;
+  for (const ch of coord) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return `tone-${h % 4}`;
+};
+
 export function Home() {
   const { client } = useSession();
   const api = (client as NonNullable<typeof client>).api.bind(client);
@@ -31,36 +38,90 @@ export function Home() {
   const progress = Object.entries(loadProgress())
     .sort((a, b) => b[1].at - a[1].at)
     .slice(0, 6);
+  const n = series.data?.length ?? 0;
   return (
     <>
-      <h1>Watch</h1>
+      <section className="hero">
+        <FilmArt />
+        <div className="label">Reelstr Cinema</div>
+        <h1>Stories anyone can fork, one short episode at a time.</h1>
+        <p className="muted" style={{ maxWidth: "38rem" }}>
+          Every episode lists who made which scene and what share each person earns. The first
+          episodes are free; after that you pay in sats, and the split is public.
+        </p>
+        <div className="row tight" style={{ marginTop: "1.25rem" }}>
+          <a className="btn btn-primary" href="#series" style={{ color: "var(--primary-fg)" }}>
+            Browse series
+          </a>
+          <a className="btn btn-plain" href="#/wallet">
+            Get sats
+          </a>
+        </div>
+        {series.data && (
+          <div className="stats">
+            <div className="hero-inset stat">
+              <span className="label">Series</span>
+              <span className="num">{n}</span>
+            </div>
+            <div className="hero-inset stat">
+              <span className="label">Free episodes</span>
+              <span className="num">{series.data.reduce((a, s) => a + s.free, 0)}</span>
+            </div>
+          </div>
+        )}
+      </section>
+
       {progress.length > 0 && (
         <>
-          <h2>Continue watching</h2>
-          <div className="grid">
+          <div className="label">Continue watching</div>
+          <div className="grid" style={{ marginTop: "0.6rem" }}>
             {progress.map(([id, p]) => (
-              <a key={id} className="card" href={`#/watch/${encodeURIComponent(id)}`}>
+              <a
+                key={id}
+                className="card card-inset"
+                style={{ textDecoration: "none", margin: 0 }}
+                href={`#/watch/${encodeURIComponent(id)}`}
+              >
                 <strong>{p.title ?? "Episode"}</strong>
-                <div className="muted">{Math.floor(p.t)} s in</div>
+                <div className="muted num" style={{ fontSize: "0.85rem" }}>
+                  {Math.floor(p.t)} s in
+                </div>
               </a>
             ))}
           </div>
         </>
       )}
-      <h2>Series</h2>
+
+      <div id="series" className="label" style={{ margin: "1.5rem 0 0.6rem" }}>
+        Series
+      </div>
       {series.error && <p className="error">{series.error}</p>}
       <div className="grid">
         {series.data?.map((s) => (
-          <a key={s.coord} className="card" href={`#/series/${encodeURIComponent(s.coord)}`}>
-            <strong>{s.title}</strong>
-            <p className="muted">{s.summary}</p>
-            <span className="pill">{s.free} free</span>
+          <a
+            key={s.coord}
+            className={`cover ${tone(s.coord)}`}
+            href={`#/series/${encodeURIComponent(s.coord)}`}
+          >
+            <div>
+              <div className="cover-title">{s.title}</div>
+              <p>{s.summary}</p>
+            </div>
+            <div className="between">
+              <span className="pill pill-fair">{s.free} free</span>
+              <span className="label" style={{ color: "inherit", opacity: 0.7 }}>
+                {s.curator.slice(0, 6)}
+              </span>
+            </div>
           </a>
         ))}
-        {series.data?.length === 0 && (
-          <p className="muted">No series yet. Curators publish them from the Curator desk.</p>
-        )}
       </div>
+      {series.data?.length === 0 && (
+        <div className="card empty">
+          <strong>No series yet</strong>
+          Curators publish them from the Curator desk.
+        </div>
+      )}
     </>
   );
 }
@@ -86,34 +147,69 @@ export function SeriesPage({ coord }: { coord: string }) {
       : [];
   }, [eps.data?.length]);
   const rated = new Map((ratings.data ?? []).map((r) => [r.cut_coord, r]));
+  const shown = eps.data?.filter((e) => !hidden.has(e.id)) ?? [];
+  const mins = Math.round(shown.reduce((a, e) => a + Number(e.duration), 0));
   return (
     <>
-      <p>
-        <a href="#/">← Series</a>
-      </p>
-      <h1>{s.data?.title}</h1>
-      <p className="muted">{s.data?.summary}</p>
+      <section className="hero">
+        <a href="#/" className="label" style={{ textDecoration: "none" }}>
+          ← All series
+        </a>
+        <h1>{s.data?.title}</h1>
+        <p className="muted" style={{ maxWidth: "38rem" }}>
+          {s.data?.summary}
+        </p>
+        <div className="stats">
+          <div className="hero-inset stat">
+            <span className="label">Episodes</span>
+            <span className="num">{shown.length}</span>
+          </div>
+          <div className="hero-inset stat">
+            <span className="label">Free</span>
+            <span className="num">{s.data?.free ?? 0}</span>
+          </div>
+          <div className="hero-inset stat">
+            <span className="label">Runtime</span>
+            <span className="num">{mins} s</span>
+          </div>
+        </div>
+      </section>
       {eps.error && <p className="error">{eps.error}</p>}
       <div className="card">
-        {eps.data
-          ?.filter((e) => !hidden.has(e.id))
-          .map((e, i) => (
-            <div key={e.id} className="row" style={{ alignItems: "center", padding: ".4rem 0" }}>
-              <a href={`#/watch/${encodeURIComponent(e.coord)}`}>
+        {shown.map((e, i) => (
+          <div key={e.id} className="ep">
+            <span className="ep-no" aria-hidden="true">
+              {e.episode}
+            </span>
+            <div className="ep-main">
+              <a className="ep-title" href={`#/watch/${encodeURIComponent(e.coord)}`}>
                 <strong>Ep {e.episode}</strong> · {e.title}
               </a>
-              <span className="muted">{Math.round(Number(e.duration))} s</span>
-              {rated.get(e.coord) ? (
-                <span>
-                  <Stars value={rated.get(e.coord)?.average ?? 0} />{" "}
-                  <span className="muted">({rated.get(e.coord)?.count})</span>
-                </span>
-              ) : (
-                <span className="muted">unrated</span>
-              )}
-              <span className="pill">{i < (s.data?.free ?? 0) ? "free" : `${e.price} sats`}</span>
+              <span className="muted num" style={{ fontSize: "0.8rem" }}>
+                {Math.round(Number(e.duration))} s
+              </span>
             </div>
-          ))}
+            {rated.get(e.coord) ? (
+              <span style={{ whiteSpace: "nowrap" }}>
+                <Stars value={rated.get(e.coord)?.average ?? 0} />{" "}
+                <span className="muted">({rated.get(e.coord)?.count})</span>
+              </span>
+            ) : (
+              <span className="muted" style={{ fontSize: "0.85rem" }}>
+                unrated
+              </span>
+            )}
+            <span className={`pill ${i < (s.data?.free ?? 0) ? "pill-fair" : ""}`}>
+              {i < (s.data?.free ?? 0) ? "free" : `${e.price} sats`}
+            </span>
+          </div>
+        ))}
+        {eps.data && shown.length === 0 && (
+          <div className="empty">
+            <strong>No episodes yet</strong>
+            The curator has not published one.
+          </div>
+        )}
       </div>
       {eps.data?.[0] && <Credits cutId={eps.data[0].id} priceSats={eps.data[0].price} />}
     </>
@@ -140,14 +236,18 @@ export function Credits({ cutId, priceSats }: { cutId: string; priceSats: number
     <>
       <h2>Credits and split</h2>
       <p className="muted">Declared in the curator's signed episode event. Anyone can check it.</p>
-      <SplitTable weights={weights} priceSats={priceSats} />
-      <p className="muted">
-        Seconds used:{" "}
-        {c.data
-          .filter((x) => x.role === "creator")
-          .map((x) => `${x.pubkey.slice(0, 6)}… ${x.seconds.toFixed(1)}s`)
-          .join(" · ")}
-      </p>
+      <div className="card">
+        <div className="scroll">
+          <SplitTable weights={weights} priceSats={priceSats} />
+        </div>
+        <p className="muted" style={{ marginBottom: 0 }}>
+          Seconds used:{" "}
+          {c.data
+            .filter((x) => x.role === "creator")
+            .map((x) => `${x.pubkey.slice(0, 6)}… ${x.seconds.toFixed(1)}s`)
+            .join(" · ")}
+        </p>
+      </div>
     </>
   );
 }

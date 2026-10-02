@@ -14,23 +14,33 @@ export function Earnings() {
   );
   return (
     <>
-      <h1>Earnings</h1>
-      <p className="muted">Numbers come from signed payout receipts, not from zap receipts.</p>
+      <section className="hero">
+        <div className="label">Earnings</div>
+        <h1 className="figure" style={{ marginTop: "0.5rem" }}>
+          <span>{e.data ? Math.floor(e.data.receivedMsats / 1000) : 0}</span>{" "}
+          <small>sats paid to you</small>
+        </h1>
+        <p className="muted" style={{ maxWidth: "36rem", marginTop: "0.9rem" }}>
+          Numbers come from signed payout receipts, not from zap receipts.
+        </p>
+        {e.data && (
+          <div className="stats">
+            <div className="hero-inset stat">
+              <span className="label">Seconds in episodes</span>
+              <span className="num">{e.data.secondsUsed.toFixed(1)}</span>
+            </div>
+            <div className="hero-inset stat">
+              <span className="label">Episodes featured</span>
+              <span className="num">{e.data.episodes}</span>
+            </div>
+          </div>
+        )}
+      </section>
       {e.error && <p className="error">{e.error}</p>}
-      {e.data && (
-        <div className="grid">
-          <div className="card">
-            <div className="muted">Seconds in published episodes</div>
-            <h1>{e.data.secondsUsed.toFixed(1)}</h1>
-          </div>
-          <div className="card">
-            <div className="muted">Episodes featured</div>
-            <h1>{e.data.episodes}</h1>
-          </div>
-          <div className="card">
-            <div className="muted">Sats paid to you</div>
-            <h1>{Math.floor(e.data.receivedMsats / 1000)}</h1>
-          </div>
+      {e.data && e.data.episodes === 0 && (
+        <div className="card empty">
+          <strong>Nothing yet</strong>
+          Scenes you make earn when a curator puts them in an episode and viewers unlock it.
         </div>
       )}
     </>

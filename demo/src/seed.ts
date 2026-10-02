@@ -165,6 +165,54 @@ export async function seed(s: Stack, log: (l: string) => void) {
     freeEpisodes: 1,
   });
 
+  // two more short series from the same scenes, so the catalogue is more than one tile
+  const extra = [
+    {
+      slug: "static-hours",
+      title: "Static Hours",
+      summary: "Every channel says the same thing. Someone is listening back.",
+      cut: {
+        episode: 1,
+        title: "Dead air",
+        synopsis: "The speakers wake up.",
+        scenes: [stairs, st],
+        price: 15,
+      },
+    },
+    {
+      slug: "dawn-patrol",
+      title: "Dawn Patrol",
+      summary: "A drone, a tower and a girl who should not be there.",
+      cut: {
+        episode: 1,
+        title: "First light",
+        synopsis: "Mist, then a signal.",
+        scenes: [ai, tower],
+        price: 0,
+      },
+    },
+  ];
+  for (const x of extra) {
+    await ila.publishCut({
+      ...base,
+      seriesSlug: x.slug,
+      episode: x.cut.episode,
+      title: x.cut.title,
+      synopsis: x.cut.synopsis,
+      scenes: x.cut.scenes.map((sc, i) => ref(sc, i % 2 ? pd : pm)),
+      scenesSources: x.cut.scenes.map(src),
+      price: { amount: x.cut.price },
+      free: x.cut.price === 0 || x.cut.episode <= 1,
+    });
+    await ila.publishSeries({
+      slug: x.slug,
+      title: x.title,
+      summary: x.summary,
+      episodes: [1],
+      freeEpisodes: 1,
+    });
+  }
+
   const cutD = ep1.tags.find((t) => t[0] === "d")?.[1];
   const rate = async (who: LocalSigner, stars: number, review: string) =>
     ila.pool.publish(
