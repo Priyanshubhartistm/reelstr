@@ -2,7 +2,11 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { flushSync } from "react-dom";
 
 /** Tiny hash router: "#/story/abc" -> ["story", "abc"]. */
-const readHash = () => window.location.hash.replace(/^#\/?/, "");
+// Only "#/…" is a screen. A plain "#section" is an in-page link, which the browser scrolls to by itself
+// and the router must leave alone (otherwise "#how" is read as a screen called "how").
+const isRoute = (h: string) => h === "" || h === "#" || h.startsWith("#/");
+const readHash = () =>
+  isRoute(window.location.hash) ? window.location.hash.replace(/^#\/?/, "") : null;
 const parse = (h: string) => h.split("/").filter(Boolean).map(decodeURIComponent);
 
 /**
@@ -12,14 +16,14 @@ const parse = (h: string) => h.split("/").filter(Boolean).map(decodeURIComponent
  * The change is wrapped in a view transition (where the browser has them) and tagged with a direction
  * on <html data-nav>, which the stylesheet turns into a slide one way or the other.
  */
-let current = typeof window === "undefined" ? "" : readHash();
+let current = typeof window === "undefined" ? "" : (readHash() ?? "");
 const history: string[] = [current];
 const scrollAt = new Map<string, number>();
 const subscribers = new Set<() => void>();
 
 function onHashChange() {
   const next = readHash();
-  if (next === current) return;
+  if (next === null || next === current) return;
   const back = history.length > 1 && history[history.length - 2] === next;
   if (back) history.pop();
   else history.push(next);

@@ -90,6 +90,19 @@ export function LoginGate({ children, title }: { children: ReactNode; title: str
   const [fresh, setFresh] = useState<LocalSigner | null>(null);
   const [confirmed, setConfirmed] = useState(false);
   const [nsec, setNsec] = useState("");
+  // an extension injects window.nostr a moment after the page loads, so look for a few seconds
+  const [hasExt, setHasExt] = useState(false);
+  useEffect(() => {
+    const look = () =>
+      setHasExt(typeof (window as unknown as { nostr?: unknown }).nostr === "object");
+    look();
+    const timers = [300, 1000, 2500].map((ms) => setTimeout(look, ms));
+    window.addEventListener("focus", look);
+    return () => {
+      for (const t of timers) clearTimeout(t);
+      window.removeEventListener("focus", look);
+    };
+  }, []);
   const [copied, setCopied] = useState(false);
   const [showKey, setShowKey] = useState(false);
   const [remember, setRemember] = useState(false);
@@ -162,30 +175,7 @@ export function LoginGate({ children, title }: { children: ReactNode; title: str
       </div>
       <div className="gate-forms">
         <section>
-          <h2>Browser extension</h2>
-          <button type="button" onClick={() => run("ext", async () => login(new Nip07Signer()))}>
-            Use NIP-07 extension
-          </button>
-          {problem("ext")}
-        </section>
-        <section>
-          <h2>Remote signer</h2>
-          <input
-            placeholder="bunker://… or name@domain"
-            value={bunker}
-            onChange={(e) => setBunker(e.target.value)}
-          />
-          <button
-            type="button"
-            disabled={!bunker}
-            onClick={() => run("bunker", async () => login(await Nip46Signer.connect(bunker)))}
-          >
-            Connect (NIP-46)
-          </button>
-          {problem("bunker")}
-        </section>
-        <section>
-          <h2>New key</h2>
+          <h2>New key · easiest</h2>
           {!fresh ? (
             <button type="button" onClick={() => setFresh(LocalSigner.generate())}>
               Generate a key
@@ -234,6 +224,54 @@ export function LoginGate({ children, title }: { children: ReactNode; title: str
               {problem("new")}
             </>
           )}
+        </section>
+        <section>
+          <h2>Browser extension</h2>
+          {hasExt ? (
+            <>
+              <p className="muted" style={{ margin: "0 0 0.25rem" }}>
+                <span className="pill pill-fair">Detected</span> Your extension keeps the key; this
+                site only asks it to sign.
+              </p>
+              <button
+                type="button"
+                onClick={() => run("ext", async () => login(new Nip07Signer()))}
+              >
+                Use NIP-07 extension
+              </button>
+              {problem("ext")}
+            </>
+          ) : (
+            <>
+              <p className="muted" style={{ margin: "0 0 0.5rem" }}>
+                No extension detected in this browser. A Nostr extension such as{" "}
+                <a href="https://chromewebstore.google.com/detail/nos2x/kpgefcfmnafjgpblomihpgmejjdanjjp">
+                  nos2x
+                </a>{" "}
+                or <a href="https://getalby.com">Alby</a> stores your key and signs for you. You do
+                not need one: use a new key above.
+              </p>
+              <button type="button" className="ghost" disabled>
+                Use NIP-07 extension
+              </button>
+            </>
+          )}
+        </section>
+        <section>
+          <h2>Remote signer</h2>
+          <input
+            placeholder="bunker://… or name@domain"
+            value={bunker}
+            onChange={(e) => setBunker(e.target.value)}
+          />
+          <button
+            type="button"
+            disabled={!bunker}
+            onClick={() => run("bunker", async () => login(await Nip46Signer.connect(bunker)))}
+          >
+            Connect (NIP-46)
+          </button>
+          {problem("bunker")}
         </section>
         <section>
           <h2>Existing key</h2>

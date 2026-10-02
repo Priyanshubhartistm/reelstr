@@ -1832,11 +1832,11 @@ describe("Studio and Cinema in a real browser", () => {
       .getByRole("heading", { name: /Stories anyone can fork/ })
       .waitFor({ timeout: 10_000 });
     await gate.goto(`${studioUrl}/#/signin`);
-    await gate.getByRole("button", { name: "Use NIP-07 extension" }).click();
-    await gate
-      .getByRole("alert")
-      .getByText(/No Nostr extension was found/)
-      .waitFor();
+    // no extension here: the button is not offered as a working action, and the card says why
+    await gate.getByText(/No extension detected in this browser/).waitFor();
+    expect(await gate.getByRole("button", { name: "Use NIP-07 extension" }).isDisabled()).toBe(
+      true,
+    );
     await fresh.close();
 
     const u = await newUser(studioUrl, "#/stories");
@@ -1980,5 +1980,38 @@ describe("Studio and Cinema in a real browser", () => {
     await p.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
     await p.getByRole("status").filter({ hasText: "new version" }).waitFor({ timeout: 10_000 });
     await ctx.close();
+  }, 120_000);
+
+  test("in-page links (How it works, Browse series) scroll and never change the screen", async () => {
+    const fresh = await browser.newContext({ viewport: { width: 1000, height: 800 } });
+    const p = await fresh.newPage();
+    await p.goto(`${studioUrl}/`);
+    const hero = p.getByRole("heading", { name: /Stories anyone can fork/ });
+    await hero.waitFor();
+    for (const [link, hash] of [
+      ["How it works", "#how"],
+      ["What is different", "#why"],
+      ["Status", "#status"],
+    ] as const) {
+      await p.locator("header.bar nav").getByRole("link", { name: link }).click();
+      await p.waitForFunction((h) => location.hash === h, hash);
+      await hero.waitFor(); // still the landing page, not sign-in
+      expect(await p.getByRole("heading", { name: "Sign in" }).count()).toBe(0);
+      await p.waitForFunction((t) => {
+        const r = document.querySelector(t)?.getBoundingClientRect();
+        return !!r && r.top < window.innerHeight && r.bottom > 0;
+      }, hash);
+    }
+    await fresh.close();
+
+    const u = await newUser(studioUrl); // signed in, on the Watch home page
+    await u.page.getByRole("link", { name: "Browse series" }).click();
+    await u.page.waitForFunction(() => location.hash === "#series");
+    await u.page.getByRole("heading", { name: /Stories anyone can fork/ }).waitFor();
+    // and a real navigation afterwards still works
+    await u.page.locator("header.bar").getByRole("link", { name: "Stories", exact: true }).click();
+    await u.page.getByRole("heading", { name: /Build a world/ }).waitFor();
+    expect(u.errors).toEqual([]);
+    await u.ctx.close();
   }, 120_000);
 });

@@ -1398,3 +1398,16 @@ ol.steps li {
     bottom: 4.6rem;
   }
 }
+
+/* in-page links ("How it works") scroll smoothly and stop below the sticky header */
+html {
+  scroll-behavior: smooth;
+}
+[id] {
+  scroll-margin-top: 5rem;
+}
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
