@@ -234,8 +234,8 @@ export function Agents({ coord }: { coord?: string }) {
           <div className="label">Delivered</div>
           <h2 style={{ margin: "0.2rem 0 0.75rem" }}>Delivered scene</h2>
           {videoUrl && (
-            // biome-ignore lint/a11y/useMediaCaption: generated preview without a transcript
             <div className="phone" style={{ width: "min(100%, 15rem)", margin: "0 0 1rem" }}>
+              {/* biome-ignore lint/a11y/useMediaCaption: generated preview without a transcript */}
               <video className="player" controls playsInline src={videoUrl} />
             </div>
           )}

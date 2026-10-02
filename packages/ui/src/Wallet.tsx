@@ -176,40 +176,38 @@ function FiatDemo({ topUp }: { topUp: (sats: number) => Promise<unknown> }) {
   const [inr, setInr] = useState(100);
   const [busy, setBusy] = useState(false);
   return (
-    <>
-      <div className="card" data-testid="fiat-demo">
-        <h3>Pay by card or UPI</h3>
-        <p className="muted">
-          Demo partner: nothing is charged. A real on-ramp would take payment here and credit the
-          sats.
-        </p>
-        <label htmlFor="f-inr">Amount (INR)</label>
-        <input
-          id="f-inr"
-          type="number"
-          min="1"
-          value={inr}
-          onChange={(e) => setInr(Number(e.target.value))}
-        />
-        <p>
-          You get {inr * DEMO_SATS_PER_INR} sats.{" "}
-          <button
-            type="button"
-            disabled={busy || inr < 1}
-            onClick={async () => {
-              setBusy(true);
-              try {
-                await topUp(inr * DEMO_SATS_PER_INR);
-              } catch {
-              } finally {
-                setBusy(false);
-              }
-            }}
-          >
-            {busy ? "Processing…" : `Pay ₹${inr} (demo)`}
-          </button>
-        </p>
-      </div>
-    </>
+    <div className="card" data-testid="fiat-demo">
+      <h3>Pay by card or UPI</h3>
+      <p className="muted">
+        Demo partner: nothing is charged. A real on-ramp would take payment here and credit the
+        sats.
+      </p>
+      <label htmlFor="f-inr">Amount (INR)</label>
+      <input
+        id="f-inr"
+        type="number"
+        min="1"
+        value={inr}
+        onChange={(e) => setInr(Number(e.target.value))}
+      />
+      <p>
+        You get {inr * DEMO_SATS_PER_INR} sats.{" "}
+        <button
+          type="button"
+          disabled={busy || inr < 1}
+          onClick={async () => {
+            setBusy(true);
+            try {
+              await topUp(inr * DEMO_SATS_PER_INR);
+            } catch {
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          {busy ? "Processing…" : `Pay ₹${inr} (demo)`}
+        </button>
+      </p>
+    </div>
   );
 }
