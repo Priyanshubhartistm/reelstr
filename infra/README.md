@@ -40,3 +40,11 @@ The media service transcribes speech locally for the Desk's "Generate captions (
 ## Real Lightning on regtest
 `services/keys/test/lnd.test.ts` and the last test in `services/split/test/split.test.ts` run two real LND nodes on a private Bitcoin regtest chain (podman, no real money). They skip themselves if the images are missing:
 `podman pull docker.io/polarlightning/bitcoind:27.0 docker.io/polarlightning/lnd:0.18.3-beta`. The key server reads `LND_URL`, `LND_MACAROON` (hex), `LND_CA`, or `PHOENIXD_URL`, `PHOENIXD_PASSWORD`.
+
+## WebKit and slow networks
+```sh
+podman build -t reelstr-webkit infra/webkit && podman run -d --rm --name pw-webkit --network host reelstr-webkit
+WEBKIT_WS=ws://127.0.0.1:3999/ node demo/src/smoke.ts shots    # run the viewer path in real WebKit
+NETWORK=slow-4g node demo/src/smoke.ts shots                  # Chrome with throttling: 4g | slow-4g | 3g
+```
+Run these with **Node**, not Bun: Bun's WebSocket client cannot connect to the Playwright server.

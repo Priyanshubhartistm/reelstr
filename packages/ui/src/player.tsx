@@ -39,6 +39,8 @@ export function HlsPlayer({
     if (Hls.isSupported()) {
       hls = new Hls({
         startPosition: live.current.startAt,
+        // open on the smallest rung so the first frame is quick on a slow link; adaptive bitrate climbs from there
+        startLevel: 0,
         xhrSetup: (xhr, url) => {
           const h = live.current.keyHeaders;
           if (h && /\/keys?\//.test(url))

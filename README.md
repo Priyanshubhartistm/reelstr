@@ -42,8 +42,8 @@ bun run demo
 About two minutes later it prints two URLs and three sign-in keys. Everything is local: a seeded story called "The Last Signal" with a branching scene tree, a free and a paid episode, an AI-made scene carrying a Source Verified badge, an agent you can commission, and a mint that hands out test sats. Walkthrough in [`docs/DEMO.md`](docs/DEMO.md).
 
 ```sh
-bun run check       # lint, types, 196 tests
-bun run test:e2e    # 10 headless-Chrome tests against the built apps
+bun run check       # lint, types, 203 tests
+bun run test:e2e    # 13 headless-browser tests against the built apps
 ```
 
 ## Honest status

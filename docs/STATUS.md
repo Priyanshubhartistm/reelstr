@@ -7,7 +7,7 @@ How each thing was checked. Levels, strongest first:
 - **fake**: run against a test double I wrote, from the spec.
 - **untested**: code exists, nothing exercised it.
 
-Run: `bun run check` (lint, types, 196 tests) and `bun run test:e2e` (10 headless-Chrome tests). Browser tests also run against the compose containers with `E2E_COMPOSE=1` (start from fresh volumes: `podman-compose -p reelstr down -v`, because the tests are not idempotent against a relay that kept the last run's stories). Last run: all 10 pass natively (9 against compose, run before captions), with the slim Blossom image. **Nothing here has touched a public relay, a real Lightning node, or real money.**
+Run: `bun run check` (lint, types, 203 tests) and `bun run test:e2e` (13 headless-browser tests). Browser tests also run against the compose containers with `E2E_COMPOSE=1` (start from fresh volumes: `podman-compose -p reelstr down -v`, because the tests are not idempotent against a relay that kept the last run's stories). Last run: all 10 pass natively (9 against compose, run before captions), with the slim Blossom image. **Nothing here has touched a public relay, a real Lightning node, or real money.**
 
 ## What talks to what
 
@@ -16,12 +16,13 @@ Run: `bun run check` (lint, types, 196 tests) and `bun run test:e2e` (10 headles
 | Cashu mint | **real**: Nutshell 0.21.0 (wallet, nutzaps, key server, split service, browser wallet). Also my own fast double for most unit tests. |
 | Postgres | **real**: Postgres 17 in a container (full indexer suite, 16 tests). Day-to-day tests use PGlite. |
 | Relay, Blossom | **real**: as built containers (podman) and as native processes. |
-| Browser | **real**: Chrome (headless). WebKit/Safari: **cannot be run on this machine** (needs Ubuntu libraries). |
+| Browser | **real**: Chrome (headless), and **real WebKit** (Playwright's build in a container, `infra/webkit`): the viewer path (browse, play, top up, unlock, Source Verified) passes. That is the WebKit engine on Linux, **not iOS Safari** (no iPhone ManagedMediaSource path, different autoplay and power rules): a real iPhone is still untested. |
+| Network | **simulated** with Chrome DevTools throttling (`NETWORK=4g\|slow-4g\|3g bun demo/src/smoke.ts`). First frame after tapping an episode: unthrottled 0.9 s, 4G (70 ms, 9 Mbit/s) 2.2 s, slow-4G (150 ms, 1.6 Mbit/s) 3.0 s, 3G (300 ms, 400 kbit/s) 8 s. Paid unlock to playing: 0.9 s, 2.4 s, 4.1 s, 10 s. The player now starts on the lowest rung (it used to open on 1920p: 7.4 s on slow-4G, 25 s on 3G). A simulation: real mobile links have jitter and loss. |
 | Lightning | **real LND 0.18 on a private regtest chain** (two nodes, one channel, real invoices, HTLCs, preimages, routing failures): `LndBackend`, the key server's L402 unlock, and the split service's Lightning-address payout. Everything else still uses `FakeLightning` for speed. **Not real:** mainnet, real liquidity and routing across a public graph, real fees, and phoenixd (the production target) was never run. LNURL: a mock server fronting a real node. |
 | phoenixd | **mock-of-real**: mock reproduces its `Api.kt` behaviours (204 for unknown hash, 200 + `reason` on failure). Never run against phoenixd. |
 | fal.ai (Wan 2.2) | **mock-of-real**: mock queue; auth and URL scheme checked against the `@fal-ai/client` source. Never run live. |
 | Video models | A mock "model" (deterministic colour fields). No real generative model has been run. |
-| Signers | NIP-07: a bridge to an out-of-page key (not a real extension). NIP-46: a bunker I wrote from the spec. **No real extension or real bunker (nsec.app etc.) was used.** |
+| Signers | **Real**: NIP-07 with the nos2x extension loaded in Chromium (key in the extension, page sees only `window.nostr`, signing prompts approved), and NIP-46 against fiatjaf\'s `nak bunker` (unit and browser). Also the earlier stand-ins. **Not tested:** phone signers (Amber), nsec.app, Alby/other extensions. |
 | BOLT11 | decoder checked against three real invoices from the BOLT #11 spec (signature recovers the spec's node key) |
 
 ## Frontend
@@ -34,7 +35,7 @@ Run: `bun run check` (lint, types, 196 tests) and `bun run test:e2e` (10 headles
 | FE-4 story tree | real browser, 500 nodes | **67 to 84 ms** to all 500 nodes in the DOM (target 1 s), local network. |
 | FE-5 timeline editor | real browser (trims, split, caption upload) | Preview uses two video elements and is not frame-exact; the server render is the truth. |
 | FE-6 split preview | real browser | |
-| FE-7 player | Chromium: real. **Safari/iPhone: untested.** | Frames across 2 joins in Chrome: worst gap at a join is one frame period (nothing skipped). hls.js + MSE only; the iPhone ManagedMediaSource path never ran. |
+| FE-7 player | Chromium and Linux WebKit: real. **iPhone Safari: untested.** | Frames across 2 joins in Chrome: worst gap at a join is one frame period (nothing skipped). hls.js + MSE only; the iPhone ManagedMediaSource path never ran. |
 | FE-8 paywall | real browser, real mint | Unlock tap to playing **277 to 320 ms** (target 3 s), local network. Daily cap tested. |
 | FE-9 wallet | real browser: Cashu + NIP-60 against the real mint, balance survives reload. NWC: fake service, unit level. | |
 | FE-10 credits | real browser | |
@@ -79,7 +80,7 @@ Run: `bun run check` (lint, types, 196 tests) and `bun run test:e2e` (10 headles
 - **Demand is unproven.** Fork rate and unlock conversion are the real tests; the PRD's kill signals stand.
 - **Real Lightning is only tested on regtest** (see above): settlement, failures and the L402 and payout flows work against real LND; mainnet routing, a real LNURL server and whether small payments are worth their fees are untested. The real mint charged 1 sat (reserve 2) on a 21 sat melt, which is roughly 5% on a micropayment.
 - **No real video model has run.** A Wan 2.2 generation through fal is the first thing to try; the adapter is checked only against a mock.
-- **Safari/iPhone untested**, and all measured timings are on localhost, not a 4G network.
+- **Real iPhone Safari untested** (WebKit-on-Linux passes), and the 4G/3G timings are simulated throttling, not a real network.
 - **Legal is not solved by code.** Custody, money transmission, India VDA tax, and likeness rules need a lawyer before the split service touches other people's money. The split service refuses to start without an explicit acknowledgement.
 - **Encrypted episodes use MPEG-TS**, because ffmpeg cannot encrypt fMP4. Any paying viewer can share the key.
 - **Blossom image runs Node 22**: on Node 24 it segfaulted intermittently. Multi-stage build, 411 MB (was 808); upload and fetch-by-hash checked on the built image.

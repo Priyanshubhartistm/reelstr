@@ -9,6 +9,7 @@
       "!**/fixtures",
       "!.venv-mint",
       "!.venv-asr",
+      "!.cache",
       "!**/bin",
       "!**/data"
     ]
