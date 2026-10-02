@@ -12,6 +12,8 @@ const browser = process.env.WEBKIT_WS
       args: ["--no-sandbox", "--autoplay-policy=no-user-gesture-required"],
     });
 const ctx = await browser.newContext({ viewport: { width: 420, height: 860 } });
+// a public https page reaching localhost needs this grant (Chrome shows a prompt to a real user)
+if (process.env.GRANT_LNA) await ctx.grantPermissions(["local-network-access"]);
 const page = await ctx.newPage();
 // ms latency, kbit/s down, kbit/s up (the figures Chrome DevTools and WebPageTest use)
 const PROFILES: Record<string, [number, number, number]> = {

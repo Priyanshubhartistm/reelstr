@@ -1,0 +1,6 @@
+{
+  // Static frontend served from Workers assets. Hash routing, so the SPA fallback only covers odd paths.
+  "name": "reelstr-studio",
+  "compatibility_date": "2026-09-01",
+  "assets": { "directory": "./dist", "not_found_handling": "single-page-application" }
+}

@@ -48,3 +48,14 @@ WEBKIT_WS=ws://127.0.0.1:3999/ node demo/src/smoke.ts shots    # run the viewer 
 NETWORK=slow-4g node demo/src/smoke.ts shots                  # Chrome with throttling: 4g | slow-4g | 3g
 ```
 Run these with **Node**, not Bun: Bun's WebSocket client cannot connect to the Playwright server.
+
+## Frontends on Cloudflare Workers
+Cinema and Studio are static, so each deploys as a Worker with assets (`apps/*/wrangler.jsonc`):
+```sh
+cd apps/cinema && bun run deploy      # vite build && wrangler deploy  ->  reelstr-cinema.<subdomain>.workers.dev
+cd apps/studio && bun run deploy
+```
+Service addresses are baked in at build time from `VITE_RELAYS`, `VITE_BLOSSOM`, `VITE_MEDIA_URL`, `VITE_INDEXER_URL`, `VITE_KEYS_URL`, `VITE_MINT`, `VITE_VERIFIERS` (defaults are `127.0.0.1`), and a user can change them in **Settings** without a rebuild.
+- A public **https** page cannot call plain `http://`/`ws://` services on other hosts (mixed content). Backends on a VM need TLS (`https://`, `wss://`).
+- Pointing the deployed page at services on the visitor's own machine works, but Chrome asks the visitor to allow local network access first.
+- The current deployment has no default mint, so the wallet needs a mint URL entered (Wallet page) until a public mint is set with `VITE_MINT` at build time.
