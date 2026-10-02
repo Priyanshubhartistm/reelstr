@@ -1674,3 +1674,44 @@ ol.guide li.done::before {
     font-size: 0.7rem;
   }
 }
+
+/* ===================================================== one column, one edge
+ * The header and the page used to have different widths, so on a wide (or zoomed-out) screen the logo sat
+ * far left and the buttons far right of a small block in the middle. Both now share one width, which also
+ * grows on big screens instead of leaving a narrow strip in a sea of cream.
+ */
+:root {
+  --page: clamp(1100px, 62vw, 1560px);
+}
+.wrap {
+  max-width: var(--page);
+}
+@media (min-width: 761px) {
+  .bar {
+    padding-inline: max(1.25rem, calc((100% - var(--page)) / 2 + 1.25rem));
+  }
+}
+.gate {
+  max-width: min(var(--page), 1100px);
+}
+
+/* equal-height cards in a row, plain-words boxes */
+.cols {
+  align-items: stretch;
+}
+.cols > .card {
+  height: 100%;
+  margin-bottom: 1.25rem;
+}
+.explain {
+  margin: 1.25rem 0;
+  max-width: 100%;
+}
+.explain ol {
+  margin: 0.6rem 0 0;
+}
+.next {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 2px solid var(--ink);
+}

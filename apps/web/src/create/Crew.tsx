@@ -1,7 +1,7 @@
 import { CrewRoom, releaseDraft } from "@reelstr/app-core";
 import type { NostrEvent } from "@reelstr/nostr";
 import { parseScene } from "@reelstr/protocol";
-import { useSession } from "@reelstr/ui";
+import { Explain, useSession } from "@reelstr/ui";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 const get = (k: string) => {
@@ -90,6 +90,10 @@ export function Crew() {
             until someone releases it.
           </p>
         </section>
+        <Explain title="What is a crew room?">
+          A private chat room for people working on the same story. Drafts you share there stay
+          hidden until someone presses release. Try it with a second account.
+        </Explain>
         <div className="cols">
           <div className="card">
             <h3>Open or create a room</h3>

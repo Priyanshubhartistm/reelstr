@@ -1,5 +1,6 @@
 import {
   BackLink,
+  Explain,
   FilmArt,
   go,
   SourceBadge,
@@ -211,6 +212,11 @@ export function StoryPage({ coord }: { coord: string }) {
   const usedCount = tree.data?.filter((n) => n.used).length ?? 0;
   return (
     <>
+      <Explain title="How to read this tree">
+        Each box is one short scene. A scene hangs under the one it continues, so a branch is one
+        possible way the story goes. "Reply" is just the default title of a scene nobody named. Open
+        a scene to watch it, or press Start a new branch to add yours.
+      </Explain>
       <section className="hero">
         <BackLink href="#/stories">Stories</BackLink>
         <h1>{story.data?.title ?? "Story"}</h1>

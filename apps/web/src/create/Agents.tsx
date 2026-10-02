@@ -1,6 +1,6 @@
 import type { NostrEvent } from "@reelstr/nostr";
 import { KIND, parseAgentProfile, parseJobResult } from "@reelstr/protocol";
-import { useAsync, usePayments, useSession } from "@reelstr/ui";
+import { Explain, useAsync, usePayments, useSession } from "@reelstr/ui";
 import { acceptResult, awaitResult, requestJob } from "@reelstr/wallet";
 import { useState } from "react";
 
@@ -116,6 +116,17 @@ export function Agents({ coord }: { coord?: string }) {
           </div>
         </div>
       </section>
+      <Explain
+        title="What are agents?"
+        steps={[
+          "Describe the scene you want, and set a price in sats.",
+          "A bot makes the clip and sends it back to you.",
+          "You review it. If you accept, the scene is published and the bot is paid. If not, you pay nothing.",
+        ]}
+      >
+        An agent is a bot account that makes video from a text prompt. In this test demo the bot
+        makes plain coloured placeholder clips, not real AI video.
+      </Explain>
       {agents.error && <p className="error">{agents.error}</p>}
       {agents.data?.length === 0 && (
         <div className="card empty">

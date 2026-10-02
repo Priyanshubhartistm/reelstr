@@ -1,5 +1,14 @@
 import type { Weight } from "@reelstr/protocol";
-import { BackLink, FilmArt, go, SplitTable, TestnetGuide, useAsync, useSession } from "@reelstr/ui";
+import {
+  BackLink,
+  Explain,
+  FilmArt,
+  go,
+  SplitTable,
+  TestnetGuide,
+  useAsync,
+  useSession,
+} from "@reelstr/ui";
 import { Stars } from "./Feedback";
 import { hiddenIds } from "./moderation";
 import { loadProgress } from "./progress";
@@ -42,6 +51,18 @@ export function Home() {
   return (
     <>
       <TestnetGuide />
+      <Explain
+        title="What is Reelstr?"
+        steps={[
+          "People post short video scenes that continue one shared story. Anyone can add a scene or branch off one.",
+          "A curator picks scenes and cuts them into an episode.",
+          "Watch the first episodes free. Then pay a few sats to keep going.",
+          "Every payment is split between everyone whose scene is in the episode, and the split is public.",
+        ]}
+      >
+        Think of a serial show that anyone can write for, where the writers get paid directly. No
+        company sits in the middle. The videos in this demo are placeholders, not real AI output.
+      </Explain>
       <section className="hero">
         <FilmArt />
         <div className="label">Reelstr Cinema</div>

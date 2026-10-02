@@ -1,5 +1,5 @@
 import { computeWeights, type Weight } from "@reelstr/protocol";
-import { SceneSequencePlayer, SplitTable, useAsync, useSession } from "@reelstr/ui";
+import { Explain, SceneSequencePlayer, SplitTable, useAsync, useSession } from "@reelstr/ui";
 import { useMemo, useState } from "react";
 import type { CutRow } from "./Home";
 
@@ -317,6 +317,18 @@ export function Desk() {
           </div>
         </div>
       </section>
+      <Explain
+        title="What is the Curator desk?"
+        steps={[
+          "Pick scenes made by different people (the list below).",
+          "Put them in the order you want. That order is your episode.",
+          "Check the split: each scene's maker gets a share of every payment.",
+          "Publish. Viewers see your episode, and the makers get paid automatically.",
+        ]}
+      >
+        Scenes are short clips anyone can post. A curator turns a few of them into one episode, like
+        an editor assembling a show.
+      </Explain>
 
       <div className="card">
         <div className="step">

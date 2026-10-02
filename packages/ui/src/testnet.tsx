@@ -72,6 +72,7 @@ export function TestnetBadge() {
 /** The wallet's faucet card. */
 export function FaucetCard() {
   const f = useFaucet();
+  const p = usePayments();
   if (!TESTNET) return null;
   return (
     <div className="card card-soft" data-testid="faucet">
@@ -89,6 +90,20 @@ export function FaucetCard() {
             : `Get ${FAUCET_SATS} test sats`}
       </button>
       {f.error && <p className="error">{f.error}</p>}
+      {p.balance > 0 && (
+        <div className="next" data-testid="faucet-next">
+          <div className="label">You have sats. What now?</div>
+          <ol className="guide">
+            <li>
+              <a href="#series">Open a series</a> and watch the free episodes.
+            </li>
+            <li>When a paid episode asks for sats, press Unlock. Your balance drops.</li>
+            <li>
+              Check <a href="#/earnings">Earnings</a> to see who was paid.
+            </li>
+          </ol>
+        </div>
+      )}
     </div>
   );
 }
