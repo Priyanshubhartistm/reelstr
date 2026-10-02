@@ -2014,4 +2014,97 @@ describe("Studio and Cinema in a real browser", () => {
     expect(u.errors).toEqual([]);
     await u.ctx.close();
   }, 120_000);
+
+  test("landing motion: hero sequence plays, sections reveal on scroll, nothing gets stuck hidden, reduced motion shows everything at once", async () => {
+    // --- with motion
+    const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    const p = await ctx.newPage();
+    const errs: string[] = [];
+    p.on("pageerror", (e) => errs.push(e.message));
+    await p.goto(`${studioUrl}/`);
+    const root = p.locator("main.landing");
+    expect(await root.evaluate((e) => e.classList.contains("anim"))).toBe(true);
+    // the headline is split into words that settle (opacity 1) by about two seconds
+    await p.waitForFunction(
+      () =>
+        Array.from(document.querySelectorAll(".landing h1 .w")).every(
+          (w) => Number.parseFloat(getComputedStyle(w).opacity) > 0.99,
+        ),
+      null,
+      { timeout: 4000 },
+    );
+    expect(await p.locator(".landing h1 .w").count()).toBeGreaterThan(8);
+    expect(await p.getByRole("heading", { name: /Stories anyone can fork/ }).innerText()).toContain(
+      "Stories anyone can fork. Episodes that pay everyone who made them.",
+    );
+    // below the fold: hidden until reached
+    const cards = p.locator("#why ~ .grid .card");
+    expect(
+      await cards.first().evaluate((e) => Number.parseFloat(getComputedStyle(e).opacity)),
+    ).toBeLessThan(0.5);
+    // the header has no scroll shadow at the top and gains one after scrolling
+    expect(await p.locator("header.bar").evaluate((e) => e.classList.contains("scrolled"))).toBe(
+      false,
+    );
+    await p.evaluate(() =>
+      document.querySelector("#why")?.scrollIntoView({ behavior: "instant" as ScrollBehavior }),
+    );
+    await p.waitForFunction(() =>
+      document.querySelector("header.bar")?.classList.contains("scrolled"),
+    );
+    // reaching a section reveals its cards, one after another, and they end up fully visible and clickable
+    await p.waitForFunction(
+      () =>
+        Array.from(document.querySelectorAll(".landing .reveal"))
+          .slice(0, 6)
+          .every((e) => e.classList.contains("in")),
+      null,
+      { timeout: 6000 },
+    );
+    await p.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await p.waitForFunction(
+      () =>
+        Array.from(document.querySelectorAll(".landing .reveal")).every((e) =>
+          e.classList.contains("in"),
+        ),
+      null,
+      { timeout: 6000 },
+    );
+    await p.waitForTimeout(1500);
+    expect(
+      await p
+        .locator(".landing .reveal")
+        .evaluateAll((els) =>
+          els.every((e) => Number.parseFloat(getComputedStyle(e).opacity) > 0.99),
+        ),
+    ).toBe(true);
+    await p.getByRole("link", { name: "Launch the app" }).last().click();
+    await p.getByRole("heading", { name: "Sign in" }).waitFor();
+    expect(errs).toEqual([]);
+    await ctx.close();
+
+    // --- reduced motion: no animation machinery, everything is simply there
+    const calm = await browser.newContext({
+      viewport: { width: 1280, height: 800 },
+      reducedMotion: "reduce",
+    });
+    const q = await calm.newPage();
+    await q.goto(`${studioUrl}/`);
+    expect(await q.locator("main.landing").evaluate((e) => e.classList.contains("anim"))).toBe(
+      false,
+    );
+    expect(
+      await q
+        .locator("#why ~ .grid .card")
+        .first()
+        .evaluate((e) => getComputedStyle(e).opacity),
+    ).toBe("1");
+    expect(
+      await q
+        .locator(".landing h1 .w")
+        .first()
+        .evaluate((e) => getComputedStyle(e).animationName),
+    ).toBe("none");
+    await calm.close();
+  }, 120_000);
 });

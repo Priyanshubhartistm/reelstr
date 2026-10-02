@@ -171,7 +171,7 @@ export function LoginGate({ children, title }: { children: ReactNode; title: str
           <li>Every split and every payout is public.</li>
           <li>Pay per episode in sats, or watch the free ones.</li>
         </ul>
-        <FilmArt />
+        <FilmArt animate />
       </div>
       <div className="gate-forms">
         <section>

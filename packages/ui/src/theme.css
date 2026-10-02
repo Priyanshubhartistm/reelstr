@@ -1411,3 +1411,215 @@ html {
     scroll-behavior: auto;
   }
 }
+
+/* ================================================================== landing motion
+ * Everything here is movement and fade (transform, opacity): the two things the browser animates without
+ * re-laying-out the page. No glow, no blur; the one highlight is a flat diagonal sweep across the button.
+ * `prefers-reduced-motion` switches all of it off at the bottom.
+ */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(22px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.hero-anim .rise {
+  animation: rise 0.7s cubic-bezier(0.2, 0, 0, 1) both;
+  animation-delay: var(--d, 0s);
+}
+.hero-anim .hero:not(.cta) h1 .w {
+  display: inline-block;
+  animation: rise 0.75s cubic-bezier(0.2, 0, 0, 1) both;
+  animation-delay: calc(0.2s + var(--i, 0) * 65ms);
+}
+
+/* the frames: the middle one drops in and lands, two more slide out of it (a scene forking), play pulses */
+.film-art .fa {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+@keyframes fa-drop {
+  0% {
+    transform: translateY(-80px) scale(0.92);
+    opacity: 0;
+  }
+  45% {
+    opacity: 1;
+  }
+  68% {
+    transform: translateY(7px) scale(1.01);
+  }
+  84% {
+    transform: translateY(-3px);
+  }
+  100% {
+    transform: none;
+    opacity: 1;
+  }
+}
+@keyframes fa-out-l {
+  from {
+    transform: translate(42px, 8px) scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+@keyframes fa-out-r {
+  from {
+    transform: translate(-42px, 8px) scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+@keyframes fa-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  45% {
+    transform: scale(1.16);
+  }
+}
+.film-art.animate .fa-mid {
+  animation: fa-drop 0.95s cubic-bezier(0.2, 0, 0, 1) 0.3s both;
+}
+.film-art.animate .fa-left {
+  animation: fa-out-l 0.75s cubic-bezier(0.2, 0, 0, 1) 1.05s both;
+}
+.film-art.animate .fa-right {
+  animation: fa-out-r 0.75s cubic-bezier(0.2, 0, 0, 1) 1.15s both;
+}
+.film-art.animate .fa-play {
+  animation: fa-pulse 0.7s ease-in-out 1.95s 1 both;
+}
+/* the closing banner's frames wait until the banner has scrolled in */
+.landing.anim .reveal:not(.in) .film-art.animate .fa {
+  animation: none;
+  opacity: 0;
+}
+
+/* sections arrive as they scroll into view, in a short stagger (--i is the position in the row) */
+.landing.anim .reveal {
+  opacity: 0;
+  transform: translateY(26px);
+}
+.landing.anim .reveal.in {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 0.6s cubic-bezier(0.2, 0, 0, 1) calc(var(--i, 0) * 90ms),
+    transform 0.65s cubic-bezier(0.2, 0, 0, 1) calc(var(--i, 0) * 90ms);
+}
+/* once arrived, the element's own quick transitions (hover lift) come back */
+.landing.anim .reveal.done {
+  transition:
+    transform 140ms cubic-bezier(0.2, 0, 0, 1),
+    box-shadow 140ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* how it works: the numbers pop in and a line draws from each card to the next */
+.landing.anim .step-card .step-no {
+  transform: scale(0);
+}
+.landing.anim .step-card.in .step-no {
+  transform: none;
+  transition: transform 0.5s cubic-bezier(0.3, 1.7, 0.5, 1) calc(var(--i, 0) * 140ms + 0.3s);
+}
+.step-card:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: calc(1.1rem + 1rem - 1px);
+  left: calc(1.1rem + 2rem + 0.45rem);
+  right: calc(-1.1rem - 2px);
+  height: 2px;
+  background: var(--ink);
+  transform-origin: left center;
+  pointer-events: none;
+}
+.landing.anim .step-card:not(:last-child)::after {
+  transform: scaleX(0);
+}
+.landing.anim .step-card.in:not(:last-child)::after {
+  transform: scaleX(1);
+  transition: transform 0.7s cubic-bezier(0.2, 0, 0, 1) calc(var(--i, 0) * 140ms + 0.7s);
+}
+@media (max-width: 900px) {
+  .step-card:not(:last-child)::after {
+    display: none;
+  }
+}
+
+/* feature cards lift when pointed at */
+.landing .grid > .card {
+  transition:
+    transform 140ms cubic-bezier(0.2, 0, 0, 1),
+    box-shadow 140ms cubic-bezier(0.2, 0, 0, 1);
+}
+.landing .grid > .card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 7px 0 0 var(--ink);
+}
+
+/* the header picks up a hard shadow once the page has scrolled under it */
+.bar {
+  transition: box-shadow 200ms ease;
+}
+.bar.scrolled {
+  box-shadow: 0 3px 0 0 color-mix(in oklab, var(--ink) 20%, transparent);
+}
+
+/* a diagonal highlight crosses the main button every few seconds */
+@keyframes shine {
+  0%,
+  72% {
+    transform: translateX(-260%) skewX(-18deg);
+  }
+  100% {
+    transform: translateX(460%) skewX(-18deg);
+  }
+}
+.btn.shine {
+  position: relative;
+  overflow: hidden;
+}
+.btn.shine::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 38%;
+  background: linear-gradient(100deg, transparent, rgb(255 255 255 / 0.5), transparent);
+  animation: shine 5.5s ease-in-out 2.6s infinite;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-anim .rise,
+  .hero-anim .hero:not(.cta) h1 .w,
+  .film-art.animate .fa,
+  .btn.shine::after {
+    animation: none !important;
+    opacity: 1;
+  }
+  .btn.shine::after {
+    display: none;
+  }
+  .landing .reveal,
+  .landing .step-card .step-no,
+  .landing .step-card::after {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+}

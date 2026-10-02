@@ -1,4 +1,5 @@
 import { FilmArt, Wordmark } from "@reelstr/ui";
+import { useEffect, useRef, useState } from "react";
 
 const REPO = "https://github.com/Priyanshubhartistm/reelstr";
 
@@ -50,11 +51,84 @@ const FEATURES = [
   ],
 ];
 
-/** The public page: what this is, how it works, and what is and is not proven yet. */
-export function Landing() {
+/** Words that rise into place one after another. Plain text for screen readers: spaces stay between them. */
+function Words({ text }: { text: string }) {
   return (
     <>
-      <header className="bar">
+      {text.split(" ").map((w, i) => (
+        // biome-ignore lint/suspicious/noArrayIndexKey: a fixed sentence, never reordered
+        <span key={i}>
+          <span className="w" style={{ ["--i" as string]: i }}>
+            {w}
+          </span>{" "}
+        </span>
+      ))}
+    </>
+  );
+}
+
+const reducedMotion = () =>
+  typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/**
+ * Scroll reveals. Sections below the fold start hidden (class `anim` on the page, set on the very first
+ * render so nothing flashes) and are shown, one after another, as they come into view. If the visitor
+ * prefers reduced motion, or the browser cannot observe scrolling, `anim` is never set and everything is
+ * simply there. A timer reveals anything still hidden, so content can never get stuck invisible.
+ */
+function useLandingMotion(root: React.RefObject<HTMLElement | null>, enabled: boolean) {
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 6);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+  useEffect(() => {
+    const el = root.current;
+    if (!el || !enabled) return;
+    const items = Array.from(el.querySelectorAll<HTMLElement>(".reveal"));
+    const mountedAt = performance.now();
+    const show = (n: HTMLElement) => {
+      // anything already on screen when the page opens waits for the hero sequence to finish (about 2 s)
+      const wait = Math.max(0, 1700 - (performance.now() - mountedAt));
+      setTimeout(() => {
+        n.classList.add("in");
+        // once it has arrived, hand its transitions back (hover lifts must be quick, not 0.6 s)
+        setTimeout(() => n.classList.add("done"), 1100);
+      }, wait);
+    };
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries)
+          if (e.isIntersecting) {
+            show(e.target as HTMLElement);
+            io.unobserve(e.target);
+          }
+      },
+      { threshold: 0.18, rootMargin: "0px 0px -6% 0px" },
+    );
+    for (const n of items) io.observe(n);
+    const safety = setTimeout(() => {
+      for (const n of items) n.classList.add("in");
+    }, 12_000);
+    return () => {
+      io.disconnect();
+      clearTimeout(safety);
+    };
+  }, [root, enabled]);
+  return scrolled;
+}
+
+/** The public page: what this is, how it works, and what is and is not proven yet. */
+export function Landing() {
+  const root = useRef<HTMLElement>(null);
+  const animate =
+    typeof window !== "undefined" && "IntersectionObserver" in window && !reducedMotion();
+  const scrolled = useLandingMotion(root, animate);
+  return (
+    <>
+      <header className={`bar${scrolled ? " scrolled" : ""}`}>
         <a className="brand" href="#/">
           <Wordmark />
         </a>
@@ -64,22 +138,32 @@ export function Landing() {
           <a href="#status">Status</a>
         </nav>
         <span className="grow" />
-        <a className="btn" href="#/signin">
+        <a className="btn shine" href="#/signin">
           Launch the app
         </a>
       </header>
-      <main className="wrap landing">
+      <main ref={root} className={`wrap landing hero-anim${animate ? " anim" : ""}`}>
         <section className="hero">
-          <FilmArt />
-          <div className="label">Open source · built on Nostr</div>
-          <h1>Stories anyone can fork. Episodes that pay everyone who made them.</h1>
-          <p className="muted" style={{ maxWidth: "38rem", fontSize: "1.1rem" }}>
+          <FilmArt animate />
+          <div className="label rise" style={{ ["--d" as string]: "0s" }}>
+            Open source · built on Nostr
+          </div>
+          <h1>
+            <Words text="Stories anyone can fork. Episodes that pay everyone who made them." />
+          </h1>
+          <p
+            className="muted rise"
+            style={{ maxWidth: "38rem", fontSize: "1.1rem", ["--d" as string]: "0.95s" }}
+          >
             Reelstr is a micro-drama platform with no owner. Short AI-made scenes branch like code,
             curators cut the best branches into episodes, and viewers pay per episode in sats. The
             revenue split is written into the episode, where anyone can check it.
           </p>
-          <div className="row tight" style={{ marginTop: "1.4rem" }}>
-            <a className="btn" href="#/signin">
+          <div
+            className="row tight rise"
+            style={{ marginTop: "1.4rem", ["--d" as string]: "1.1s" }}
+          >
+            <a className="btn shine" href="#/signin">
               Launch the app
             </a>
             <a className="btn btn-plain" href="#how">
@@ -87,21 +171,29 @@ export function Landing() {
             </a>
           </div>
           <div className="row tight" style={{ marginTop: "1.4rem", gap: "0.5rem" }}>
-            <span className="pill">Free to watch the first episodes</span>
-            <span className="pill">Pay in sats</span>
-            <span className="pill">Splits are public</span>
+            {["Free to watch the first episodes", "Pay in sats", "Splits are public"].map(
+              (t, i) => (
+                <span
+                  key={t}
+                  className="pill rise"
+                  style={{ ["--d" as string]: `${1.3 + i * 0.1}s` }}
+                >
+                  {t}
+                </span>
+              ),
+            )}
           </div>
         </section>
 
-        <div id="how" className="label" style={{ margin: "2rem 0 0.7rem" }}>
+        <div id="how" className="label reveal" style={{ margin: "2rem 0 0.7rem" }}>
           How it works
         </div>
-        <div className="grid grid-3">
-          {STEPS.map((s) => (
+        <div className="grid grid-3 steps">
+          {STEPS.map((s, i) => (
             <div
               key={s.n}
-              className={`cover ${s.tone}`}
-              style={{ minHeight: "13rem", cursor: "default" }}
+              className={`cover step-card reveal ${s.tone}`}
+              style={{ ["--i" as string]: i * 1.5 }}
             >
               <div>
                 <span
@@ -119,12 +211,12 @@ export function Landing() {
           ))}
         </div>
 
-        <div id="why" className="label" style={{ margin: "2rem 0 0.7rem" }}>
+        <div id="why" className="label reveal" style={{ margin: "2rem 0 0.7rem" }}>
           What is different
         </div>
         <div className="grid grid-3">
-          {FEATURES.map(([t, b]) => (
-            <div key={t} className="card" style={{ margin: 0 }}>
+          {FEATURES.map(([t, b], i) => (
+            <div key={t} className="card reveal" style={{ margin: 0, ["--i" as string]: i % 3 }}>
               <h3>{t}</h3>
               <p className="muted" style={{ marginBottom: 0 }}>
                 {b}
@@ -133,10 +225,10 @@ export function Landing() {
           ))}
         </div>
 
-        <div id="status" className="label" style={{ margin: "2rem 0 0.7rem" }}>
+        <div id="status" className="label reveal" style={{ margin: "2rem 0 0.7rem" }}>
           Status
         </div>
-        <div className="card card-soft">
+        <div className="card card-soft reveal">
           <h3>A working build, not a launched product</h3>
           <p>
             Everything above runs end to end. Payments use test sats today: real Lightning is tested
@@ -157,9 +249,10 @@ export function Landing() {
           </div>
         </div>
 
-        <section className="hero cta" style={{ marginTop: "2rem" }}>
+        <section className="hero cta reveal" style={{ marginTop: "2rem" }}>
+          <FilmArt animate />
           <h1 style={{ marginBottom: "0.75rem" }}>Watch one, or make one.</h1>
-          <a className="btn" href="#/signin">
+          <a className="btn shine" href="#/signin">
             Launch the app
           </a>
         </section>

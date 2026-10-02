@@ -22,6 +22,15 @@ The web app (Watch and Create tabs, plus the public landing page) uses one style
 - `prefers-reduced-motion` turns the transitions off, and browsers without view transitions simply change page.
 - Loading shows flat pulsing placeholders instead of blank space, and the tab title follows the page.
 
+## Landing page motion
+
+Movement and fade only (the two things a browser animates without re-laying-out the page), no animation library.
+- **Hero, on load (about 2 s):** the headline rises word by word; the middle film frame drops in and lands with a small bounce, two more slide out of it (a scene forking), the play triangle pulses once; the paragraph, buttons and chips follow.
+- **On scroll:** each section arrives in a short stagger as it comes into view. In "How it works" the numbers pop in and a line draws from each card to the next. Anything already on screen at load waits for the hero to finish.
+- **Small things:** feature cards lift when pointed at, the header gains a hard shadow once the page scrolls under it, and a flat diagonal highlight sweeps across the main button every few seconds.
+- **Safe by construction:** reduced motion shows everything at once with no animation; content below the fold is only hidden when scroll-observing works, and a 12 s timer reveals anything still hidden.
+- **To undo it:** `git revert` the landing-animation commit, or `git checkout before-landing-animation -- apps/web/src/Landing.tsx packages/ui/src/theme.css packages/ui/src/shell.tsx packages/ui/src/session.tsx`.
+
 ## Pieces
 
 | Piece | Where |
