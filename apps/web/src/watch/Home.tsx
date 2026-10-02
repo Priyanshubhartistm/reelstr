@@ -1,5 +1,5 @@
 import type { Weight } from "@reelstr/protocol";
-import { BackLink, FilmArt, go, SplitTable, useAsync, useSession } from "@reelstr/ui";
+import { BackLink, FilmArt, go, SplitTable, TestnetGuide, useAsync, useSession } from "@reelstr/ui";
 import { Stars } from "./Feedback";
 import { hiddenIds } from "./moderation";
 import { loadProgress } from "./progress";
@@ -41,6 +41,7 @@ export function Home() {
   const n = series.data?.length ?? 0;
   return (
     <>
+      <TestnetGuide />
       <section className="hero">
         <FilmArt />
         <div className="label">Reelstr Cinema</div>

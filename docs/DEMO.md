@@ -11,6 +11,10 @@ Both smoke scripts pass against the seeded demo in headless Chrome. Logins are s
 
 Everything is local: Go relay, NIP-29 crew relay, two Blossom servers, real Nutshell mint (test sats), media service, indexer (PGlite), key server, a mock-model agent, a verifier, and the web app on port 5173. Ctrl+C discards all data. Nothing touches a public relay or real money.
 
+## Your own clips
+
+`bun demo/src/index.ts --clips ~/clips --model veo-3.1` seeds the same story from your own videos (`01-the-signal.mp4` to `05-static.mp4`, plus an optional `06-dawn-over-the-tower.mp4`). The prompts for those clips, the loader details and a recording script are in [`SHOWCASE.md`](SHOWCASE.md).
+
 ## What is seeded
 
 "The Last Signal": five scenes in a branching tree (Mara roots it, Dev forks two branches, Mara and Ila continue them), a mock-model scene with a full manifest (the verifier labels it Source Verified), Ila following the creators (so her Desk inbox shows their scenes), two episodes curated by Ila (episode 1 free, episode 2 is 21 sats and encrypted), two ratings. Scene footage is generated titled clips (a stand-in for model output).

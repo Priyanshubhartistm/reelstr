@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { usePayments } from "./payments";
+import { FaucetCard, TESTNET } from "./testnet";
 
 /** FE-9: balance, top-up, spending cap, history. */
 export function Wallet() {
@@ -72,7 +73,8 @@ export function Wallet() {
 
       <div className="cols">
         <div>
-          {p.wallet && FIAT_DEMO && <FiatDemo topUp={p.topUp} />}
+          {p.wallet && <FaucetCard />}
+          {p.wallet && FIAT_DEMO && !TESTNET && <FiatDemo topUp={p.topUp} />}
           {p.wallet && (
             <div className="card">
               <h3>Spending</h3>

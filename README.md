@@ -44,8 +44,12 @@ About two minutes later it prints two URLs and three sign-in keys. Everything is
 
 ```sh
 bun run check       # lint, types, 203 tests
-bun run test:e2e    # 18 headless-browser tests against the built apps
+bun run test:e2e    # 19 headless-browser tests against the built apps
 ```
+
+## Showcase
+
+The demo runs as a **testnet**: a badge, a faucet for free test sats, a four-step guide. Bring your own clips and a recording script: [`docs/SHOWCASE.md`](docs/SHOWCASE.md).
 
 ## Honest status
 

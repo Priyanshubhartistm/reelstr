@@ -1,9 +1,10 @@
-import { seed } from "./seed";
+import { seed, seedOptionsFromArgv } from "./seed";
 
 /**
  * Seed a stack that is already running (compose, or a VM): the same story the local demo tells.
  *   bun demo/src/remote.ts [--host <PUBLIC_HOST>]      default localhost
  *   bun demo/src/remote.ts --public-base https://host/reelstr   behind a reverse proxy
+ *   add  --clips ~/my-clips [--model veo-3.1]  to use your own clips (docs/SHOWCASE.md)
  * Uses the stable demo identities from demo/.demo-keys.json.
  */
 const host = process.argv.includes("--host")
@@ -30,7 +31,7 @@ const endpoints = base
       indexerUrl: `http://${host}:3300`,
       keysUrl: `http://${host}:3400`,
     };
-const who = await seed({ endpoints }, (l) => console.log(`[seed] ${l}`));
+const who = await seed({ endpoints }, (l) => console.log(`[seed] ${l}`), seedOptionsFromArgv());
 console.log(`
 Seeded. Open:
   Reelstr  http://${host}:5173

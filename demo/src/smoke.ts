@@ -67,16 +67,28 @@ await page
 await page.screenshot({ path: `${out}/4-paywall.png` });
 console.log("paid episode shows the paywall");
 const watchUrl = page.url();
-await page.getByRole("link", { name: "Top up" }).click();
-await page.getByTestId("balance").waitFor({ timeout: 30_000 });
-await page.locator("#w-amt").fill("100");
-await page.getByRole("button", { name: "Get invoice" }).click();
-await page.getByText("100 sats", { exact: true }).waitFor({ timeout: 60_000 });
-await page.screenshot({ path: `${out}/5-wallet.png` });
-await page.getByRole("button", { name: "Pay ₹100 (demo)" }).click();
-await page.getByText("200 sats", { exact: true }).waitFor({ timeout: 60_000 });
-console.log("fiat demo partner credited 100 sats");
-await page.goto(watchUrl);
+const faucetOnPaywall = page.getByRole("button", { name: "Get 500 test sats" });
+if (await faucetOnPaywall.count()) {
+  // testnet build: the faucet is right on the paywall, one click and the unlock button wakes up
+  await faucetOnPaywall.click();
+  await page
+    .getByRole("button", { name: "Unlock for 21 sats" })
+    .and(page.locator(":enabled"))
+    .waitFor({ timeout: 60_000 });
+  await page.screenshot({ path: `${out}/5-faucet.png` });
+  console.log("testnet faucet on the paywall credited 500 test sats");
+} else {
+  await page.getByRole("link", { name: "Top up" }).click();
+  await page.getByTestId("balance").waitFor({ timeout: 30_000 });
+  await page.locator("#w-amt").fill("100");
+  await page.getByRole("button", { name: "Get invoice" }).click();
+  await page.getByText("100 sats", { exact: true }).waitFor({ timeout: 60_000 });
+  await page.screenshot({ path: `${out}/5-wallet.png` });
+  await page.getByRole("button", { name: "Pay ₹100 (demo)" }).click();
+  await page.getByText("200 sats", { exact: true }).waitFor({ timeout: 60_000 });
+  console.log("fiat demo partner credited 100 sats");
+  await page.goto(watchUrl);
+}
 const t1 = t();
 await page.getByRole("button", { name: "Unlock for 21 sats" }).click();
 await page.waitForFunction(
@@ -91,11 +103,14 @@ await page.screenshot({ path: `${out}/6-unlocked.png` });
 console.log(
   `topped up with test sats and unlocked the paid episode (${engine}): unlock to playing ${Math.round(t() - t1)} ms`,
 );
-// the AI scene in this episode carries the verifier's label (the apps trust the demo verifier)
-await page
-  .getByTestId("source-row")
-  .filter({ hasText: "Source Verified" })
-  .waitFor({ timeout: 60_000 });
-await page.screenshot({ path: `${out}/7-verified.png`, fullPage: true });
-console.log("Source Verified badge shown on the AI scene");
+// the AI scene in this episode carries the verifier's label (only when the mock open-weight scene is seeded)
+if (!process.env.SKIP_VERIFIED) {
+  // the AI scene in this episode carries the verifier's label (the apps trust the demo verifier)
+  await page
+    .getByTestId("source-row")
+    .filter({ hasText: "Source Verified" })
+    .waitFor({ timeout: 60_000 });
+  await page.screenshot({ path: `${out}/7-verified.png`, fullPage: true });
+  console.log("Source Verified badge shown on the AI scene");
+}
 await browser.close();

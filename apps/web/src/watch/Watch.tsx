@@ -1,10 +1,12 @@
 import {
   BackLink,
   type Clip,
+  FaucetButton,
   go,
   HlsPlayer,
   SceneSequencePlayer,
   SourceBadge,
+  TESTNET,
   useAsync,
   usePayments,
   useSession,
@@ -289,6 +291,11 @@ export function Watch({ cutRef }: { cutRef: string }) {
                 <p className="muted">
                   Balance is too low. <a href="#/wallet">Top up</a>
                 </p>
+              )}
+              {pay.wallet && pay.balance < Number(c.price) && TESTNET && (
+                <div style={{ marginTop: "0.5rem" }}>
+                  <FaucetButton>Get 500 test sats</FaucetButton>
+                </div>
               )}
               {err && <p className="error">{err}</p>}
             </div>

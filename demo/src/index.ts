@@ -1,11 +1,11 @@
 import { cleanup } from "@reelstr/testkit";
-import { seed } from "./seed";
+import { seed, seedOptionsFromArgv } from "./seed";
 import { startStack } from "./stack";
 
 const log = (s: string) => console.log(`[demo] ${s}`);
 const stack = await startStack(log);
 let who: Awaited<ReturnType<typeof seed>> | undefined;
-if (!process.argv.includes("--no-seed")) who = await seed(stack, log);
+if (!process.argv.includes("--no-seed")) who = await seed(stack, log, seedOptionsFromArgv());
 
 console.log(`
   Reelstr demo is running (everything local; nothing touches a public relay or real money)

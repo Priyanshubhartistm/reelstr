@@ -7,6 +7,7 @@ export * from "./session";
 export * from "./settings";
 export * from "./shell";
 export * from "./split";
+export * from "./testnet";
 export * from "./tree";
 export * from "./verified";
 export * from "./Wallet";

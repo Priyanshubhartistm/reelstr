@@ -36,10 +36,13 @@ const procs: Bun.Subprocess[] = [];
 const stops: (() => void | Promise<void>)[] = [];
 const dir = tempDir();
 
-async function serveApp(app: "web") {
-  const dist = join(ROOT, "apps", app, "dist");
+async function serveApp(app: "web", variant?: { outDir: string; env: Record<string, string> }) {
+  const dist = join(ROOT, "apps", app, variant?.outDir ?? "dist");
   // always rebuild: a stale dist once hid a browser-only bug for a whole test run
-  const b = Bun.spawnSync(["bunx", "vite", "build"], { cwd: join(ROOT, "apps", app) });
+  const b = Bun.spawnSync(
+    ["bunx", "vite", "build", ...(variant ? ["--outDir", variant.outDir, "--emptyOutDir"] : [])],
+    { cwd: join(ROOT, "apps", app), env: { ...process.env, ...variant?.env } },
+  );
   if (b.exitCode !== 0) throw new Error(`${app} build failed: ${b.stderr.toString()}`);
   const srv = Bun.serve({
     port: 0,
@@ -2106,4 +2109,48 @@ describe("Studio and Cinema in a real browser", () => {
     ).toBe("none");
     await calm.close();
   }, 120_000);
+
+  test("testnet build: badge everywhere, a faucet that mints test sats with a cooldown, and a four-step guide", async () => {
+    const testnetUrl = await serveApp("web", {
+      outDir: "dist-testnet",
+      env: { VITE_TESTNET: "1" },
+    });
+    // public landing page says so
+    const anon = await browser.newContext({ viewport: { width: 1100, height: 800 } });
+    const lp = await anon.newPage();
+    await lp.goto(`${testnetUrl}/`);
+    await lp.getByText("Testnet demo").first().waitFor();
+    await lp.getByText("Free test sats from a faucet").waitFor();
+    await anon.close();
+    // the normal build does not
+    const plain = await newUser(studioUrl);
+    expect(await plain.page.locator(".testnet-badge").count()).toBe(0);
+    expect(await plain.page.getByTestId("guide").count()).toBe(0);
+    await plain.ctx.close();
+
+    const u = await newUser(testnetUrl);
+    await u.page.locator(".testnet-badge").waitFor();
+    // new here: the guide starts at step 1
+    const guide = u.page.getByTestId("guide");
+    await guide.waitFor();
+    expect(await guide.locator("li.done").count()).toBe(0);
+    await u.page.locator("header.bar").getByRole("link", { name: "Wallet", exact: true }).click();
+    const faucet = u.page.getByTestId("faucet");
+    await faucet.waitFor();
+    await faucet.getByRole("button", { name: "Get 500 test sats" }).click();
+    await u.page.getByText("500 sats", { exact: true }).waitFor({ timeout: 60_000 });
+    // one claim, then a short wait (the button says how long)
+    await faucet.getByRole("button", { name: /Again in \d+ s/ }).waitFor();
+    expect(await faucet.getByRole("button", { name: /Again in/ }).isDisabled()).toBe(true);
+    // the guide has ticked step 1 and can be hidden for good
+    await u.page.locator("header.bar").getByRole("link", { name: "Watch", exact: true }).click();
+    await guide.locator("li.done").waitFor();
+    await guide.getByRole("button", { name: "Hide" }).click();
+    await guide.waitFor({ state: "detached" });
+    await u.page.reload();
+    await u.page.locator("header.bar").waitFor();
+    expect(await u.page.getByTestId("guide").count()).toBe(0);
+    expect(u.errors).toEqual([]);
+    await u.ctx.close();
+  }, 180_000);
 });

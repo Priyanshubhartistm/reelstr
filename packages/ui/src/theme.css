@@ -1623,3 +1623,54 @@ html {
     transition: none !important;
   }
 }
+
+/* testnet */
+.testnet-badge {
+  text-decoration: none;
+  flex: none;
+}
+ol.guide {
+  list-style: none;
+  counter-reset: g;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+}
+ol.guide li {
+  counter-increment: g;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.55rem 0.8rem;
+  border: 2px solid var(--ink);
+  border-radius: 1rem;
+  background: var(--card);
+  box-shadow: var(--shadow-1);
+  font-weight: 500;
+}
+ol.guide li::before {
+  content: counter(g);
+  flex: none;
+  width: 1.6rem;
+  height: 1.6rem;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  background: var(--primary);
+  color: var(--primary-fg);
+  font: 700 0.75rem var(--font-mono);
+}
+ol.guide li.done::before {
+  background: var(--fair-tint);
+  color: var(--fair);
+  content: "✓";
+}
+@media (max-width: 760px) {
+  .testnet-badge {
+    order: 2;
+    font-size: 0.7rem;
+  }
+}

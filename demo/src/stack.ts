@@ -143,6 +143,7 @@ export async function startStack(log: (s: string) => void) {
   const appEnv = {
     VITE_MINT: mint.url,
     VITE_FIAT_DEMO: "1",
+    VITE_TESTNET: "1", // the local demo is a testnet showcase: badge, faucet and guide
     VITE_VERIFIERS: await verifierSigner.getPublicKey(),
   };
   mkdirSync(join(ROOT, "demo"), { recursive: true });

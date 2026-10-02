@@ -7,6 +7,7 @@ const env = {
   ...process.env,
   VITE_MINT: `http://127.0.0.1:${PORTS.mint}`,
   VITE_FIAT_DEMO: "1",
+  VITE_TESTNET: "1",
   VITE_VERIFIERS: await new LocalSigner(hexToBytes(demoKeys().verifier as string)).getPublicKey(),
 };
 for (const app of ["web"]) {

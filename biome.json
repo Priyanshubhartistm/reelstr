@@ -9,6 +9,7 @@
       "!**/fixtures",
       "!.venv-mint",
       "!.venv-asr",
+      "!**/dist-testnet",
       "!.cache",
       "!**/bin",
       "!**/data"

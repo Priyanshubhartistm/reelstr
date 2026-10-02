@@ -1,3 +1,4 @@
+import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { hexToBytes } from "@noble/hashes/utils.js";
 import { MockAdapter } from "@reelstr/agent";
@@ -7,6 +8,7 @@ import { buildRating } from "@reelstr/protocol";
 import { tempDir } from "@reelstr/testkit";
 import { makeScene } from "./footage";
 import { demoKeys } from "./stack";
+import { SCENES } from "./story";
 
 /** All the seed needs to know about a running stack: where its services are. */
 type Stack = {
@@ -23,8 +25,46 @@ const THEMES = {
   static: { c0: "0x222222", c1: "0xdddddd", freq: 147 },
 };
 
+export interface SeedOptions {
+  /** a folder with your own clips named 01-…mp4 to 05-…mp4 (06 is optional): used instead of generated placeholders */
+  clipsDir?: string;
+  /** what made your clips, recorded on each scene as a closed model (e.g. "veo-3.1"); omit to record nothing */
+  model?: string;
+  /** include the mock open-weight scene that earns the Source Verified badge (default: only with placeholder footage) */
+  verifiedDemo?: boolean;
+}
+
+/** `--clips DIR`, `--model NAME`, `--verified-demo` from the command line. */
+export function seedOptionsFromArgv(argv = process.argv): SeedOptions {
+  const val = (f: string) => (argv.includes(f) ? argv[argv.indexOf(f) + 1] : undefined);
+  const clipsDir = val("--clips");
+  return {
+    clipsDir: clipsDir?.replace(/^~(?=\/|$)/, process.env.HOME ?? "~"),
+    model: val("--model"),
+    verifiedDemo: argv.includes("--verified-demo") ? true : undefined,
+  };
+}
+
+/** The clip for scene `n` (1-based) in `dir`, matched by its number prefix, or null. */
+function findClip(dir: string, n: number): string | null {
+  const prefix = String(n).padStart(2, "0");
+  const f = readdirSync(dir).find(
+    (x) => x.startsWith(`${prefix}-`) && /\.(mp4|mov|webm|m4v)$/i.test(x),
+  );
+  return f ? join(dir, f) : null;
+}
+
 /** The people the demo logs in as. Their keys are printed so a presenter can sign in as them. */
-export async function seed(s: Stack, log: (l: string) => void) {
+export async function seed(s: Stack, log: (l: string) => void, opts: SeedOptions = {}) {
+  if (opts.clipsDir) {
+    if (!existsSync(opts.clipsDir)) throw new Error(`clips folder not found: ${opts.clipsDir}`);
+    const missing = SCENES.slice(0, 5).filter((_, i) => !findClip(opts.clipsDir as string, i + 1));
+    if (missing.length)
+      throw new Error(
+        `missing clips in ${opts.clipsDir}: ${missing.map((m) => `${m.file}.mp4`).join(", ")} (any of mp4, mov, webm, m4v; the number prefix is what matters)`,
+      );
+  }
+  const verifiedDemo = opts.verifiedDemo ?? !opts.clipsDir;
   const dir = tempDir("reelstr-demo-");
   const k = demoKeys();
   const people = {
@@ -64,64 +104,96 @@ export async function seed(s: Stack, log: (l: string) => void) {
   });
   const story = { pubkey: pm, d: "last-signal" };
 
-  const make = async (n: string, title: string, caption: string, theme: keyof typeof THEMES) =>
-    new Uint8Array(
+  const make = async (i: number, theme: keyof typeof THEMES) => {
+    const own = opts.clipsDir ? findClip(opts.clipsDir, i + 1) : null;
+    if (own) return new Uint8Array(await Bun.file(own).arrayBuffer());
+    const sc = SCENES[i] as (typeof SCENES)[number];
+    return new Uint8Array(
       await Bun.file(
-        await makeScene(join(dir, `${n}.mp4`), { title, caption, ...THEMES[theme] }),
+        await makeScene(join(dir, `${sc.file}.mp4`), {
+          title: sc.title.toUpperCase(),
+          caption: sc.caption,
+          ...THEMES[theme],
+        }),
       ).arrayBuffer(),
     );
+  };
+  // what made the clips, if the person said so: recorded honestly as a closed model
+  const gen = opts.model
+    ? { model: { name: opts.model, open: false }, refs: [] as string[], loras: [] as string[] }
+    : undefined;
+  const T = (i: number) => SCENES[i] as (typeof SCENES)[number];
 
   log("seeding scenes (each is uploaded and normalized for real)...");
   const sig = await mara.publishScene({
-    bytes: await make("signal", "THE SIGNAL", "3 a.m. A tower hums to life", "signal"),
-    title: "The Signal",
-    prompt: "an abandoned radio tower at night, a single red light wakes up",
+    bytes: await make(0, "signal"),
+    title: T(0).title,
+    prompt: T(0).prompt,
     story,
+    gen,
   });
   const tower = await dev.forkScene(sig.event, {
-    bytes: await make("tower", "INTO THE TOWER", "Wren climbs toward the voice", "tower"),
-    title: "Into the Tower",
-    prompt: "a girl climbs a rusted spiral stair inside the tower",
+    bytes: await make(1, "tower"),
+    title: T(1).title,
+    prompt: T(1).prompt,
+    gen,
   });
   const stairs = await dev.forkScene(sig.event, {
-    bytes: await make("stairs", "DOWN BELOW", "Another way: under the tower", "stairs"),
-    title: "Down Below",
-    prompt: "a service hatch, a long tunnel, green emergency light",
+    bytes: await make(2, "stairs"),
+    title: T(2).title,
+    prompt: T(2).prompt,
+    gen,
   });
   const bc = await mara.forkScene(tower.event, {
-    bytes: await make("bc", "THE BROADCAST", "The Voice says her name", "broadcast"),
-    title: "The Broadcast",
-    prompt: "a vintage microphone glowing, a distorted voice, red light",
+    bytes: await make(3, "broadcast"),
+    title: T(3).title,
+    prompt: T(3).prompt,
+    gen,
   });
   const st = await ila.forkScene(stairs.event, {
-    bytes: await make("static", "STATIC", "Every channel says the same thing", "static"),
-    title: "Static",
-    prompt: "walls of old speakers all showing white noise",
+    bytes: await make(4, "static"),
+    title: T(4).title,
+    prompt: T(4).prompt,
+    gen,
   });
 
-  // a scene from an open-weight model with a full manifest: the verifier re-renders it and labels it
-  const aiPrompt = "the radio tower seen from a drone at dawn, mist, slow push-in";
-  const aiBytes = await new MockAdapter("mock-open-1").generate({
-    prompt: aiPrompt,
-    seed: "42",
-    refs: [],
-    loras: [],
-    durationSec: 12,
-  });
-  const ai = await mara.publishScene({
-    bytes: aiBytes,
-    title: "Dawn Over the Tower",
-    prompt: aiPrompt,
-    story,
-    parent: { id: sig.event.id },
-    gen: { model: { name: "mock-open-1", open: true }, seed: "42", refs: [], loras: [] },
-  });
+  // scene 6: your own clip if you supplied 06; otherwise the mock open-weight scene that earns Source Verified
+  // (only when asked for, because its coloured fields look wrong beside real footage); otherwise none
+  const ownDawn = opts.clipsDir ? findClip(opts.clipsDir, 6) : null;
+  let dawn: typeof sig | null = null;
+  if (ownDawn) {
+    dawn = await mara.publishScene({
+      bytes: new Uint8Array(await Bun.file(ownDawn).arrayBuffer()),
+      title: T(5).title,
+      prompt: T(5).prompt,
+      story,
+      parent: { id: sig.event.id },
+      gen,
+    });
+  } else if (verifiedDemo) {
+    const aiPrompt = "the radio tower seen from a drone at dawn, mist, slow push-in";
+    dawn = await mara.publishScene({
+      bytes: await new MockAdapter("mock-open-1").generate({
+        prompt: aiPrompt,
+        seed: "42",
+        refs: [],
+        loras: [],
+        durationSec: 12,
+      }),
+      title: T(5).title,
+      prompt: aiPrompt,
+      story,
+      parent: { id: sig.event.id },
+      gen: { model: { name: "mock-open-1", open: true }, seed: "42", refs: [], loras: [] },
+    });
+  }
 
   const ref = (e: typeof sig, payee: string) => ({
     id: e.event.id,
     sha256: e.ingest.normalized.sha256,
     inSec: 0,
-    outSec: 10,
+    // the clip's real length, up to 10 s (a Veo clip is 8 s)
+    outSec: Math.min(10, Math.floor(e.ingest.probe.durationSec * 10) / 10),
     payee,
   });
   const src = (e: typeof sig) => ({
@@ -153,8 +225,8 @@ export async function seed(s: Stack, log: (l: string) => void) {
     episode: 2,
     title: "Down Below",
     synopsis: "The other way in.",
-    scenes: [ref(sig, pm), ref(stairs, pd), ref(st, pi), ref(ai, pm)],
-    scenesSources: [src(sig), src(stairs), src(st), src(ai)],
+    scenes: [ref(sig, pm), ref(stairs, pd), ref(st, pi), ...(dawn ? [ref(dawn, pm)] : [])],
+    scenesSources: [src(sig), src(stairs), src(st), ...(dawn ? [src(dawn)] : [])],
     price: { amount: 21 },
   });
   await ila.publishSeries({
@@ -179,18 +251,22 @@ export async function seed(s: Stack, log: (l: string) => void) {
         price: 15,
       },
     },
-    {
-      slug: "dawn-patrol",
-      title: "Dawn Patrol",
-      summary: "A drone, a tower and a girl who should not be there.",
-      cut: {
-        episode: 1,
-        title: "First light",
-        synopsis: "Mist, then a signal.",
-        scenes: [ai, tower],
-        price: 0,
-      },
-    },
+    ...(dawn
+      ? [
+          {
+            slug: "dawn-patrol",
+            title: "Dawn Patrol",
+            summary: "A drone, a tower and a girl who should not be there.",
+            cut: {
+              episode: 1,
+              title: "First light",
+              synopsis: "Mist, then a signal.",
+              scenes: [dawn, tower],
+              price: 0,
+            },
+          },
+        ]
+      : []),
   ];
   for (const x of extra) {
     await ila.publishCut({

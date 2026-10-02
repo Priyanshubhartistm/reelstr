@@ -1,4 +1,4 @@
-import { FilmArt, Wordmark } from "@reelstr/ui";
+import { FilmArt, TESTNET, Wordmark } from "@reelstr/ui";
 import { useEffect, useRef, useState } from "react";
 
 const REPO = "https://github.com/Priyanshubhartistm/reelstr";
@@ -137,6 +137,7 @@ export function Landing() {
           <a href="#why">What is different</a>
           <a href="#status">Status</a>
         </nav>
+        {TESTNET && <span className="pill pill-accent">Testnet demo</span>}
         <span className="grow" />
         <a className="btn shine" href="#/signin">
           Launch the app
@@ -171,17 +172,20 @@ export function Landing() {
             </a>
           </div>
           <div className="row tight" style={{ marginTop: "1.4rem", gap: "0.5rem" }}>
-            {["Free to watch the first episodes", "Pay in sats", "Splits are public"].map(
-              (t, i) => (
-                <span
-                  key={t}
-                  className="pill rise"
-                  style={{ ["--d" as string]: `${1.3 + i * 0.1}s` }}
-                >
-                  {t}
-                </span>
-              ),
-            )}
+            {[
+              "Free to watch the first episodes",
+              "Pay in sats",
+              "Splits are public",
+              ...(TESTNET ? ["Free test sats from a faucet"] : []),
+            ].map((t, i) => (
+              <span
+                key={t}
+                className="pill rise"
+                style={{ ["--d" as string]: `${1.3 + i * 0.1}s` }}
+              >
+                {t}
+              </span>
+            ))}
           </div>
         </section>
 

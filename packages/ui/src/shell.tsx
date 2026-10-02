@@ -2,6 +2,7 @@ import { type ReactNode, useEffect, useState } from "react";
 import { useRoute } from "./hooks";
 import { usePayments } from "./payments";
 import { useSession } from "./session";
+import { TestnetBadge } from "./testnet";
 
 export interface NavItem {
   href: string;
@@ -132,6 +133,7 @@ export function AppShell({ items, children }: { items: NavItem[]; children: Reac
         <a className="brand" href="#/">
           <Wordmark />
         </a>
+        <TestnetBadge />
         <nav aria-label="Primary">{links}</nav>
         <span className="grow" />
         {pay.wallet && (

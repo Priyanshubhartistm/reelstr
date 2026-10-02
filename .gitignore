@@ -14,3 +14,4 @@ services/crew/data/
 demo/.demo-keys.json
 .venv-asr/
 .cache/
+dist-testnet
