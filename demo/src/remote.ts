@@ -19,8 +19,7 @@ const endpoints = {
 const who = await seed({ endpoints }, (l) => console.log(`[seed] ${l}`));
 console.log(`
 Seeded. Open:
-  Cinema  http://${host}:5174
-  Studio  http://${host}:5173
+  Reelstr  http://${host}:5173
 Sign in as (paste the nsec):
   Mara  ${who.mara}
   Dev   ${who.dev}

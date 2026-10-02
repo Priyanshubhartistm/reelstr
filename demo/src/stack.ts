@@ -32,8 +32,7 @@ export const PORTS = {
   indexer: 3300,
   keys: 3400,
   mint: 3338,
-  studio: 5173,
-  cinema: 5174,
+  web: 5173,
 };
 
 /** Keys that must be known before the apps are built (the verifier is trusted by pubkey). */
@@ -53,7 +52,7 @@ export function demoKeys() {
   }
 }
 
-function serveApp(app: "studio" | "cinema", port: number, env: Record<string, string>) {
+function serveApp(app: "web", port: number, env: Record<string, string>) {
   const dir = join(ROOT, "apps", app);
   const b = Bun.spawnSync(["bunx", "vite", "build"], { cwd: dir, env: { ...process.env, ...env } });
   if (b.exitCode !== 0) throw new Error(`${app} build failed: ${b.stderr.toString()}`);
@@ -147,9 +146,8 @@ export async function startStack(log: (s: string) => void) {
     VITE_VERIFIERS: await verifierSigner.getPublicKey(),
   };
   mkdirSync(join(ROOT, "demo"), { recursive: true });
-  const studio = serveApp("studio", PORTS.studio, appEnv);
-  const cinema = serveApp("cinema", PORTS.cinema, appEnv);
-  log("Studio and Cinema built and served");
+  const web = serveApp("web", PORTS.web, appEnv);
+  log("Web app built and served");
 
   return {
     endpoints,
@@ -157,13 +155,11 @@ export async function startStack(log: (s: string) => void) {
     crewUrl,
     agentPubkey: await agentSigner.getPublicKey(),
     verifierPubkey: await verifierSigner.getPublicKey(),
-    studioUrl: `http://127.0.0.1:${studio.port}`,
-    cinemaUrl: `http://127.0.0.1:${cinema.port}`,
+    webUrl: `http://127.0.0.1:${web.port}`,
     stop: () => {
       agent.stop();
       verifier.stop();
-      studio.stop(true);
-      cinema.stop(true);
+      web.stop(true);
       media.stop(true);
       api.stop(true);
       keyServer.stop();

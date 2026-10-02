@@ -29,10 +29,7 @@
       "path": "packages/ui"
     },
     {
-      "path": "apps/studio"
-    },
-    {
-      "path": "apps/cinema"
+      "path": "apps/web"
     },
     {
       "path": "e2e"

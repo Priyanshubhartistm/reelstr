@@ -4,7 +4,7 @@
 
 > Status: a complete local build and a working demo, not a launched product. Nothing has run on a public relay or with real money yet. Read [Honest status](#honest-status) before relying on any of it.
 
-![Reelstr Cinema](docs/ui/c-home-d.png)
+![Reelstr](docs/ui/landing-d.png)
 
 ## The idea
 
@@ -19,8 +19,7 @@ Serialized short drama (the Pocket FM / ReelShort model) works, but the platform
 
 | Piece | What it does |
 | --- | --- |
-| **Cinema** (PWA) | Vertical player, series pages, wallet, paywall, ratings, reports, captions, curator desk with timeline editor |
-| **Studio** | Create stories, upload or generate scenes, fork and continue, story tree, crew rooms, earnings, commission AI agents |
+| **Web app** (PWA) | One app with tabs. Watch: vertical player, series pages, paywall, ratings, reports, captions. Create: stories and scene tree, fork and continue, curator desk with timeline editor, crew rooms, agents, earnings. Wallet and settings are shared. A public landing page for signed-out visitors |
 | **Protocol** | Event kinds, builders, validators and fixtures for stories, scenes (NIP-71 addressable video), cuts, series, payouts and jobs. Draft spec in [`docs/nip/reelstr.md`](docs/nip/reelstr.md) |
 | **Reference relay** | Go (khatru) with a kind allowlist, proof-of-work floor and timestamp window, all advertised in NIP-11 |
 | **Media service** | Normalizes clips (1080x1920, 30 fps, H.264, loudness), renders hash-stable HLS ladders with optional AES-128, mirrors blobs, generates draft captions locally with speech-to-text |

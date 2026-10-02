@@ -3,7 +3,7 @@
 Apps and services meet on Nostr relays (events) and Blossom servers (media). Money is the one exception: Cinema pays a key server, which releases the episode key.
 
 ```
-Studio (apps/studio)        Cinema (apps/cinema, PWA)
+Reelstr web app (apps/web): Watch, Stories, Desk, Agents, Crew, Earnings, Wallet
    |   \                      |   \        \
    |    crew relay (NIP-29)   |    \        key server (services/keys) --- Cashu mint / Lightning
    |                          |     indexer API (services/indexer, Postgres/PGlite)

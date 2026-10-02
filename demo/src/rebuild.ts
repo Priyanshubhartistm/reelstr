@@ -9,7 +9,7 @@ const env = {
   VITE_FIAT_DEMO: "1",
   VITE_VERIFIERS: await new LocalSigner(hexToBytes(demoKeys().verifier as string)).getPublicKey(),
 };
-for (const app of ["studio", "cinema"]) {
+for (const app of ["web"]) {
   const b = Bun.spawnSync(["bunx", "vite", "build"], { cwd: `${ROOT}/apps/${app}`, env });
   if (b.exitCode !== 0) throw new Error(`${app}: ${b.stderr.toString()}`);
   console.log("built", app);

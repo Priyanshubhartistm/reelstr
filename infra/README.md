@@ -23,7 +23,7 @@ bun demo/src/smoke.ts shots && bun demo/src/smoke-studio.ts shots   # drive it i
 
 Browsers use `PUBLIC_HOST` (in `infra/.env`) to reach the services; containers use service names. Published events carry the public addresses (blob and mint URLs), so every Bun service maps them back with `URL_REWRITE` (see `.env`/compose); this is what makes `http://localhost:3100/<hash>` fetchable from inside a container.
 
-For a VM: `bun demo/src/envgen.ts --host <the VM's DNS name or IP>`, open ports 3100, 3200, 3300, 3334, 3335, 3338 (dev mint only), 3400, 5173 and 5174, then the same `up` and `remote.ts --host <host>`. There is no TLS in this file: put a reverse proxy in front (and use `https://`/`wss://` hosts in `PUBLIC_HOST`-derived URLs) before exposing it to the internet. Caption generation needs the `services-asr` image: set `MEDIA_TARGET=services-asr`.
+For a VM: `bun demo/src/envgen.ts --host <the VM's DNS name or IP>`, open ports 3100, 3200, 3300, 3334, 3335, 3338 (dev mint only), 3400 and 5173, then the same `up` and `remote.ts --host <host>`. There is no TLS in this file: put a reverse proxy in front (and use `https://`/`wss://` hosts in `PUBLIC_HOST`-derived URLs) before exposing it to the internet. Caption generation needs the `services-asr` image: set `MEDIA_TARGET=services-asr`.
 
 Browser tests against only the relay, Blossom and Postgres containers (the rest in-process): `cd infra && podman-compose -p reelstr up -d relay blossom postgres`, then `E2E_COMPOSE=1 bun test e2e` from the root.
 
@@ -50,10 +50,9 @@ NETWORK=slow-4g node demo/src/smoke.ts shots                  # Chrome with thro
 Run these with **Node**, not Bun: Bun's WebSocket client cannot connect to the Playwright server.
 
 ## Frontends on Cloudflare Workers
-Cinema and Studio are static, so each deploys as a Worker with assets (`apps/*/wrangler.jsonc`):
+The app is static, so it deploys as a Worker with assets (`apps/web/wrangler.jsonc`):
 ```sh
-cd apps/cinema && bun run deploy      # vite build && wrangler deploy  ->  reelstr-cinema.<subdomain>.workers.dev
-cd apps/studio && bun run deploy
+cd apps/web && bun run deploy      # vite build && wrangler deploy  ->  reelstr.<subdomain>.workers.dev
 ```
 Service addresses are baked in at build time from `VITE_RELAYS`, `VITE_BLOSSOM`, `VITE_MEDIA_URL`, `VITE_INDEXER_URL`, `VITE_KEYS_URL`, `VITE_MINT`, `VITE_VERIFIERS` (defaults are `127.0.0.1`), and a user can change them in **Settings** without a rebuild.
 - A public **https** page cannot call plain `http://`/`ws://` services on other hosts (mixed content). Backends on a VM need TLS (`https://`, `wss://`).

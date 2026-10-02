@@ -1,5 +1,5 @@
 {
-  "name": "@reelstr/studio",
+  "name": "@reelstr/web",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -11,11 +11,11 @@
   },
   "dependencies": {
     "@reelstr/app-core": "workspace:*",
+    "@reelstr/nostr": "workspace:*",
     "@reelstr/protocol": "workspace:*",
     "@reelstr/ui": "workspace:*",
     "react": "19.3.0",
     "react-dom": "19.3.0",
-    "@reelstr/nostr": "workspace:*",
     "@reelstr/wallet": "workspace:*"
   },
   "devDependencies": {

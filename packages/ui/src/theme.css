@@ -1115,3 +1115,81 @@ ol.steps li {
 .gate-hero .brand {
   max-width: calc(100% - 9.5rem);
 }
+
+/* sign in: the pitch card is as tall as the column of options, with the artwork anchored at its foot */
+.gate {
+  align-items: stretch;
+}
+.gate-hero {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.gate-hero .points {
+  max-width: 19rem;
+}
+.gate-hero .film-art {
+  top: auto;
+  bottom: -1.4rem;
+  right: 1.6rem;
+  width: 14rem;
+}
+.gate-hero .brand {
+  max-width: none;
+}
+@media (max-width: 900px) {
+  .gate-hero .film-art {
+    display: block;
+    width: 9rem;
+    bottom: -1rem;
+  }
+  .gate-hero {
+    padding-bottom: 7.5rem;
+  }
+}
+.landing .hero h1 {
+  max-width: 40rem;
+}
+.landing .grid .cover:hover {
+  transform: none;
+  box-shadow: var(--shadow-2);
+}
+.bar > a.btn {
+  min-height: 2.5rem;
+  padding: 0 1.1rem;
+}
+
+.gate-forms section:last-of-type {
+  margin-bottom: 0;
+}
+.grid-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+@media (max-width: 900px) {
+  .grid-3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 620px) {
+  .grid-3 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.step-card {
+  min-height: 12rem;
+  cursor: default;
+}
+.step-card p {
+  display: block;
+  -webkit-line-clamp: unset;
+  opacity: 0.85;
+  font-size: 0.95rem;
+}
+.landing .hero.cta {
+  text-align: center;
+  padding: 2.5rem 1.5rem 2.75rem;
+}
+.landing .hero.cta h1 {
+  max-width: none;
+  margin: 0 auto 1rem;
+}

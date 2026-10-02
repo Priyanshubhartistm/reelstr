@@ -165,7 +165,7 @@ services:
         VITE_MINT: "${MINT_URL:-http://localhost:3338}"
         VITE_VERIFIERS: "${VERIFIERS:-}"
         VITE_FIAT_DEMO: "${FIAT_DEMO:-}"
-    ports: ["5173:5173", "5174:5174"]
+    ports: ["5173:5173"]
     restart: unless-stopped
 
 volumes:

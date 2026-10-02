@@ -36,7 +36,7 @@ const procs: Bun.Subprocess[] = [];
 const stops: (() => void | Promise<void>)[] = [];
 const dir = tempDir();
 
-async function serveApp(app: "studio" | "cinema") {
+async function serveApp(app: "web") {
   const dist = join(ROOT, "apps", app, "dist");
   // always rebuild: a stale dist once hid a browser-only bug for a whole test run
   const b = Bun.spawnSync(["bunx", "vite", "build"], { cwd: join(ROOT, "apps", app) });
@@ -112,8 +112,9 @@ beforeAll(async () => {
     indexerUrl: `http://127.0.0.1:${api.port}`,
     powBits: 0,
   };
-  studioUrl = await serveApp("studio");
-  cinemaUrl = await serveApp("cinema");
+  // one app now; the two names stay so each test reads as the role it plays (create vs watch)
+  studioUrl = await serveApp("web");
+  cinemaUrl = studioUrl;
   browser = await chromium.launch({
     executablePath: process.env.CHROME_PATH ?? "/usr/bin/google-chrome",
     headless: true,
@@ -130,6 +131,7 @@ afterAll(async () => {
 
 async function newUser(
   url: string,
+  route = "",
 ): Promise<{ page: Page; ctx: BrowserContext; errors: string[] }> {
   const ctx = await browser.newContext({ viewport: { width: 1000, height: 900 } });
   await ctx.addInitScript(
@@ -158,10 +160,14 @@ async function newUser(
       ) &&
       errors.push(m.text()),
   );
-  await page.goto(url);
+  await page.goto(`${url}/#/signin`);
   await page.getByRole("button", { name: "Generate a key" }).click();
   await page.getByText("I saved my key").click();
   await page.getByRole("button", { name: "Continue" }).click();
+  if (route) {
+    await page.locator("header.bar").waitFor();
+    await page.goto(`${url}/${route}`);
+  }
   return { page, ctx, errors };
 }
 
@@ -218,7 +224,7 @@ describe("Studio and Cinema in a real browser", () => {
     });
 
     // --- Studio: alice starts a story and adds the first scene
-    const alice = await newUser(studioUrl);
+    const alice = await newUser(studioUrl, "#/stories");
     await alice.page.getByLabel("Title").first().fill(`E2E Heist ${RUN}`);
     await alice.page.getByLabel("Logline").fill("A crew, a door, a clock.");
     await alice.page.getByRole("button", { name: "Create story" }).click();
@@ -241,7 +247,7 @@ describe("Studio and Cinema in a real browser", () => {
     const storyHash = new URL(alice.page.url()).hash;
 
     // --- Studio: bob forks it
-    const bob = await newUser(studioUrl);
+    const bob = await newUser(studioUrl, "#/stories");
     await bob.page.goto(`${studioUrl}/${storyHash}`);
     await bob.page.locator(".tree .node").first().click({ timeout: T });
     await bob.page.getByRole("button", { name: "Fork / continue from here" }).click();
@@ -484,7 +490,7 @@ describe("Studio and Cinema in a real browser", () => {
       gainDb: -20,
     });
     const pool = new (await import("@reelstr/nostr")).RelayPool();
-    const alice = await newUser(studioUrl);
+    const alice = await newUser(studioUrl, "#/stories");
     // a story to attach the draft to
     await alice.page.getByLabel("Title").first().fill("Crew Story");
     await alice.page.getByLabel("Logline").fill("Made in private.");
@@ -527,7 +533,7 @@ describe("Studio and Cinema in a real browser", () => {
     expect(alicePk).toHaveLength(64);
 
     // bob joins once alice invites him
-    const bob = await newUser(studioUrl);
+    const bob = await newUser(studioUrl, "#/stories");
     await bob.page.locator("header.bar").getByRole("link", { name: "Crew", exact: true }).click();
     const bobPk = await bob.page.evaluate(
       () => document.querySelector("header.bar .who")?.getAttribute("title") ?? "",
@@ -737,12 +743,14 @@ describe("Studio and Cinema in a real browser", () => {
     const page = await ctx.newPage();
     const errs: string[] = [];
     page.on("pageerror", (e) => errs.push(e.message));
-    await page.goto(studioUrl);
+    await page.goto(`${studioUrl}/#/signin`);
     await page.getByRole("button", { name: "Use NIP-07 extension" }).click();
     await page
       .locator("header.bar")
       .getByText(`${extPk.slice(0, 8)}…`)
       .waitFor({ timeout: 30_000 });
+    await page.goto(`${studioUrl}/#/stories`);
+
     await page.getByLabel("Title").first().fill("Signed by an extension");
     await page.getByLabel("Logline").fill("The page never sees the key.");
     await page.getByRole("button", { name: "Create story" }).click();
@@ -769,13 +777,15 @@ describe("Studio and Cinema in a real browser", () => {
     const p2 = await c2.newPage();
     const errs2: string[] = [];
     p2.on("pageerror", (e) => errs2.push(e.message));
-    await p2.goto(studioUrl);
+    await p2.goto(`${studioUrl}/#/signin`);
     await p2.getByPlaceholder("bunker://… or name@domain").fill(bunker.uri);
     await p2.getByRole("button", { name: "Connect (NIP-46)" }).click();
     await p2
       .locator("header.bar")
       .getByText(`${bunker.userPubkey.slice(0, 8)}…`)
       .waitFor({ timeout: 60_000 });
+    await p2.goto(`${studioUrl}/#/stories`);
+
     await p2.getByLabel("Title").first().fill("Signed by a bunker");
     await p2.getByLabel("Logline").fill("Remote signing.");
     await p2.getByRole("button", { name: "Create story" }).click();
@@ -825,7 +835,7 @@ describe("Studio and Cinema in a real browser", () => {
     });
     await agent.start(5);
 
-    const u = await newUser(studioUrl);
+    const u = await newUser(studioUrl, "#/stories");
     await u.page.getByLabel("Title").first().fill(`Agent Story ${RUN}`);
     await u.page.getByLabel("Logline").fill("Made by a bot.");
     await u.page.getByRole("button", { name: "Create story" }).click();
@@ -940,7 +950,7 @@ describe("Studio and Cinema in a real browser", () => {
     }
     await Promise.all(evs.map((e) => pool.publish(e, [publicRelay])));
     const _health = await fetch(`${endpoints.indexerUrl}/health`).then((r) => r.json());
-    const reader = await newUser(studioUrl);
+    const reader = await newUser(studioUrl, "#/stories");
     // wait until the indexer has all 500 (the API is the source for the tree)
     const probe = new ReelstrClient({
       signer: LS.generate(),
@@ -1635,7 +1645,7 @@ describe("Studio and Cinema in a real browser", () => {
       (await c.api<unknown[]>(`/verifications/${scene.event.id}`)).length === 1 ? true : undefined,
     );
 
-    const u = await newUser(studioUrl);
+    const u = await newUser(studioUrl, "#/stories");
     const story = `#/story/${encodeURIComponent(`31810:${apk}:badge`)}`;
     const open = async () => {
       await u.page.goto(`${studioUrl}/${story}`);
@@ -1684,7 +1694,7 @@ describe("Studio and Cinema in a real browser", () => {
     const page = await ctx.newPage();
     const errs: string[] = [];
     page.on("pageerror", (e) => errs.push(e.message));
-    await page.goto(studioUrl);
+    await page.goto(`${studioUrl}/#/signin`);
     await page.getByPlaceholder("bunker://… or name@domain").fill(bunker.uri);
     await page.getByRole("button", { name: "Connect (NIP-46)" }).click();
     await page
@@ -1692,6 +1702,8 @@ describe("Studio and Cinema in a real browser", () => {
       .getByText(`${pk.slice(0, 8)}…`)
       .waitFor({ timeout: 60_000 });
     const title = `Signed by nak ${RUN}`;
+    await page.goto(`${studioUrl}/#/stories`);
+
     await page.getByLabel("Title").first().fill(title);
     await page.getByLabel("Logline").fill("Remote signing, for real.");
     await page.getByRole("button", { name: "Create story" }).click();
@@ -1760,7 +1772,7 @@ describe("Studio and Cinema in a real browser", () => {
       const page = await ctx.newPage();
       const errs: string[] = [];
       page.on("pageerror", (e) => errs.push(e.message));
-      await page.goto(studioUrl);
+      await page.goto(`${studioUrl}/#/signin`);
       await page.getByRole("button", { name: "Use NIP-07 extension" }).click();
       await page
         .locator("header.bar")
@@ -1771,6 +1783,8 @@ describe("Studio and Cinema in a real browser", () => {
         await page.evaluate(() => typeof (window as unknown as { nostr?: unknown }).nostr),
       ).toBe("object");
       const title = `Signed by nos2x ${RUN}`;
+      await page.goto(`${studioUrl}/#/stories`);
+
       await page.getByLabel("Title").first().fill(title);
       await page.getByLabel("Logline").fill("Signed in a real extension.");
       await page.getByRole("button", { name: "Create story" }).click();

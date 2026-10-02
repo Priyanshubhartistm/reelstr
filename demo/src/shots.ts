@@ -9,8 +9,7 @@ import { demoKeys } from "./stack";
  */
 const out = process.argv[2] ?? ".";
 const only = process.argv[3];
-const studio = process.env.STUDIO_URL ?? "http://127.0.0.1:5173";
-const cinema = process.env.CINEMA_URL ?? "http://127.0.0.1:5174";
+const web = process.env.WEB_URL ?? "http://127.0.0.1:5173";
 const api = process.env.INDEXER_URL ?? "http://127.0.0.1:3300";
 const k = demoKeys();
 const nsec = (n: string) => new LocalSigner(hexToBytes(k[n] as string)).backup();
@@ -39,28 +38,29 @@ type Shot = {
   act?: (p: import("playwright-core").Page) => Promise<void>;
 };
 const shots: Shot[] = [
-  { name: "gate-cinema", app: cinema, hash: "" },
-  { name: "c-home", app: cinema, hash: "#/", who: "mara", wait: ".cover" },
-  { name: "c-series", app: cinema, hash: `#/series/${e(sc)}`, who: "mara", wait: ".ep" },
+  { name: "landing", app: web, hash: "" },
+  { name: "gate", app: web, hash: "#/signin" },
+  { name: "c-home", app: web, hash: "#/", who: "mara", wait: ".cover" },
+  { name: "c-series", app: web, hash: `#/series/${e(sc)}`, who: "mara", wait: ".ep" },
   {
     name: "c-watch-free",
-    app: cinema,
+    app: web,
     hash: `#/watch/${e(eps[0]?.coord ?? "")}`,
     who: "mara",
     wait: "video.player",
   },
   {
     name: "c-watch-paid",
-    app: cinema,
+    app: web,
     hash: `#/watch/${e(eps[1]?.coord ?? "")}`,
     who: "mara",
     wait: "[data-testid=paywall]",
   },
-  { name: "c-wallet", app: cinema, hash: "#/wallet", who: "mara", wait: "[data-testid=balance]" },
-  { name: "c-desk", app: cinema, hash: "#/desk", who: "ila", wait: "#d-story" },
+  { name: "c-wallet", app: web, hash: "#/wallet", who: "mara", wait: "[data-testid=balance]" },
+  { name: "c-desk", app: web, hash: "#/desk", who: "ila", wait: "#d-story" },
   {
     name: "c-desk-filled",
-    app: cinema,
+    app: web,
     hash: "#/desk",
     who: "ila",
     wait: "#d-story",
@@ -73,11 +73,11 @@ const shots: Shot[] = [
       await p.waitForTimeout(1200);
     },
   },
-  { name: "c-settings", app: cinema, hash: "#/settings", who: "mara", wait: "#v-add" },
-  { name: "s-stories", app: studio, hash: "#/", who: "mara", wait: ".cover, .card" },
+  { name: "c-settings", app: web, hash: "#/settings", who: "mara", wait: "#v-add" },
+  { name: "s-stories", app: web, hash: "#/stories", who: "mara", wait: ".cover, .card" },
   {
     name: "s-story",
-    app: studio,
+    app: web,
     hash: `#/story/${e(st)}`,
     who: "mara",
     wait: ".tree .node",
@@ -86,11 +86,11 @@ const shots: Shot[] = [
       await p.waitForTimeout(800);
     },
   },
-  { name: "s-compose", app: studio, hash: `#/compose/${e(st)}`, who: "mara", wait: "#c-file" },
-  { name: "s-agents", app: studio, hash: "#/agents", who: "mara", wait: "#ag-agent" },
-  { name: "s-crew", app: studio, hash: "#/crew", who: "mara" },
-  { name: "s-earnings", app: studio, hash: "#/earnings", who: "mara" },
-  { name: "s-wallet", app: studio, hash: "#/wallet", who: "mara", wait: "[data-testid=balance]" },
+  { name: "s-compose", app: web, hash: `#/compose/${e(st)}`, who: "mara", wait: "#c-file" },
+  { name: "s-agents", app: web, hash: "#/agents", who: "mara", wait: "#ag-agent" },
+  { name: "s-crew", app: web, hash: "#/crew", who: "mara" },
+  { name: "s-earnings", app: web, hash: "#/earnings", who: "mara" },
+  { name: "s-wallet", app: web, hash: "#/wallet", who: "mara", wait: "[data-testid=balance]" },
 ];
 
 for (const [label, w, h] of [

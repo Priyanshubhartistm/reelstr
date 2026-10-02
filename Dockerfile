@@ -25,7 +25,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends python3 python3
 ENV ASR_PYTHON=/opt/asr/bin/python HF_HOME=/state/hf
 USER bun
 
-# The two web apps, built with the service addresses a browser should use (build args), then served
+# The web app, built with the service addresses a browser should use (build args), then served
 # as static files with a single-page-app fallback.
 FROM docker.io/oven/bun:1.3.14-debian AS webbuild
 WORKDIR /app
@@ -40,10 +40,9 @@ ARG VITE_MINT=
 ARG VITE_VERIFIERS=
 ARG VITE_FIAT_DEMO=
 ARG VITE_POW_BITS=0
-RUN cd apps/studio && bunx vite build && cd ../cinema && bunx vite build
+RUN cd apps/web && bunx vite build
 
 FROM docker.io/library/nginx:1.27-alpine AS web
 COPY infra/web/nginx.conf /etc/nginx/conf.d/default.conf
-COPY --from=webbuild /app/apps/studio/dist /usr/share/nginx/html/studio
-COPY --from=webbuild /app/apps/cinema/dist /usr/share/nginx/html/cinema
-EXPOSE 5173 5174
+COPY --from=webbuild /app/apps/web/dist /usr/share/nginx/html
+EXPOSE 5173

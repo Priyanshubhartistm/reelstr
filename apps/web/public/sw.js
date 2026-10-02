@@ -1,5 +1,5 @@
 // App shell cache: installable and opens offline. API and media always go to the network.
-const SHELL = "reelstr-cinema-v1";
+const SHELL = "reelstr-web-v1";
 self.addEventListener("install", (e) => {
   e.waitUntil(
     caches.open(SHELL).then((c) => c.addAll(["/", "/manifest.webmanifest", "/icon.svg"])),

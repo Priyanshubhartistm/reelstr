@@ -10,8 +10,7 @@ if (!process.argv.includes("--no-seed")) who = await seed(stack, log);
 console.log(`
   Reelstr demo is running (everything local; nothing touches a public relay or real money)
 
-  Cinema (watch, unlock, rate)  ${stack.cinemaUrl}
-  Studio (create, fork, curate) ${stack.studioUrl}
+  Reelstr (watch, create, curate) ${stack.webUrl}
 
   Mint (test sats, no value)    ${stack.mintUrl}
   Agent to commission           ${stack.agentPubkey}   (model: mock-open-1)

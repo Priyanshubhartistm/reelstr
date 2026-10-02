@@ -204,7 +204,7 @@ export function StoryPage({ coord }: { coord: string }) {
   return (
     <>
       <section className="hero">
-        <a href="#/" className="label" style={{ textDecoration: "none" }}>
+        <a href="#/stories" className="label" style={{ textDecoration: "none" }}>
           ← Stories
         </a>
         <h1>{story.data?.title ?? "Story"}</h1>

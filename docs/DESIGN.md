@@ -1,6 +1,6 @@
 # Design system: Pine & Cream
 
-Both apps (Cinema, Studio) share one stylesheet, `packages/ui/src/theme.css`, and one shell, `packages/ui/src/shell.tsx`. The look is flat and warm: no glow, no glass, no blur. The numbers (sats, shares, seconds) carry the page and the colour stays out of their way.
+The web app (Watch and Create tabs, plus the public landing page) uses one stylesheet, `packages/ui/src/theme.css`, and one shell, `packages/ui/src/shell.tsx`. The look is flat and warm: no glow, no glass, no blur. The numbers (sats, shares, seconds) carry the page and the colour stays out of their way.
 
 ![Cinema home](ui/c-home-d.png)
 
@@ -31,7 +31,7 @@ Below 760 px the header keeps the wordmark and the balance, and the destinations
 | --- | --- |
 | ![Episode, locked](ui/c-watch-paid-d.png) | ![Curator desk](ui/c-desk-filled-d.png) |
 | ![Story tree](ui/s-story-d.png) | ![Wallet](ui/c-wallet-d.png) |
-| ![Sign in](ui/gate-cinema-d.png) | ![Phone](ui/c-home-m.png) |
+| ![Sign in](ui/gate-d.png) | ![Phone](ui/c-home-m.png) |
 
 Regenerate them against the running demo with `bun demo/src/shots.ts <dir>` (rebuild the apps first with `bun demo/src/rebuild.ts`).
 

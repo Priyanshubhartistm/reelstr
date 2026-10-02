@@ -37,7 +37,7 @@ if (net && !process.env.WEBKIT_WS) {
 }
 const engine = process.env.WEBKIT_WS ? "webkit" : "chrome";
 const t = () => performance.now();
-await page.goto(process.env.CINEMA_URL ?? "http://127.0.0.1:5174");
+await page.goto(`${process.env.WEB_URL ?? "http://127.0.0.1:5173"}/#/signin`);
 await page.getByRole("button", { name: "Generate a key" }).click();
 await page.getByText("I saved my key").click();
 await page.getByRole("button", { name: "Continue" }).click();

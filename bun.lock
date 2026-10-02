@@ -10,27 +10,8 @@
         "typescript": "7.0.2",
       },
     },
-    "apps/cinema": {
-      "name": "@reelstr/cinema",
-      "version": "0.1.0",
-      "dependencies": {
-        "@reelstr/app-core": "workspace:*",
-        "@reelstr/nostr": "workspace:*",
-        "@reelstr/protocol": "workspace:*",
-        "@reelstr/ui": "workspace:*",
-        "@reelstr/wallet": "workspace:*",
-        "react": "19.3.0",
-        "react-dom": "19.3.0",
-      },
-      "devDependencies": {
-        "@types/react": "19.3.0",
-        "@types/react-dom": "19.3.0",
-        "@vitejs/plugin-react": "6.1.1",
-        "vite": "8.3.1",
-      },
-    },
-    "apps/studio": {
-      "name": "@reelstr/studio",
+    "apps/web": {
+      "name": "@reelstr/web",
       "version": "0.1.0",
       "dependencies": {
         "@reelstr/app-core": "workspace:*",
@@ -326,8 +307,6 @@
 
     "@reelstr/bolt11": ["@reelstr/bolt11@workspace:packages/bolt11"],
 
-    "@reelstr/cinema": ["@reelstr/cinema@workspace:apps/cinema"],
-
     "@reelstr/crew": ["@reelstr/crew@workspace:services/crew"],
 
     "@reelstr/demo": ["@reelstr/demo@workspace:demo"],
@@ -352,13 +331,13 @@
 
     "@reelstr/split": ["@reelstr/split@workspace:services/split"],
 
-    "@reelstr/studio": ["@reelstr/studio@workspace:apps/studio"],
-
     "@reelstr/testkit": ["@reelstr/testkit@workspace:packages/testkit"],
 
     "@reelstr/ui": ["@reelstr/ui@workspace:packages/ui"],
 
     "@reelstr/wallet": ["@reelstr/wallet@workspace:packages/wallet"],
+
+    "@reelstr/web": ["@reelstr/web@workspace:apps/web"],
 
     "@rolldown/binding-android-arm-eabi": ["@rolldown/binding-android-arm-eabi@1.2.12", "", { "os": "android", "cpu": "arm" }, "sha512-dB/a1214qKfHMXCpgqR4OZT+jS4kTyEXbQGJPqzobt5EwH5rX080pxE37alt3RzvR1bf1Yz/yGqRfrYAxuPw0A=="],
 

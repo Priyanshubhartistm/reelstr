@@ -10,8 +10,7 @@ import { demoKeys } from "./stack";
 const out = process.argv[2] ?? ".";
 const keys = demoKeys();
 const nsec = (n: string) => new LocalSigner(hexToBytes(keys[n] as string)).backup();
-const studio = process.env.STUDIO_URL ?? "http://127.0.0.1:5173";
-const cinema = process.env.CINEMA_URL ?? "http://127.0.0.1:5174";
+const web = process.env.WEB_URL ?? "http://127.0.0.1:5173";
 const dir = tempDir("reelstr-demo-smoke-");
 const browser = await chromium.launch({
   executablePath: process.env.CHROME_PATH ?? "/usr/bin/google-chrome",
@@ -30,7 +29,7 @@ const step = (s: string) => console.log(`ok: ${s}`);
 
 // 1. Dev forks a scene from the Studio tree
 const dev = await as("dev");
-await dev.page.goto(studio);
+await dev.page.goto(`${web}/#/stories`);
 await dev.page.getByRole("link", { name: /The Last Signal/ }).click({ timeout: 60_000 });
 // the seeded tree (any size: the seed may grow); the fork must add exactly one
 await dev.page.locator(".tree .node").first().waitFor({ timeout: 60_000 });
@@ -83,7 +82,7 @@ step("commissioned the agent, accepted, paid by nutzap");
 
 // 3. Ila (curator) edits episode 1: replace a scene, publish a new version
 const ila = await as("ila");
-await ila.page.goto(`${cinema}/#/desk`);
+await ila.page.goto(`${web}/#/desk`);
 await ila.page.locator("#d-story").selectOption({ label: "The Last Signal" });
 await ila.page.getByLabel("Your published episodes").selectOption({ index: 1 });
 await ila.page.getByRole("heading", { name: /Editing episode 1/ }).waitFor({ timeout: 30_000 });

@@ -9,7 +9,7 @@ bun demo/src/smoke-studio.ts <dir>  # while it runs: Dev forks, commissions the 
 
 Both smoke scripts pass against the seeded demo in headless Chrome. Logins are stable across runs (keys live in `demo/.demo-keys.json`, git-ignored).
 
-Everything is local: Go relay, NIP-29 crew relay, two Blossom servers, real Nutshell mint (test sats), media service, indexer (PGlite), key server, a mock-model agent, a verifier, and both apps on fixed ports (Cinema 5174, Studio 5173). Ctrl+C discards all data. Nothing touches a public relay or real money.
+Everything is local: Go relay, NIP-29 crew relay, two Blossom servers, real Nutshell mint (test sats), media service, indexer (PGlite), key server, a mock-model agent, a verifier, and the web app on port 5173. Ctrl+C discards all data. Nothing touches a public relay or real money.
 
 ## What is seeded
 
@@ -17,10 +17,10 @@ Everything is local: Go relay, NIP-29 crew relay, two Blossom servers, real Nuts
 
 ## Suggested walkthrough (about 6 minutes)
 
-1. **Cinema, new key.** Series page: the free episode plays, credits and split show who gets what, the second episode shows the 21-sat paywall.
+1. **Watch, new key.** Series page: the free episode plays, credits and split show who gets what, the second episode shows the 21-sat paywall.
 2. **Pay.** Top up with test sats (invoice settles on the mint), unlock, it plays. Credits show each recipient's share in sats.
-3. **Studio as Mara** (paste her nsec). Open the story: the tree shows both branches, green nodes are used in an episode. Fork a scene from "Into the Tower" by uploading any clip.
-4. **Studio as Ila** (curator). Curator desk: open episode 1, replace a scene, publish a new version. Viewers keep their place and rating.
+3. **Stories tab as Mara** (paste her nsec). Open the story: the tree shows both branches, green nodes are used in an episode. Fork a scene from "Into the Tower" by uploading any clip.
+4. **Curator desk as Ila** (curator). Curator desk: open episode 1, replace a scene, publish a new version. Viewers keep their place and rating.
 5. **Agents page.** Commission the agent printed at start-up (mock model), review, accept: the agent gets paid by nutzap on acceptance.
 6. **Moderation.** Report an episode: it hides for you at once.
 
