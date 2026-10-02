@@ -58,7 +58,7 @@ afterAll(() => {
   cleanup();
 });
 
-async function setup(opts: { price?: number } = {}) {
+async function setup(opts: { price?: number; allowClosed?: boolean } = {}) {
   const agentSigner = LocalSigner.generate();
   const lockPriv = bytesToHex(randomBytes(32));
   const lockPub = bytesToHex(getPubKeyFromPrivKey(hexToBytes(lockPriv)));
@@ -76,6 +76,14 @@ async function setup(opts: { price?: number } = {}) {
     generate: async () => new Uint8Array(),
   };
   adapters.set("kling-3", closed);
+  // a closed-weight model that really renders (the mock's pictures), to follow a closed job end to end
+  const m = new MockAdapter("closed-mock");
+  adapters.set("closed-mock", {
+    model: "closed-mock",
+    open: false,
+    notes: "closed",
+    generate: (r) => m.generate(r),
+  });
   const agent = new Agent({
     signer: agentSigner,
     pool,
@@ -88,6 +96,7 @@ async function setup(opts: { price?: number } = {}) {
     lockPubkey: lockPub,
     mints: [mint.url],
     name: "mock-bot",
+    allowClosed: opts.allowClosed,
   });
   await agent.start(5);
   const human = LocalSigner.generate();
@@ -318,6 +327,39 @@ describe("Verifier service", () => {
     v.stop();
     w.agent.stop();
   }, 300_000);
+});
+
+describe("closed-weight models (Veo, Kling)", () => {
+  const ask = (w: Awaited<ReturnType<typeof setup>>) =>
+    requestJob(w.r, {
+      agent: w.pk,
+      prompt: "a tower at dawn",
+      story: w.story,
+      model: "closed-mock",
+      seed: 5,
+      durationSec: 6,
+      bidSats: 100,
+    });
+
+  test("refused by default, with the reason", async () => {
+    const w = await setup();
+    const job = await ask(w);
+    await expect(awaitResult(w.r, job.id, w.pk, 60_000)).rejects.toThrow(/closed-weight/);
+    w.agent.stop();
+  }, 120_000);
+
+  test("accepted when the operator allows it, and the manifest says closed so it can never be Source Verified", async () => {
+    const w = await setup({ allowClosed: true });
+    const job = await ask(w);
+    const result = await awaitResult(w.r, job.id, w.pk, 120_000);
+    const scene = JSON.parse(result.content);
+    expect(parseScene(scene).gen.model).toMatchObject({ name: "closed-mock", open: false });
+    expect(scene.tags.find((t: string[]) => t[0] === "gen" && t[1] === "model")).toContain(
+      "closed",
+    );
+    expect((await verifyScene(scene, { adapters: w.adapters })).verdict).toBe("ineligible");
+    w.agent.stop();
+  }, 240_000);
 });
 
 describe("credits show agent and commissioner separately (NP-6)", () => {

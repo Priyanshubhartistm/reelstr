@@ -136,6 +136,74 @@ export class FalWanAdapter implements GenAdapter {
   }
 }
 
+/**
+ * Google's Veo 3.1 through the Gemini API (`models/<id>:predictLongRunning`, x-goog-api-key). Request and
+ * response shapes are taken from Google's published guide (https://ai.google.dev/gemini-api/docs/veo),
+ * not from a live call: run it once with a real key before relying on it.
+ *
+ * Closed weights, so a scene made here is marked closed in its manifest and a verifier cannot re-render
+ * it ("Source Verified" is not available for it). Clips are 4, 6 or 8 seconds, with generated audio, and
+ * Gemini bills them per second (no free tier for video).
+ */
+export class GeminiVeoAdapter implements GenAdapter {
+  readonly model = "veo-3.1";
+  readonly open = false;
+  readonly notes =
+    "Veo 3.1 via the Gemini API: closed weights (not re-renderable, no Source Verified), 4/6/8 s clips with audio, paid per second";
+  constructor(
+    private readonly apiKey: string,
+    private readonly apiModel = "veo-3.1-generate-preview",
+    private readonly fetchFn: (input: string, init?: RequestInit) => Promise<Response> = (i, o) =>
+      fetch(i, o),
+    private readonly pollMs = 5000,
+    private readonly base = "https://generativelanguage.googleapis.com/v1beta",
+  ) {}
+
+  async generate(req: GenRequest): Promise<Uint8Array> {
+    if (req.durationSec > 8) throw new Error("Veo makes clips of up to 8 s: request 8 s or less");
+    const seconds = req.durationSec <= 4 ? 4 : req.durationSec <= 6 ? 6 : 8;
+    const headers = { "x-goog-api-key": this.apiKey, "Content-Type": "application/json" };
+    const parameters: Record<string, unknown> = {
+      aspectRatio: "9:16",
+      durationSeconds: String(seconds),
+      resolution: "720p",
+    };
+    if (Number.isFinite(Number(req.seed)) && req.seed !== "") parameters.seed = Number(req.seed);
+    const submit = await this.fetchFn(`${this.base}/models/${this.apiModel}:predictLongRunning`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ instances: [{ prompt: req.prompt }], parameters }),
+    });
+    if (!submit.ok)
+      throw new Error(`Gemini submit failed: ${submit.status} ${await submit.text()}`);
+    const { name } = (await submit.json()) as { name?: string };
+    if (!name) throw new Error("Gemini returned no operation name");
+    type Op = {
+      done?: boolean;
+      error?: { message?: string };
+      response?: { generateVideoResponse?: { generatedSamples?: { video?: { uri?: string } }[] } };
+    };
+    let op: Op = {};
+    for (let i = 0; i < 120; i++) {
+      op = (await (await this.fetchFn(`${this.base}/${name}`, { headers })).json()) as Op;
+      if (op.error) throw new Error(`Gemini job failed: ${op.error.message ?? "unknown error"}`);
+      if (op.done) break;
+      await new Promise((r) => setTimeout(r, this.pollMs));
+    }
+    if (!op.done) throw new Error("Gemini job did not finish in time");
+    const uri = op.response?.generateVideoResponse?.generatedSamples?.[0]?.video?.uri;
+    if (!uri)
+      throw new Error("Gemini returned no video (it may have been blocked by a safety filter)");
+    // the download carries the API key, so only ever send it to Google
+    const host = new URL(uri).hostname;
+    if (!/(^|\.)(googleapis|googleusercontent)\.com$/.test(host))
+      throw new Error(`refusing to send the API key to ${host}`);
+    const dl = await this.fetchFn(uri, { headers: { "x-goog-api-key": this.apiKey } });
+    if (!dl.ok) throw new Error(`Gemini download failed: ${dl.status}`);
+    return new Uint8Array(await dl.arrayBuffer());
+  }
+}
+
 export type AdapterRegistry = Map<string, GenAdapter>;
 export const registry = (...a: GenAdapter[]): AdapterRegistry =>
   new Map(a.map((x) => [x.model, x]));

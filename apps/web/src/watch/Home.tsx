@@ -97,7 +97,7 @@ export function Home() {
       </div>
       {series.error && <p className="error">{series.error}</p>}
       {!series.data && !series.error && (
-        <div className="grid" aria-busy="true" aria-label="Loading series">
+        <div className="grid" role="status" aria-label="Loading series">
           {[0, 1, 2].map((i) => (
             <div key={i} className="skeleton" />
           ))}

@@ -5,12 +5,13 @@ import { installUrlRewrite } from "@reelstr/blossom";
 import { openLedger } from "@reelstr/keys";
 import { LocalSigner, RelayPool, retry } from "@reelstr/nostr";
 import { CashuWallet } from "@reelstr/wallet";
-import { Agent, FalWanAdapter, MockAdapter, registry } from "./index";
+import { Agent, FalWanAdapter, GeminiVeoAdapter, MockAdapter, registry } from "./index";
 
 /**
  * Run an agent. Environment:
  *   AGENT_NAME (profile name, default reelstr-agent), AGENT_NSEC, AGENT_LOCK_PRIVKEY (hex), RELAYS, BLOSSOM_URL, MEDIA_URL, MINT_URL,
- *   PRICE_SATS (default 100), FAL_KEY (optional: enables wan-2.2-t2v), MOCK=1 (enables mock-open-1)
+ *   PRICE_SATS (default 100), FAL_KEY (optional: enables wan-2.2-t2v),
+ *   GEMINI_API_KEY (optional: enables veo-3.1; set AGENT_ALLOW_CLOSED=1 too, GEMINI_VEO_MODEL to pick the API model), MOCK=1 (enables mock-open-1)
  * Earnings are kept in AGENT_LEDGER_DB (sqlite, default ./agent.db).
  */
 installUrlRewrite();
@@ -27,9 +28,13 @@ const lockPriv = env("AGENT_LOCK_PRIVKEY");
 const mint = env("MINT_URL");
 const adapters = registry(
   ...(process.env.FAL_KEY ? [new FalWanAdapter(process.env.FAL_KEY)] : []),
+  ...(process.env.GEMINI_API_KEY
+    ? [new GeminiVeoAdapter(process.env.GEMINI_API_KEY, process.env.GEMINI_VEO_MODEL || undefined)]
+    : []),
   ...(process.env.MOCK ? [new MockAdapter()] : []),
 );
-if (adapters.size === 0) throw new Error("no models enabled: set FAL_KEY and/or MOCK=1");
+if (adapters.size === 0)
+  throw new Error("no models enabled: set FAL_KEY, GEMINI_API_KEY and/or MOCK=1");
 
 const agent = new Agent({
   signer,
@@ -51,6 +56,8 @@ const agent = new Agent({
   lockPubkey: Buffer.from(getPubKeyFromPrivKey(hexToBytes(lockPriv))).toString("hex"),
   mints: [mint],
   name: process.env.AGENT_NAME,
+  // Veo is closed-weight: the agent only takes such jobs when told to (its scenes cannot be Source Verified)
+  allowClosed: process.env.AGENT_ALLOW_CLOSED === "1",
   onLog: (l) => console.log(new Date().toISOString(), l),
 });
 await agent.start();

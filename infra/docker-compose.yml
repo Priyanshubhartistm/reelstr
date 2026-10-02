@@ -146,6 +146,9 @@ services:
       MINT_URL: "${MINT_URL:-http://localhost:3338}"
       AGENT_LEDGER_DB: /state/agent.db
       FAL_KEY: "${FAL_KEY:-}"
+      GEMINI_API_KEY: "${GEMINI_API_KEY:-}"
+      GEMINI_VEO_MODEL: "${GEMINI_VEO_MODEL:-}"
+      AGENT_ALLOW_CLOSED: "${AGENT_ALLOW_CLOSED:-}"
       MOCK: "${MOCK:-}"
     volumes: [agent-state:/state]
     depends_on: [media]

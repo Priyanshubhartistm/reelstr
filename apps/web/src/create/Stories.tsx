@@ -101,7 +101,7 @@ export function StoriesList() {
       </div>
       {stories.error && <p className="error">{stories.error}</p>}
       {!stories.data && !stories.error && (
-        <div className="grid" aria-busy="true" aria-label="Loading stories">
+        <div className="grid" role="status" aria-label="Loading stories">
           {[0, 1, 2].map((i) => (
             <div key={i} className="skeleton" />
           ))}

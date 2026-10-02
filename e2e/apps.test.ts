@@ -1806,7 +1806,6 @@ describe("Studio and Cinema in a real browser", () => {
   test("navigation: back pills on every detail page, directional view transitions, browser back, and reduced motion", async () => {
     const { LocalSigner: LS } = await import("@reelstr/nostr");
     const author = LS.generate();
-    const apk = await author.getPublicKey();
     const c = new ReelstrClient({
       signer: author,
       relays: [publicRelay],

@@ -5,7 +5,7 @@ Nothing from PRD section 6 is dropped. Where the research (`docs/research.md`, 2
 | PRD | Built | Why |
 | --- | --- | --- |
 | Scene = kind 22 (regular) | Scene = **kind 34236** (NIP-71 addressable short video), `d` = SHA-256 of the normalized video blob. Immutable by convention: an edit is a new blob, hence a new `d`. Cuts pin by event id **and** blob hash. | Divine and Flare publish addressable kinds; `a` coordinates are stable; regular kinds are only referenceable by `e` id. `d = blob hash` keeps addressable events effectively immutable. |
-| Story/Cut/Series/Payout kinds TBD | Story 31810, Cut 31811, Series 31812 (addressable), Payout 9810 (regular). All in `packages/protocol/src/kinds.ts`. | Free in the NIPs README as of 2026-09-27; unregistered, re-check before the NIP PR. |
+| Story/Cut/Series/Payout kinds TBD | Story 31810, Cut 31811, Series 31812 (addressable), Payout 9810 (regular). All in `packages/protocol/src/kinds.ts`. | Free in the NIPs README as of 2026-10-02 (re-checked: 31810 to 31812 and 9810 to 9812 are absent from the kinds table; 34236 is NIP-71's). Unregistered: re-check again right before the PR. |
 | Series mirrored as NIP-51 30005 | Deferred until rendered episodes are published as NIP-71 video events (media phase). | 30005 lists videos, and a Series lists Cuts. |
 | AES-128 HLS = paywall | Built, documented as **leak-tolerant**. One paying viewer can share the key. DRM hook is an interface stub. | The key is handed to the client in the clear; segments are public Blossom blobs. |
 | Nutzap = verifiable receipt | Key server verifies DLEQ **and** queries the mint for spent state (NUT-07) before releasing a key. Lightning preimage path also supported. | NIP-61 is draft; a signed token is not proof of spend. |
@@ -58,3 +58,12 @@ Nothing from PRD section 6 is dropped. Where the research (`docs/research.md`, 2
 - Episode weights are computed in integer milliseconds with largest-remainder rounding, so every client gets identical weights that sum to exactly 10,000.
 - Validators recompute the split from the scene tags and reject declared weights that differ (clients may downgrade to a warning via `lenientWeights`).
 - Signature verification runs on a clean copy of the event: `nostr-tools` caches verification on a hidden symbol that object spread copies, which would let a tampered copy pass.
+
+## Decisions taken on the project owner's behalf (2026-10-02)
+
+| Question | Decision | Why |
+| --- | --- | --- |
+| Fiat on-ramp provider | **None for now.** The "Pay by card or UPI (demo)" button stays a clearly labelled demo. A viewer tops up with any Lightning wallet through an invoice (works today), or connects one through NWC. | A card or UPI processor will not deliver Bitcoin; the real options are exchanges or on-ramp APIs that need a registered business, KYC and legal advice, and nothing is gained before there is demand. Revisit when a real user cannot top up by invoice. |
+| DRM | **None for now.** Paid episodes stay AES-128 and are documented as leak-tolerant. | DRM costs $99 to $299 a month plus per-license fees, and the PRD compares leakage to Spotify's. Decide when there is revenue worth protecting. |
+| Video model | **Both hosted routes are supported:** Wan 2.2 through fal (open weights, so Source Verified works) and Veo 3.1 through the Gemini API (closed weights, so scenes are marked closed and cannot be verified). The agent only accepts closed-model jobs when `AGENT_ALLOW_CLOSED=1`. | Open weights are what makes verification possible; Gemini is a fine choice if the goal is quality or you already have a key. |
+| Protocol submission | **Prepared, not sent.** `docs/nip/reelstr.md` is the draft and `docs/nip/PR-DESCRIPTION.md` the pull request text. | Opening a public PR under someone's account needs their explicit go. |

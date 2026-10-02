@@ -35,6 +35,11 @@ export interface AgentOpts {
   lockPubkey: string;
   mints: string[];
   name?: string;
+  /**
+   * Take jobs for closed-weight models (Veo, Kling). Off by default: their scenes cannot be re-rendered by
+   * a verifier, so they never earn Source Verified. The manifest says so honestly either way.
+   */
+  allowClosed?: boolean;
   onLog?: (line: string) => void;
 }
 
@@ -124,7 +129,7 @@ export class Agent {
     const a = this.o.adapters.get(j.model);
     if (!a)
       return `model ${j.model} is not offered here (have: ${[...this.o.adapters.keys()].join(", ")})`;
-    if (!a.open)
+    if (!a.open && !this.o.allowClosed)
       return `model ${j.model} is closed-weight, so its scenes would not be re-renderable`;
     if (j.parentId) {
       const parent = await this.o.pool.get(this.o.relays, { ids: [j.parentId] });
@@ -175,7 +180,7 @@ export class Agent {
           story: { pubkey: root[1] as string, d: root.slice(2).join(":") },
           parent: j.parentId ? { id: j.parentId } : undefined,
           license: j.license,
-          gen: { model: { name: j.model, open: true }, seed, refs: j.refs, loras: j.loras },
+          gen: { model: { name: j.model, open: adapter.open }, seed, refs: j.refs, loras: j.loras },
           commissioner: { pubkey: j.requester },
         });
         const scene = await this.o.signer.signEvent(template);
