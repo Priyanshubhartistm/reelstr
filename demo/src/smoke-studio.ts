@@ -63,9 +63,11 @@ step(`fork from the tree: ${before} -> ${before + 1} scenes`);
 // 2. Dev commissions the agent (needs test sats first)
 await dev.page.locator("header.bar").getByRole("link", { name: "Wallet", exact: true }).click();
 await dev.page.getByTestId("balance").waitFor({ timeout: 30_000 });
+// the wallet is persistent on a deployed stack, so compare with where it started
+const start = Number.parseInt(await dev.page.getByTestId("balance").innerText(), 10) || 0;
 await dev.page.locator("#w-amt").fill("300");
 await dev.page.getByRole("button", { name: "Get invoice" }).click();
-await dev.page.getByText("300 sats", { exact: true }).waitFor({ timeout: 60_000 });
+await dev.page.getByText(`${start + 300} sats`, { exact: true }).waitFor({ timeout: 60_000 });
 await dev.page.locator("header.bar").getByRole("link", { name: "Agents", exact: true }).click();
 await dev.page.locator("#ag-agent option").nth(1).waitFor({ state: "attached", timeout: 30_000 });
 await dev.page.locator("#ag-agent").selectOption({ index: 1 });
