@@ -38,7 +38,11 @@ export const httpAuthHeader = (ev: unknown) => `Nostr ${btoa(JSON.stringify(ev))
  * that its SHA-256 equals the `payload` tag (a POST with a body and no payload tag is refused).
  * Pass the request body text you already read (a Request body can only be read once).
  */
-export function verifyHttpAuth(req: Request, bodyText?: string): string | null {
+export function verifyHttpAuth(
+  req: Request,
+  bodyText?: string,
+  publicPrefix?: string,
+): string | null {
   const h = req.headers.get("authorization");
   if (!h?.startsWith("Nostr ")) return null;
   try {
@@ -47,7 +51,19 @@ export function verifyHttpAuth(req: Request, bodyText?: string): string | null {
     if (Math.abs(Date.now() / 1000 - ev.created_at) > MAX_SKEW_SEC) return null;
     const u = tagValue(ev.tags, "u");
     const m = tagValue(ev.tags, "method");
-    if (!u || new URL(u).pathname !== new URL(req.url).pathname || m?.toUpperCase() !== req.method)
+    // behind a reverse proxy that strips a path prefix (`/reelstr/media`), the client signed the public
+    // path while this process sees the stripped one: PUBLIC_PATH_PREFIX says what was stripped.
+    // Strict once set: the signed path must be exactly prefix + what we received.
+    const prefix = (
+      publicPrefix ??
+      (typeof process !== "undefined" ? process.env?.PUBLIC_PATH_PREFIX : "") ??
+      ""
+    ).replace(/\/+$/, "");
+    if (
+      !u ||
+      new URL(u).pathname !== prefix + new URL(req.url).pathname ||
+      m?.toUpperCase() !== req.method
+    )
       return null;
     if (bodyText !== undefined && bodyText !== "") {
       if (tagValue(ev.tags, "payload") !== sha256Hex(new TextEncoder().encode(bodyText)))

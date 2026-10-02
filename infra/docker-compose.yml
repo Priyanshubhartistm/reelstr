@@ -6,6 +6,10 @@
 #   docker compose --profile agent up -d      + a generation agent;  --profile verifier: + a verifier
 # Containers reach each other by service name; URL_REWRITE maps the public addresses that appear inside
 # published events (blob and mint URLs) to those internal names.
+# Ports are published on loopback only (BIND=0.0.0.0 to expose them). Behind a reverse proxy that serves
+# the services under one hostname and path prefix, set BLOSSOM_PUBLIC_URL / MINT_URL to the public URLs and
+# MEDIA_PATH_PREFIX / KEYS_PATH_PREFIX to the stripped prefixes (`bun demo/src/envgen.ts --public-base ...`).
+# On a shared machine add:  -f docker-compose.yml -f docker-compose.limits.yml
 name: reelstr
 
 # One image for every Bun service, built once by `indexer` (the others only reuse the tag)
@@ -14,13 +18,13 @@ x-service: &svc
   restart: unless-stopped
   environment: &env
     RELAYS: ws://relay:3334
-    URL_REWRITE: "http://${PUBLIC_HOST:-localhost}:3100=http://blossom:3100,${MINT_URL:-http://localhost:3338}=http://mint:3338"
+    URL_REWRITE: "${BLOSSOM_PUBLIC_URL:-http://localhost:3100}=http://blossom:3100,${MINT_URL:-http://localhost:3338}=http://mint:3338"
 services:
   relay:
     build: ../services/relay
     environment:
       POW_BITS: "${POW_BITS:-16}"
-    ports: ["3334:3334"]
+    ports: ["${BIND:-127.0.0.1}:3334:3334"]
     volumes: [relay-data:/data]
     restart: unless-stopped
 
@@ -28,7 +32,7 @@ services:
     build: ./blossom
     environment:
       BLOSSOM_PUBLIC_URL: "${BLOSSOM_PUBLIC_URL:-http://localhost:3100}"
-    ports: ["3100:3100"]
+    ports: ["${BIND:-127.0.0.1}:3100:3100"]
     volumes: [blossom-data:/data]
     restart: unless-stopped
 
@@ -38,7 +42,7 @@ services:
       POSTGRES_USER: reelstr
       POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-reelstr-dev}"
       POSTGRES_DB: reelstr
-    ports: ["5432:5432"]
+    ports: ["127.0.0.1:5432:5432"]
     volumes: [pg-data:/var/lib/postgresql/data]
     restart: unless-stopped
 
@@ -52,7 +56,7 @@ services:
       MINT_LISTEN_PORT: "3338"
       MINT_PRIVATE_KEY: "${MINT_PRIVATE_KEY:-dev-only-change-me}"
       MINT_INFO_NAME: reelstr-dev-mint
-    ports: ["3338:3338"]
+    ports: ["${BIND:-127.0.0.1}:3338:3338"]
     volumes: [mint-data:/root/.cashu]
     profiles: ["mint"]
 
@@ -61,7 +65,7 @@ services:
     environment:
       RELAY_SECRET: "${CREW_RELAY_SECRET:?set CREW_RELAY_SECRET (64 hex): group state is signed by it}"
       DOMAIN: "${PUBLIC_HOST:-localhost}"
-    ports: ["3335:3335"]
+    ports: ["${BIND:-127.0.0.1}:3335:3335"]
     volumes: [crew-data:/data]
     restart: unless-stopped
 
@@ -76,9 +80,10 @@ services:
     environment:
       <<: *env
       PORT: "3200"
+      PUBLIC_PATH_PREFIX: "${MEDIA_PATH_PREFIX:-}"
       BLOSSOM_URL: http://blossom:3100
       MEDIA_ALLOW: "${MEDIA_ALLOW:-}"
-    ports: ["3200:3200"]
+    ports: ["${BIND:-127.0.0.1}:3200:3200"]
     depends_on: [blossom]
 
   indexer:
@@ -91,7 +96,7 @@ services:
       <<: *env
       PORT: "3300"
       DATABASE_URL: "postgres://reelstr:${POSTGRES_PASSWORD:-reelstr-dev}@postgres:5432/reelstr"
-    ports: ["3300:3300"]
+    ports: ["${BIND:-127.0.0.1}:3300:3300"]
     depends_on: [relay, postgres]
 
   keys:
@@ -100,13 +105,14 @@ services:
     environment:
       <<: *env
       PORT: "3400"
+      PUBLIC_PATH_PREFIX: "${KEYS_PATH_PREFIX:-}"
       LEDGER_DB: /state/keys.db
       MINTS: "${MINT_URL:-http://localhost:3338}"
       PHOENIXD_URL: "${PHOENIXD_URL:-}"
       PHOENIXD_PASSWORD: "${PHOENIXD_PASSWORD:-}"
       LND_URL: "${LND_URL:-}"
       LND_MACAROON: "${LND_MACAROON:-}"
-    ports: ["3400:3400"]
+    ports: ["${BIND:-127.0.0.1}:3400:3400"]
     volumes: [keys-state:/state]
 
   split:
@@ -165,7 +171,7 @@ services:
         VITE_MINT: "${MINT_URL:-http://localhost:3338}"
         VITE_VERIFIERS: "${VERIFIERS:-}"
         VITE_FIAT_DEMO: "${FIAT_DEMO:-}"
-    ports: ["5173:5173"]
+    ports: ["${BIND:-127.0.0.1}:5173:5173"]
     restart: unless-stopped
 
 volumes:

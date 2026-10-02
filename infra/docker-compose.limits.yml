@@ -1,0 +1,21 @@
+# Overlay for a machine that also runs something else (a trading bot, a database) you must not starve:
+#   docker compose -f docker-compose.yml -f docker-compose.limits.yml up -d
+# cpu_shares only matters under contention (default weight is 1024, so everything else wins);
+# `cpus` is a hard ceiling, which only the ffmpeg-heavy media service needs.
+x-low: &low
+  cpu_shares: 128
+  mem_limit: 1g
+services:
+  relay: { <<: *low, mem_limit: 512m }
+  crew: { <<: *low, mem_limit: 256m }
+  blossom: { <<: *low, mem_limit: 512m }
+  postgres: { <<: *low, mem_limit: 512m }
+  mint: { <<: *low, mem_limit: 512m }
+  indexer: { <<: *low, mem_limit: 768m }
+  keys: { <<: *low, mem_limit: 512m }
+  agent: { <<: *low, mem_limit: 768m }
+  verifier: { <<: *low, mem_limit: 768m }
+  media:
+    <<: *low
+    mem_limit: 3g
+    cpus: "${MEDIA_CPUS:-1}"
