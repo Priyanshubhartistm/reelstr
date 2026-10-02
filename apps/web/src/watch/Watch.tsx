@@ -1,4 +1,5 @@
 import {
+  BackLink,
   type Clip,
   go,
   HlsPlayer,
@@ -161,17 +162,22 @@ export function Watch({ cutRef }: { cutRef: string }) {
   return (
     <>
       <p style={{ margin: "0 0 1rem" }}>
-        <a
-          className="label"
-          style={{ textDecoration: "none" }}
+        <BackLink
           href={cut.data?.series ? `#/series/${encodeURIComponent(cut.data.series.coord)}` : "#/"}
         >
-          ← {cut.data?.series?.title ?? "Back"}
-        </a>
+          {cut.data?.series?.title ?? "Back"}
+        </BackLink>
       </p>
       {cut.error && <p className="error">{cut.error}</p>}
       <div className="watch">
         <div>
+          {!c && !cut.error && (
+            <div
+              className="skeleton"
+              style={{ aspectRatio: "9 / 16", maxHeight: "78vh" }}
+              aria-busy="true"
+            />
+          )}
           {hidden && (
             <div className="card" data-testid="hidden-notice">
               <div className="label">Hidden</div>

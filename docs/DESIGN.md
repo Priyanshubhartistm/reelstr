@@ -14,6 +14,14 @@ The web app (Watch and Create tabs, plus the public landing page) uses one style
 - **Voice.** State the fact, then get out of the way. "Declared in the curator's signed episode event. Anyone can check it."
 - **Light only.** Tokens are `:root` custom properties, so a dark theme would be a class flip, but nothing needs one yet.
 
+## Motion and navigation
+
+- **One router** (`packages/ui/src/hooks.ts`) knows whether a navigation was forward or back (it keeps its own record of where you have been, since a hash change does not say). It tags `<html data-nav="forward|back">` and runs the change inside a browser **view transition**: the page slides and fades 28 px one way going forward and the other way going back, while the header and the bottom strip stay put.
+- Forward starts at the top; back returns to where you were scrolled.
+- **Back is one component** (`BackLink`): a pill that names where it goes, on every detail page and on sign-in. The arrow nudges left on hover.
+- `prefers-reduced-motion` turns the transitions off, and browsers without view transitions simply change page.
+- Loading shows flat pulsing placeholders instead of blank space, and the tab title follows the page.
+
 ## Pieces
 
 | Piece | Where |

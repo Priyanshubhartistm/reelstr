@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect } from "react";
 import { useRoute } from "./hooks";
 import { usePayments } from "./payments";
 import { useSession } from "./session";
@@ -10,6 +10,16 @@ export interface NavItem {
   route: string;
   /** other first segments that should also light this item up */
   also?: string[];
+}
+
+/** The one way back: a pill that always names where it goes. Same look on every page, light or dark. */
+export function BackLink({ href, children }: { href: string; children: ReactNode }) {
+  return (
+    <a className="back" href={href}>
+      <span aria-hidden="true">←</span>
+      {children}
+    </a>
+  );
 }
 
 /** The mark: a pine tile with a play triangle, same two colours as the rest of the system. */
@@ -87,6 +97,11 @@ export function AppShell({ items, children }: { items: NavItem[]; children: Reac
   const { pubkey, logout } = useSession();
   const pay = usePayments();
   const here = page ?? "";
+  // the tab strip and browser history say where you are
+  const label = items.find((i) => i.route === here || i.also?.includes(here))?.label;
+  useEffect(() => {
+    document.title = label ? `${label} · Reelstr` : "Reelstr";
+  }, [label]);
   const active = (i: NavItem) => i.route === here || !!i.also?.includes(here);
   const links = items.map((i) => (
     <a key={i.href} href={i.href} aria-current={active(i) ? "page" : undefined}>

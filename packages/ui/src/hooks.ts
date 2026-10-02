@@ -1,18 +1,66 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { flushSync } from "react-dom";
 
 /** Tiny hash router: "#/story/abc" -> ["story", "abc"]. */
-const readRoute = () =>
-  window.location.hash.replace(/^#\/?/, "").split("/").filter(Boolean).map(decodeURIComponent);
+const readHash = () => window.location.hash.replace(/^#\/?/, "");
+const parse = (h: string) => h.split("/").filter(Boolean).map(decodeURIComponent);
+
+/**
+ * One router for the whole page, so a route change is a single event we can animate.
+ * `history` is our own record of where we have been: a hash change does not say whether it was a click
+ * or the browser's back button, but landing on the entry before the current one means "back".
+ * The change is wrapped in a view transition (where the browser has them) and tagged with a direction
+ * on <html data-nav>, which the stylesheet turns into a slide one way or the other.
+ */
+let current = typeof window === "undefined" ? "" : readHash();
+const history: string[] = [current];
+const scrollAt = new Map<string, number>();
+const subscribers = new Set<() => void>();
+
+function onHashChange() {
+  const next = readHash();
+  if (next === current) return;
+  const back = history.length > 1 && history[history.length - 2] === next;
+  if (back) history.pop();
+  else history.push(next);
+  scrollAt.set(current, window.scrollY);
+  current = next;
+  const commit = () => {
+    for (const f of subscribers) f();
+    // forward starts at the top; back returns to where you were (as far as the content has loaded)
+    window.scrollTo(0, back ? (scrollAt.get(next) ?? 0) : 0);
+  };
+  document.documentElement.dataset.nav = back ? "back" : "forward";
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  type VT = { ready: Promise<void>; finished: Promise<void>; updateCallbackDone: Promise<void> };
+  const start = (document as Document & { startViewTransition?: (cb: () => void) => VT })
+    .startViewTransition;
+  if (start && !reduced) {
+    const vt = start.call(document, () => flushSync(commit));
+    // a navigation during another one's animation skips it: the page still updates, but the browser
+    // rejects the skipped transition's promises, which would surface as an unhandled error
+    for (const p of [vt.ready, vt.finished, vt.updateCallbackDone]) p.catch(() => {});
+  } else commit();
+}
+if (typeof window !== "undefined") window.addEventListener("hashchange", onHashChange);
+
+const subscribe = (f: () => void) => {
+  subscribers.add(f);
+  return () => {
+    subscribers.delete(f);
+  };
+};
 
 export function useRoute(): string[] {
-  const [r, setR] = useState(readRoute);
-  useEffect(() => {
-    const f = () => setR(readRoute());
-    window.addEventListener("hashchange", f);
-    return () => window.removeEventListener("hashchange", f);
-  }, []);
-  return r;
+  const h = useSyncExternalStore(
+    subscribe,
+    () => current,
+    () => "",
+  );
+  return useMemo(() => parse(h), [h]);
 }
+/** Whether the last navigation was back (for components that animate themselves). */
+export const lastNavigation = () => document.documentElement.dataset.nav ?? "forward";
 export const go = (...parts: string[]) => {
   window.location.hash = `/${parts.map(encodeURIComponent).join("/")}`;
 };

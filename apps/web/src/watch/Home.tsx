@@ -1,5 +1,5 @@
 import type { Weight } from "@reelstr/protocol";
-import { FilmArt, go, SplitTable, useAsync, useSession } from "@reelstr/ui";
+import { BackLink, FilmArt, go, SplitTable, useAsync, useSession } from "@reelstr/ui";
 import { Stars } from "./Feedback";
 import { hiddenIds } from "./moderation";
 import { loadProgress } from "./progress";
@@ -96,6 +96,13 @@ export function Home() {
         Series
       </div>
       {series.error && <p className="error">{series.error}</p>}
+      {!series.data && !series.error && (
+        <div className="grid" aria-busy="true" aria-label="Loading series">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="skeleton" />
+          ))}
+        </div>
+      )}
       <div className="grid">
         {series.data?.map((s) => (
           <a
@@ -152,9 +159,7 @@ export function SeriesPage({ coord }: { coord: string }) {
   return (
     <>
       <section className="hero">
-        <a href="#/" className="label" style={{ textDecoration: "none" }}>
-          ← All series
-        </a>
+        <BackLink href="#/">All series</BackLink>
         <h1>{s.data?.title}</h1>
         <p className="muted" style={{ maxWidth: "38rem" }}>
           {s.data?.summary}
@@ -175,7 +180,13 @@ export function SeriesPage({ coord }: { coord: string }) {
         </div>
       </section>
       {eps.error && <p className="error">{eps.error}</p>}
-      <div className="card">
+      <div className="card" aria-busy={!eps.data}>
+        {!eps.data && !eps.error && (
+          <>
+            <div className="skeleton line" style={{ height: "2.6rem" }} />
+            <div className="skeleton line" style={{ height: "2.6rem" }} />
+          </>
+        )}
         {shown.map((e, i) => (
           <div key={e.id} className="ep">
             <span className="ep-no" aria-hidden="true">

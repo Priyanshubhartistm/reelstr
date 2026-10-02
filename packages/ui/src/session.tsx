@@ -10,7 +10,7 @@ import {
   useState,
 } from "react";
 import { type Endpoints, loadEndpoints, saveEndpoints } from "./config";
-import { FilmArt, Wordmark } from "./shell";
+import { BackLink, FilmArt, Wordmark } from "./shell";
 
 interface Session {
   client: ReelstrClient | null;
@@ -73,6 +73,16 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 
+/** Say what to do, not what the browser threw. */
+const friendly = (m: string) =>
+  /window\.nostr/.test(m)
+    ? "No Nostr extension was found in this browser. Install one such as nos2x or Alby, or use a remote signer or a key instead."
+    : /invalid bunker|bunker/i.test(m)
+      ? `The remote signer did not accept the connection (${m}). Check the bunker:// address and that the signer is online.`
+      : /nsec|bech32|invalid/i.test(m)
+        ? "That does not look like a valid secret key. It should start with nsec1."
+        : m;
+
 /** FE-1: the three sign-in paths. No private key is ever sent anywhere. */
 export function LoginGate({ children, title }: { children: ReactNode; title: string }) {
   const { client, login } = useSession();
@@ -86,6 +96,9 @@ export function LoginGate({ children, title }: { children: ReactNode; title: str
   const run = (f: () => Promise<void>) => f().catch((e: Error) => setErr(e.message));
   return (
     <main className="gate">
+      <div className="gate-top">
+        <BackLink href="#/">Back</BackLink>
+      </div>
       <div className="gate-hero hero">
         <a className="brand" href="#/" style={{ color: "var(--hero-fg)" }}>
           <Wordmark />
@@ -174,7 +187,12 @@ export function LoginGate({ children, title }: { children: ReactNode; title: str
             Use this key
           </button>
         </section>
-        {err && <p className="error">{err}</p>}
+        {err && (
+          <div className="alert" role="alert">
+            <strong>Could not sign in</strong>
+            {friendly(err)}
+          </div>
+        )}
       </div>
     </main>
   );

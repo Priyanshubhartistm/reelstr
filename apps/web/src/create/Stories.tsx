@@ -1,4 +1,5 @@
 import {
+  BackLink,
   FilmArt,
   go,
   SourceBadge,
@@ -99,6 +100,13 @@ export function StoriesList() {
         Stories
       </div>
       {stories.error && <p className="error">{stories.error}</p>}
+      {!stories.data && !stories.error && (
+        <div className="grid" aria-busy="true" aria-label="Loading stories">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="skeleton" />
+          ))}
+        </div>
+      )}
       <div className="grid">
         {stories.data?.map((s) => (
           <a
@@ -204,9 +212,7 @@ export function StoryPage({ coord }: { coord: string }) {
   return (
     <>
       <section className="hero">
-        <a href="#/stories" className="label" style={{ textDecoration: "none" }}>
-          ← Stories
-        </a>
+        <BackLink href="#/stories">Stories</BackLink>
         <h1>{story.data?.title ?? "Story"}</h1>
         <p className="muted" style={{ maxWidth: "38rem" }}>
           {story.data?.logline}

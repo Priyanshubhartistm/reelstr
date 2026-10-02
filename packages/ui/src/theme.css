@@ -1193,3 +1193,171 @@ ol.steps li {
   max-width: none;
   margin: 0 auto 1rem;
 }
+
+/* ------------------------------------------------------------ back button */
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 2.25rem;
+  padding: 0 1rem 0 0.8rem;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--fg);
+  box-shadow: var(--shadow-1);
+  font: 600 0.8125rem / 1 var(--font-sans);
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    transform 90ms cubic-bezier(0.2, 0, 0, 1),
+    box-shadow 90ms cubic-bezier(0.2, 0, 0, 1);
+}
+.back span {
+  display: inline-block;
+  transition: transform 140ms cubic-bezier(0.2, 0, 0, 1);
+}
+.back:hover span {
+  transform: translateX(-3px);
+}
+.back:active {
+  transform: translateY(2px);
+  box-shadow: 0 0 0 0 var(--ink);
+}
+.hero .back {
+  margin-bottom: 0.5rem;
+}
+.gate-top {
+  grid-column: 1 / -1;
+}
+
+/* ------------------------------------------------------------ alerts */
+.alert {
+  margin-top: 1rem;
+  padding: 0.9rem 1.1rem;
+  border: 2px solid var(--ink);
+  border-radius: 1rem;
+  background: oklch(0.95 0.05 27);
+  box-shadow: var(--shadow-1);
+  color: oklch(0.38 0.14 27);
+}
+.alert strong {
+  display: block;
+  margin-bottom: 0.15rem;
+}
+
+/* ------------------------------------------------------- loading skeletons */
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+.skeleton {
+  border: 2px solid var(--ink);
+  border-radius: var(--radius);
+  background: var(--muted);
+  box-shadow: var(--shadow-2);
+  min-height: 15rem;
+  animation: pulse 1.3s ease-in-out infinite;
+}
+.skeleton.line {
+  min-height: 1rem;
+  border-radius: 0.5rem;
+  box-shadow: none;
+  border-width: 0;
+  margin: 0.5rem 0;
+}
+
+/* ------------------------------------------------------- page transitions */
+/* The header and the bottom strip are the same on every page, so they stay put while the page slides. */
+.bar {
+  view-transition-name: bar;
+}
+.bottomnav {
+  view-transition-name: bottomnav;
+}
+@keyframes vt-out-left {
+  to {
+    opacity: 0;
+    transform: translateX(-28px);
+  }
+}
+@keyframes vt-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(28px);
+  }
+}
+@keyframes vt-out-right {
+  to {
+    opacity: 0;
+    transform: translateX(28px);
+  }
+}
+@keyframes vt-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-28px);
+  }
+}
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 240ms;
+  animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
+  animation-fill-mode: both;
+}
+[data-nav="forward"]::view-transition-old(root) {
+  animation-name: vt-out-left;
+}
+[data-nav="forward"]::view-transition-new(root) {
+  animation-name: vt-in-right;
+}
+[data-nav="back"]::view-transition-old(root) {
+  animation-name: vt-out-right;
+}
+[data-nav="back"]::view-transition-new(root) {
+  animation-name: vt-in-left;
+}
+::view-transition-group(bar),
+::view-transition-group(bottomnav) {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+  .skeleton {
+    animation: none;
+  }
+}
+
+/* eight tabs: tighter so they fit at laptop widths, and a soft fade where a narrow screen still scrolls */
+.bar {
+  gap: 0.85rem;
+}
+.bar nav a {
+  padding: 0 0.62rem;
+  font-size: 0.875rem;
+}
+@media (max-width: 1240px) {
+  .bar nav {
+    mask-image: linear-gradient(to right, #000 calc(100% - 2rem), transparent);
+  }
+}
+.bar nav {
+  flex: 1 1 auto;
+}
+.bar .grow {
+  flex: 0 0 0;
+}
+@media (max-width: 760px) {
+  .bar .grow {
+    flex: 1;
+  }
+}

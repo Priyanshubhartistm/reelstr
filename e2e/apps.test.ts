@@ -1802,4 +1802,96 @@ describe("Studio and Cinema in a real browser", () => {
       await ctx.close();
     }
   }, 300_000);
+
+  test("navigation: back pills on every detail page, directional view transitions, browser back, and reduced motion", async () => {
+    const { LocalSigner: LS } = await import("@reelstr/nostr");
+    const author = LS.generate();
+    const apk = await author.getPublicKey();
+    const c = new ReelstrClient({
+      signer: author,
+      relays: [publicRelay],
+      blossom: endpoints.blossom as string,
+      mirrors: endpoints.mirrors as string[],
+      mediaUrl: endpoints.mediaUrl as string,
+      indexerUrl: endpoints.indexerUrl as string,
+    });
+    const title = `Nav ${RUN}`;
+    await c.createStory({ d: "nav", title, logline: "x" });
+    await until(async () =>
+      (await c.api<{ title: string }[]>("/stories")).some((x) => x.title === title)
+        ? true
+        : undefined,
+    );
+
+    // sign-in has a way back to the landing page
+    const fresh = await browser.newContext({ viewport: { width: 1000, height: 900 } });
+    const gate = await fresh.newPage();
+    await gate.goto(`${studioUrl}/#/signin`);
+    await gate.getByRole("link", { name: "Back" }).click();
+    await gate
+      .getByRole("heading", { name: /Stories anyone can fork/ })
+      .waitFor({ timeout: 10_000 });
+    await gate.goto(`${studioUrl}/#/signin`);
+    await gate.getByRole("button", { name: "Use NIP-07 extension" }).click();
+    await gate
+      .getByRole("alert")
+      .getByText(/No Nostr extension was found/)
+      .waitFor();
+    await fresh.close();
+
+    const u = await newUser(studioUrl, "#/stories");
+    const count = () => u.page.evaluate(() => (window as unknown as { __vt: number }).__vt ?? 0);
+    const nav = () => u.page.evaluate(() => document.documentElement.dataset.nav);
+    await u.page.evaluate(() => {
+      const w = window as unknown as { __vt: number };
+      w.__vt = 0;
+      const orig = document.startViewTransition?.bind(document);
+      if (orig)
+        document.startViewTransition = ((cb: () => void) => {
+          w.__vt++;
+          return orig(cb);
+        }) as typeof document.startViewTransition;
+    });
+    await u.page.waitForFunction(() => document.title.startsWith("Stories"));
+    // forward: open the story, the back pill names where it goes
+    await u.page.getByRole("link", { name: new RegExp(title) }).click();
+    await u.page
+      .getByRole("link", { name: "Stories" })
+      .and(u.page.locator(".back"))
+      .waitFor({ timeout: T });
+    expect(await nav()).toBe("forward");
+    expect(await count()).toBeGreaterThanOrEqual(1); // the browser really ran a view transition
+    // the back pill goes up one level and is tagged as back
+    await u.page.locator(".back", { hasText: "Stories" }).click();
+    await u.page.getByRole("heading", { name: /Build a world/ }).waitFor();
+    expect(await nav()).toBe("back");
+    // the browser's own back / forward buttons behave the same way
+    await u.page.getByRole("link", { name: new RegExp(title) }).click();
+    await u.page.locator(".back", { hasText: "Stories" }).waitFor();
+    await u.page.goBack();
+    await u.page.getByRole("heading", { name: /Build a world/ }).waitFor();
+    expect(await nav()).toBe("back");
+    await u.page.goForward();
+    await u.page.locator(".back", { hasText: "Stories" }).waitFor();
+    expect(await nav()).toBe("forward");
+    // scrolling starts at the top on a new page
+    expect(await u.page.evaluate(() => window.scrollY)).toBe(0);
+
+    // two navigations in a row (the first transition is skipped) must not raise an error
+    await u.page.evaluate(() => {
+      location.hash = "#/settings";
+      location.hash = "#/stories";
+    });
+    await u.page.getByRole("heading", { name: /Build a world/ }).waitFor();
+    // reduced motion: same navigation, no view transition
+    await u.page.getByRole("link", { name: new RegExp(title) }).click();
+    await u.page.locator(".back", { hasText: "Stories" }).waitFor();
+    await u.page.emulateMedia({ reducedMotion: "reduce" });
+    const before = await count();
+    await u.page.locator(".back", { hasText: "Stories" }).click();
+    await u.page.getByRole("heading", { name: /Build a world/ }).waitFor();
+    expect(await count()).toBe(before);
+    expect(u.errors).toEqual([]);
+    await u.ctx.close();
+  }, 300_000);
 });

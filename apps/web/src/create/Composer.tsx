@@ -1,6 +1,6 @@
 import { CrewRoom } from "@reelstr/app-core";
 import type { NostrEvent } from "@reelstr/nostr";
-import { useAsync, useSession } from "@reelstr/ui";
+import { BackLink, useAsync, useSession } from "@reelstr/ui";
 import { useState } from "react";
 
 const MAX_BYTES = 200 * 1024 * 1024;
@@ -107,13 +107,7 @@ export function Composer({
   return (
     <>
       <section className="hero">
-        <a
-          href={`#/story/${encodeURIComponent(coord)}`}
-          className="label"
-          style={{ textDecoration: "none" }}
-        >
-          ← Story
-        </a>
+        <BackLink href={`#/story/${encodeURIComponent(coord)}`}>Story</BackLink>
         <h1>{parent ? "Fork or continue" : "New scene"}</h1>
         {parent ? (
           <p className="muted" style={{ maxWidth: "38rem" }}>

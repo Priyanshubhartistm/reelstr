@@ -134,16 +134,16 @@ export function Crew() {
 
   return (
     <>
-      <p>
+      <p style={{ margin: "0 0 1rem" }}>
         <button
           type="button"
-          className="ghost"
+          className="back"
           onClick={() => {
             room.close();
             setRoom(null);
           }}
         >
-          ← Rooms
+          <span aria-hidden="true">←</span>Rooms
         </button>
       </p>
       <section className="hero">

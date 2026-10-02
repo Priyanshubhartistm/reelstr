@@ -51,7 +51,8 @@ function Shell() {
   const [page, arg] = route;
   // arriving from the sign-in page: land on the home screen
   useEffect(() => {
-    if (page === "signin") go("");
+    // check the live address, not the route this effect closed over: if you already moved on, stay there
+    if (page === "signin" && window.location.hash.replace(/^#\/?/, "") === "signin") go("");
   }, [page]);
   return (
     <AppShell items={NAV}>
