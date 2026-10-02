@@ -57,3 +57,7 @@ Regenerate them against the running demo with `bun demo/src/shots.ts <dir>` (reb
 - No real artwork or poster frames: covers are typographic. Poster extraction at render time would fix that.
 - No dark mode, and no full accessibility audit beyond keyboard focus, labelled controls and contrast chosen from the reference palette.
 - Reference: the Halfpot site's "Pine & Cream" brand guide, adapted for a media product.
+
+## Mobile
+
+The phone app is the same web build in a Capacitor shell (`apps/mobile`), so there is one design. At 760 px and below the primary tabs move to a bottom bar (`.bottomnav`, padded by `env(safe-area-inset-bottom)`), and the header is padded by `env(safe-area-inset-top)` so it clears the status bar and notch.

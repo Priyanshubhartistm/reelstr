@@ -15,3 +15,8 @@ demo/.demo-keys.json
 .venv-asr/
 .cache/
 dist-testnet
+
+apps/mobile/android/build
+apps/mobile/android/.gradle
+apps/mobile/android/app/build
+apps/mobile/ios/App/Pods

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Reelstr</string>
+    <string name="title_activity_main">Reelstr</string>
+    <string name="package_name">tech.ansht.reelstr</string>
+    <string name="custom_url_scheme">tech.ansht.reelstr</string>
+</resources>

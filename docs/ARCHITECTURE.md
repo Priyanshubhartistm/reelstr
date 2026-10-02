@@ -1,16 +1,28 @@
 # Architecture
 
-Apps and services meet on Nostr relays (events) and Blossom servers (media). Money is the one exception: Cinema pays a key server, which releases the episode key.
+Apps and services meet on Nostr relays (events) and Blossom servers (media). Money is the one exception: the app pays a key server, which releases the episode key.
 
+```mermaid
+flowchart LR
+  APP["Web and mobile app<br/>(apps/web, apps/mobile)"]
+  APP -->|events| RELAY["Public relay<br/>services/relay"]
+  APP -->|private drafts| CREW["Crew relay (NIP-29)<br/>services/crew"]
+  APP -->|reads| IDX["Indexer + Postgres<br/>services/indexer"]
+  APP -->|blobs| BLOS[("Blossom")]
+  APP -->|pay, get key| KEYS["Key server<br/>services/keys"]
+  KEYS --> MINT["Cashu mint"]
+  KEYS --> LN["Lightning"]
+  IDX -. subscribes .-> RELAY
+  MEDIA["Media service<br/>services/media"] --> BLOS
+  AGENT["Generation agent<br/>services/agent"] --> RELAY
+  AGENT --> MEDIA
+  VER["Verifier"] --> RELAY
+  SPLIT["Split service<br/>off by default"] --> RELAY
+  SPLIT --> MINT
 ```
-Reelstr web app (apps/web): Watch, Stories, Desk, Agents, Crew, Earnings, Wallet
-   |   \                      |   \        \
-   |    crew relay (NIP-29)   |    \        key server (services/keys) --- Cashu mint / Lightning
-   |                          |     indexer API (services/indexer, Postgres/PGlite)
-   +---- public relay (services/relay) ---- Blossom (infra/blossom) ---- media service (services/media)
-                   ^                                                     
-   generation agent (services/agent)        split service (services/split, off by default)
-```
+
+The event kinds, watch-and-pay flow, create-and-fork flow and bot-commission flow are drawn in the [README](../README.md#how-it-fits-together).
+
 
 | Piece | Path | Role |
 | --- | --- | --- |
@@ -20,6 +32,7 @@ Reelstr web app (apps/web): Watch, Stories, Desk, Agents, Crew, Earnings, Wallet
 | Media | `packages/media` | ffmpeg: normalize scenes, render episodes (HLS ladder, AES-128). |
 | Wallet | `packages/wallet` | Cashu wallet, NIP-61 nutzaps, NIP-60 storage, NWC, zap splits, unlock and job flows. |
 | App core | `packages/app-core` | Publish flows (story, scene, fork, cut, series) and crew rooms, UI-free. |
+| Mobile | `apps/mobile` | Capacitor shell around the web build (Android and iOS projects). No separate UI code. |
 | UI | `packages/ui` | Login, session, payments provider, HLS player, tree, split table. |
 | Relay | `services/relay` | Go/khatru reference relay: kind allowlist + PoW floor. |
 | Crew relay | `services/crew` | Go/relay29 NIP-29 rooms for private drafts. |
