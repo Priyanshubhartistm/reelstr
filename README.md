@@ -1,10 +1,43 @@
-# Reelstr
+<p align="center">
+  <img src="docs/brand/logo.png" alt="Reelstr" width="420">
+</p>
 
-**Open-source Pocket FM on Nostr.** Short AI-made scenes that anyone can fork, episodes cut by curators, and per-episode payments in sats, with the revenue split written into signed events that anyone can verify.
+<h3 align="center">Open-source Pocket FM on Nostr</h3>
 
-![Reelstr on desktop and phone](docs/ui/showcase.png)
+<p align="center">
+  Short AI-made scenes anyone can fork, episodes cut by curators, and per-episode payments in sats,<br>
+  with the revenue split written into signed events that anyone can verify.
+</p>
 
-[**Live testnet demo**](https://reelstr.ansht.workers.dev) · [Architecture](docs/ARCHITECTURE.md) · [Protocol draft](docs/nip/reelstr.md) · [Status](docs/STATUS.md) · [Mobile](#mobile-app)
+<p align="center">
+  <a href="https://reelstr.ansht.workers.dev"><img alt="Live demo" src="https://img.shields.io/badge/Live_demo-testnet-17432f?style=for-the-badge&logo=cloudflare&logoColor=white"></a>
+  <a href="docs/ARCHITECTURE.md"><img alt="Architecture" src="https://img.shields.io/badge/Architecture-docs-9b7be0?style=for-the-badge&logo=mermaid&logoColor=white"></a>
+  <a href="docs/nip/reelstr.md"><img alt="Protocol" src="https://img.shields.io/badge/Protocol-NIP_draft-8e44ad?style=for-the-badge&logo=nostr&logoColor=white"></a>
+  <a href="docs/STATUS.md"><img alt="Status" src="https://img.shields.io/badge/Status-honest_report-f08a3c?style=for-the-badge&logo=checkmarx&logoColor=white"></a>
+</p>
+
+<p align="center">
+  <img alt="Nostr" src="https://img.shields.io/badge/Nostr-8e44ad?style=flat-square&logo=nostr&logoColor=white">
+  <img alt="Bitcoin Lightning" src="https://img.shields.io/badge/Lightning-f7931a?style=flat-square&logo=lightning&logoColor=white">
+  <img alt="Cashu" src="https://img.shields.io/badge/Cashu-ecash-2b7a5b?style=flat-square">
+  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-3178c6?style=flat-square&logo=typescript&logoColor=white">
+  <img alt="React" src="https://img.shields.io/badge/React-20232a?style=flat-square&logo=react&logoColor=61dafb">
+  <img alt="Bun" src="https://img.shields.io/badge/Bun-000000?style=flat-square&logo=bun&logoColor=white">
+  <img alt="Capacitor" src="https://img.shields.io/badge/Android_%2B_iOS-Capacitor-119eff?style=flat-square&logo=capacitor&logoColor=white">
+  <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/License-MIT-lightgrey?style=flat-square"></a>
+</p>
+
+<p align="center">
+  <img src="docs/ui/showcase.png" alt="Reelstr on desktop and phone" width="900">
+</p>
+
+<p align="center">
+  <b><a href="#what-it-is-in-plain-words">What it is</a></b> ·
+  <b><a href="#how-it-fits-together">How it works</a></b> ·
+  <b><a href="#try-it">Try it</a></b> ·
+  <b><a href="#mobile-app">Mobile</a></b> ·
+  <b><a href="#honest-status">Status</a></b>
+</p>
 
 > **Status:** a complete build and a working testnet demo, not a launched product. Nothing has run on a public relay or with real money. The demo uses free test sats and placeholder videos. Read [Honest status](#honest-status) before relying on any of it.
 

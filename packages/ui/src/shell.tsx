@@ -23,29 +23,9 @@ export function BackLink({ href, children }: { href: string; children: ReactNode
   );
 }
 
-/** The mark: a pine tile with a play triangle, same two colours as the rest of the system. */
+/** The mark: the brand icon (a play bubble on a pine tile). */
 export function BrandMark() {
-  return (
-    <svg className="brand-mark" viewBox="0 0 32 32" role="img" aria-label="Reelstr">
-      <rect
-        x="1.5"
-        y="1.5"
-        width="29"
-        height="29"
-        rx="9"
-        fill="var(--hero)"
-        stroke="var(--ink)"
-        strokeWidth="2.5"
-      />
-      <path
-        d="M12.5 9.5 23 16l-10.5 6.5z"
-        fill="var(--primary)"
-        stroke="var(--ink)"
-        strokeWidth="2"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
+  return <img className="brand-mark" src="/icon-192.png" width="32" height="32" alt="Reelstr" />;
 }
 
 /**
