@@ -1,5 +1,5 @@
 import { ReelstrClient } from "@reelstr/app-core";
-import { LocalSigner, Nip07Signer, Nip46Signer, type Signer } from "@reelstr/nostr";
+import { LocalSigner, Nip07Signer, Nip46Signer, parseSecretKey, type Signer } from "@reelstr/nostr";
 import {
   createContext,
   type ReactNode,
@@ -79,21 +79,36 @@ const friendly = (m: string) =>
     ? "No Nostr extension was found in this browser. Install one such as nos2x or Alby, or use a remote signer or a key instead."
     : /invalid bunker|bunker/i.test(m)
       ? `The remote signer did not accept the connection (${m}). Check the bunker:// address and that the signer is online.`
-      : /nsec|bech32|invalid/i.test(m)
-        ? "That does not look like a valid secret key. It should start with nsec1."
-        : m;
+      : m;
 
 /** FE-1: the three sign-in paths. No private key is ever sent anywhere. */
 export function LoginGate({ children, title }: { children: ReactNode; title: string }) {
   const { client, login } = useSession();
-  const [err, setErr] = useState("");
+  // which card the problem came from, so the message appears next to the thing that failed
+  const [err, setErr] = useState<{ where: string; msg: string } | null>(null);
   const [bunker, setBunker] = useState("");
   const [fresh, setFresh] = useState<LocalSigner | null>(null);
   const [confirmed, setConfirmed] = useState(false);
   const [nsec, setNsec] = useState("");
+  const [showKey, setShowKey] = useState(false);
+  const [remember, setRemember] = useState(false);
 
   if (client) return <>{children}</>;
-  const run = (f: () => Promise<void>) => f().catch((e: Error) => setErr(e.message));
+  const run = (where: string, f: () => Promise<void>) => {
+    setErr(null);
+    return f().catch((e: Error) => setErr({ where, msg: e.message }));
+  };
+  const problem = (where: string) =>
+    err?.where === where && (
+      <div
+        className="alert"
+        role="alert"
+        ref={(el) => el?.scrollIntoView({ block: "nearest", behavior: "smooth" })}
+      >
+        <strong>Could not sign in</strong>
+        {friendly(err.msg)}
+      </div>
+    );
   return (
     <main className="gate">
       <div className="gate-top">
@@ -117,9 +132,10 @@ export function LoginGate({ children, title }: { children: ReactNode; title: str
       <div className="gate-forms">
         <section>
           <h2>Browser extension</h2>
-          <button type="button" onClick={() => run(async () => login(new Nip07Signer()))}>
+          <button type="button" onClick={() => run("ext", async () => login(new Nip07Signer()))}>
             Use NIP-07 extension
           </button>
+          {problem("ext")}
         </section>
         <section>
           <h2>Remote signer</h2>
@@ -131,10 +147,11 @@ export function LoginGate({ children, title }: { children: ReactNode; title: str
           <button
             type="button"
             disabled={!bunker}
-            onClick={() => run(async () => login(await Nip46Signer.connect(bunker)))}
+            onClick={() => run("bunker", async () => login(await Nip46Signer.connect(bunker)))}
           >
             Connect (NIP-46)
           </button>
+          {problem("bunker")}
         </section>
         <section>
           <h2>New key</h2>
@@ -158,7 +175,7 @@ export function LoginGate({ children, title }: { children: ReactNode; title: str
                 type="button"
                 disabled={!confirmed}
                 onClick={() =>
-                  run(async () => {
+                  run("new", async () => {
                     try {
                       localStorage.setItem(NSEC_KEY, fresh.backup());
                     } catch {}
@@ -168,31 +185,58 @@ export function LoginGate({ children, title }: { children: ReactNode; title: str
               >
                 Continue
               </button>
+              {problem("new")}
             </>
           )}
         </section>
         <section>
           <h2>Existing key</h2>
           <input
-            type="password"
+            type={showKey ? "text" : "password"}
             placeholder="nsec1…"
             value={nsec}
-            onChange={(e) => setNsec(e.target.value)}
+            autoComplete="off"
+            spellCheck={false}
+            aria-label="Secret key"
+            onChange={(e) => {
+              setNsec(e.target.value);
+              if (err?.where === "existing") setErr(null);
+            }}
           />
+          <label className="check" style={{ margin: "0.5rem 0 0" }}>
+            <input
+              type="checkbox"
+              checked={showKey}
+              onChange={(e) => setShowKey(e.target.checked)}
+            />
+            Show what I pasted
+          </label>
+          <label className="check" style={{ margin: "0.25rem 0 0" }}>
+            <input
+              type="checkbox"
+              checked={remember}
+              onChange={(e) => setRemember(e.target.checked)}
+            />
+            Keep me signed in on this device
+          </label>
           <button
             type="button"
             disabled={!nsec}
-            onClick={() => run(async () => login(LocalSigner.fromNsec(nsec)))}
+            onClick={() =>
+              run("existing", async () => {
+                const who = parseSecretKey(nsec);
+                if (remember)
+                  try {
+                    localStorage.setItem(NSEC_KEY, who.backup());
+                  } catch {}
+                await login(who);
+              })
+            }
           >
             Use this key
           </button>
+          {problem("existing")}
         </section>
-        {err && (
-          <div className="alert" role="alert">
-            <strong>Could not sign in</strong>
-            {friendly(err)}
-          </div>
-        )}
       </div>
     </main>
   );

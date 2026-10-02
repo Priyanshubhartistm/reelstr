@@ -1894,4 +1894,49 @@ describe("Studio and Cinema in a real browser", () => {
     expect(u.errors).toEqual([]);
     await u.ctx.close();
   }, 300_000);
+
+  test("sign-in with an existing key: forgiving paste, specific errors next to the form, show toggle, stay signed in", async () => {
+    const { LocalSigner: LS } = await import("@reelstr/nostr");
+    const key = LS.generate();
+    const nsec = key.backup();
+    const ctx = await browser.newContext({ viewport: { width: 1000, height: 900 } });
+    const p = await ctx.newPage();
+    await p.goto(`${studioUrl}/#/signin`);
+    const field = p.getByLabel("Secret key");
+    const use = p.getByRole("button", { name: "Use this key" });
+    const card = p.locator("section", { hasText: "Existing key" });
+    // a truncated key (what the screenshot showed) says why, inside this card
+    await field.fill(nsec.slice(0, 33));
+    await use.click();
+    await card
+      .getByRole("alert")
+      .getByText(/33 characters and a secret key has 63/)
+      .waitFor();
+    // typing clears the message; a public key is named as such
+    await field.fill(`npub1${"q".repeat(58)}`);
+    await card.getByRole("alert").waitFor({ state: "detached" });
+    await use.click();
+    await card
+      .getByRole("alert")
+      .getByText(/public key \(npub\)/)
+      .waitFor();
+    // the show toggle reveals what was pasted
+    expect(await field.getAttribute("type")).toBe("password");
+    await p.getByLabel("Show what I pasted").check();
+    expect(await field.getAttribute("type")).toBe("text");
+    // pasted with a line break and quotes, and remembered on this device
+    await field.fill(`"${nsec.slice(0, 30)}\n${nsec.slice(30)}"`);
+    await p.getByLabel("Keep me signed in on this device").check();
+    await use.click();
+    await p
+      .locator("header.bar")
+      .getByText(`${(await key.getPublicKey()).slice(0, 8)}…`)
+      .waitFor({ timeout: 30_000 });
+    await p.reload();
+    await p
+      .locator("header.bar")
+      .getByText(`${(await key.getPublicKey()).slice(0, 8)}…`)
+      .waitFor({ timeout: 30_000 });
+    await ctx.close();
+  }, 120_000);
 });

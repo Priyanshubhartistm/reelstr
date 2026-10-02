@@ -7,7 +7,7 @@ How each thing was checked. Levels, strongest first:
 - **fake**: run against a test double I wrote, from the spec.
 - **untested**: code exists, nothing exercised it.
 
-Run: `bun run check` (lint, types, 203 tests) and `bun run test:e2e` (14 headless-browser tests). Browser tests also run against the compose containers with `E2E_COMPOSE=1` (start from fresh volumes: `podman-compose -p reelstr down -v`, because the tests are not idempotent against a relay that kept the last run's stories). Last run: all 10 pass natively (9 against compose, run before captions), with the slim Blossom image. **Nothing here has touched a public relay, a real Lightning node, or real money.**
+Run: `bun run check` (lint, types, 203 tests) and `bun run test:e2e` (15 headless-browser tests). Browser tests also run against the compose containers with `E2E_COMPOSE=1` (start from fresh volumes: `podman-compose -p reelstr down -v`, because the tests are not idempotent against a relay that kept the last run's stories). Last run: all 10 pass natively (9 against compose, run before captions), with the slim Blossom image. **Nothing here has touched a public relay, a real Lightning node, or real money.**
 
 ## What talks to what
 

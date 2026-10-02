@@ -1361,3 +1361,11 @@ ol.steps li {
     flex: 1;
   }
 }
+
+/* an error sits inside the card that caused it */
+.gate section .alert {
+  margin: 0.75rem 0 0;
+}
+.gate section label.check {
+  font-size: 0.875rem;
+}

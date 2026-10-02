@@ -117,6 +117,7 @@
       "name": "@reelstr/nostr",
       "version": "0.1.0",
       "dependencies": {
+        "@noble/hashes": "latest",
         "@reelstr/protocol": "workspace:*",
         "nostr-tools": "2.25.2",
       },

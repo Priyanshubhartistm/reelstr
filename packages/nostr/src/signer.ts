@@ -1,3 +1,4 @@
+import { hexToBytes } from "@noble/hashes/utils.js";
 import type { EventTemplate } from "@reelstr/protocol";
 import * as nip19 from "nostr-tools/nip19";
 import * as nip44 from "nostr-tools/nip44";
@@ -104,4 +105,33 @@ export class Nip46Signer implements Signer {
   close() {
     return this.bunker.close();
   }
+}
+
+/**
+ * A secret key from whatever a person pastes: `nsec1…`, 64 hex characters, with stray spaces, line
+ * breaks, quotes or a `nostr:` prefix. Throws an Error whose message says what is wrong in plain words.
+ */
+export function parseSecretKey(input: string): LocalSigner {
+  const s = input
+    .replace(/\s+/g, "")
+    .replace(/^["'`]+|["'`]+$/g, "")
+    .replace(/^nostr:/i, "");
+  if (!s) throw new Error("Paste your secret key first. It starts with nsec1.");
+  if (/^[0-9a-f]{64}$/i.test(s)) return new LocalSigner(hexToBytes(s.toLowerCase()));
+  if (/^npub1/i.test(s))
+    throw new Error(
+      "That is a public key (npub). Signing in needs your secret key, which starts with nsec1.",
+    );
+  if (/^nsec1/i.test(s)) {
+    try {
+      return LocalSigner.fromNsec(s.toLowerCase());
+    } catch {
+      throw new Error(
+        `That nsec is not valid: it has ${s.length} characters and a secret key has 63. A character may be missing or wrong, so copy it again.`,
+      );
+    }
+  }
+  throw new Error(
+    `That does not look like a secret key: it has ${s.length} characters and starts with "${s.slice(0, 5)}". A secret key starts with nsec1 and has 63 characters.`,
+  );
 }
