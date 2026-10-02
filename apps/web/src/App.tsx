@@ -5,6 +5,7 @@ import {
   type NavItem,
   PaymentsProvider,
   Settings,
+  UpdateNotice,
   useRoute,
   useSession,
   Wallet,
@@ -36,13 +37,19 @@ export function App() {
   const { client } = useSession();
   const [page] = useRoute();
   // the public page is for people who are not signed in yet; everything else asks for a key
-  if (!client && (!page || page === "about")) return <Landing />;
   return (
-    <LoginGate title="Sign in">
-      <PaymentsProvider>
-        <Shell />
-      </PaymentsProvider>
-    </LoginGate>
+    <>
+      <UpdateNotice />
+      {!client && (!page || page === "about") ? (
+        <Landing />
+      ) : (
+        <LoginGate title="Sign in">
+          <PaymentsProvider>
+            <Shell />
+          </PaymentsProvider>
+        </LoginGate>
+      )}
+    </>
   );
 }
 

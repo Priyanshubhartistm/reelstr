@@ -90,6 +90,7 @@ export function LoginGate({ children, title }: { children: ReactNode; title: str
   const [fresh, setFresh] = useState<LocalSigner | null>(null);
   const [confirmed, setConfirmed] = useState(false);
   const [nsec, setNsec] = useState("");
+  const [copied, setCopied] = useState(false);
   const [showKey, setShowKey] = useState(false);
   const [remember, setRemember] = useState(false);
 
@@ -97,6 +98,36 @@ export function LoginGate({ children, title }: { children: ReactNode; title: str
   const run = (where: string, f: () => Promise<void>) => {
     setErr(null);
     return f().catch((e: Error) => setErr({ where, msg: e.message }));
+  };
+  const copyKey = async (nsecText: string) => {
+    try {
+      await navigator.clipboard.writeText(nsecText);
+    } catch {
+      // no clipboard permission: select the text so the person can press copy themselves
+      const el = document.querySelector(".nsec");
+      if (el) {
+        const r = document.createRange();
+        r.selectNodeContents(el);
+        window.getSelection()?.removeAllRanges();
+        window.getSelection()?.addRange(r);
+      }
+      return;
+    }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  const downloadKey = (nsecText: string) => {
+    const blob = new Blob(
+      [
+        `Reelstr secret key\n\n${nsecText}\n\nAnyone with this key controls your account. Keep it private. If you lose it, the account cannot be recovered.\n`,
+      ],
+      { type: "text/plain" },
+    );
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "reelstr-secret-key.txt";
+    a.click();
+    URL.revokeObjectURL(a.href);
   };
   const problem = (where: string) =>
     err?.where === where && (
@@ -163,6 +194,21 @@ export function LoginGate({ children, title }: { children: ReactNode; title: str
             <>
               <p>Save this secret key somewhere safe. If you lose it, your account is gone.</p>
               <code className="nsec">{fresh.backup()}</code>
+              <div className="row tight" style={{ gap: "0.5rem" }}>
+                <button type="button" className="ghost sm" onClick={() => copyKey(fresh.backup())}>
+                  {copied ? "Copied" : "Copy key"}
+                </button>
+                <button
+                  type="button"
+                  className="ghost sm"
+                  onClick={() => downloadKey(fresh.backup())}
+                >
+                  Download backup
+                </button>
+                <span className="sr" role="status">
+                  {copied ? "Key copied to the clipboard" : ""}
+                </span>
+              </div>
               <label className="check">
                 <input
                   type="checkbox"

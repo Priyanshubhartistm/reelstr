@@ -1939,4 +1939,46 @@ describe("Studio and Cinema in a real browser", () => {
       .waitFor({ timeout: 30_000 });
     await ctx.close();
   }, 120_000);
+
+  test("a new key can be copied and downloaded, and a stale tab is told a new version exists", async () => {
+    const ctx = await browser.newContext({
+      viewport: { width: 1000, height: 900 },
+      permissions: ["clipboard-read", "clipboard-write"],
+    });
+    const p = await ctx.newPage();
+    await p.goto(`${studioUrl}/#/signin`);
+    await p.getByRole("button", { name: "Generate a key" }).click();
+    const shown = (await p.locator(".nsec").innerText()).replace(/\s+/g, "");
+    expect(shown).toMatch(/^nsec1[a-z0-9]{58}$/);
+    await p.getByRole("button", { name: "Copy key" }).click();
+    await p.getByRole("button", { name: "Copied" }).waitFor();
+    expect(await p.evaluate(() => navigator.clipboard.readText())).toBe(shown);
+    const dl = p.waitForEvent("download");
+    await p.getByRole("button", { name: "Download backup" }).click();
+    const file = await dl;
+    expect(file.suggestedFilename()).toBe("reelstr-secret-key.txt");
+    expect(await Bun.file(await file.path()).text()).toContain(shown);
+    // what was copied is accepted by the existing-key box (the thing that went wrong before)
+    await p.getByLabel("Secret key").fill(await p.evaluate(() => navigator.clipboard.readText()));
+    await p.getByRole("button", { name: "Use this key" }).click();
+    await p.locator("header.bar").waitFor({ timeout: 30_000 });
+
+    // a newer deployment: the server now serves a different fingerprinted script
+    expect(await p.getByRole("status").filter({ hasText: "new version" }).count()).toBe(0);
+    await p.route("**/*", async (route) => {
+      const req = route.request();
+      if (req.resourceType() === "document" || /[?&]v=\d+/.test(req.url())) {
+        const res = await route.fetch();
+        const html = (await res.text()).replace(
+          /\/assets\/index-[\w-]+\.js/,
+          "/assets/index-NEWBUILD.js",
+        );
+        return route.fulfill({ response: res, body: html });
+      }
+      return route.continue();
+    });
+    await p.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
+    await p.getByRole("status").filter({ hasText: "new version" }).waitFor({ timeout: 10_000 });
+    await ctx.close();
+  }, 120_000);
 });

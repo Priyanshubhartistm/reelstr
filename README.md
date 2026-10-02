@@ -44,7 +44,7 @@ About two minutes later it prints two URLs and three sign-in keys. Everything is
 
 ```sh
 bun run check       # lint, types, 203 tests
-bun run test:e2e    # 15 headless-browser tests against the built apps
+bun run test:e2e    # 16 headless-browser tests against the built apps
 ```
 
 ## Honest status
