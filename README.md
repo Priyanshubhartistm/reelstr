@@ -177,7 +177,14 @@ bun run apk         # debug APK: apps/mobile/android/app/build/outputs/apk/debug
 
 Point it at your own backend with `B=https://your-host/reelstr bun run sync`. iOS: open `apps/mobile/ios/App` in Xcode on a Mac.
 
-Not yet done: the APK has not been built or run on a device, iOS has not been built, and nothing is in a store. Store release needs a Google Play account and signing key, and an Apple developer account.
+**Build without Android Studio:** `infra/android` builds the debug APK inside a container, so the host only needs Docker:
+
+```sh
+docker build -t reelstr-android infra/android
+mkdir -p out && docker run --rm --cpus 1 --memory 5g -v "$PWD:/src:ro" -v "$PWD/out:/out" reelstr-android
+```
+
+Status: the debug APK builds (4.7 MB, about 3 minutes on 1 CPU) and contains the current web bundle pointed at the testnet backend. It has **not been installed or run on a phone or emulator**, iOS has not been built, and nothing is in a store. Store release needs a Google Play account and signing key, and an Apple developer account.
 
 ## Deploy
 
