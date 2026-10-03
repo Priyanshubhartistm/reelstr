@@ -10,6 +10,9 @@ payment crosses at least one routing hop when our only channel goes to a differe
 """
 import json, subprocess, sys, time, urllib.request
 
+# the explorer and faucet sit behind Cloudflare, which refuses the default Python user agent
+UA = {"User-Agent": "Mozilla/5.0 (reelstr-fee-test)"}
+
 FAUCET_NODE = "02465ed5be53d04fde66c9418ff14a5f2267723810176c9212b722e542dc1afb1b"  # issues our invoices
 SPEND_CAP_SATS = 1500
 
@@ -43,7 +46,7 @@ def open_channel(local=50000):
     if int(bal["confirmed_balance"]) < local + 2000:
         sys.exit("not enough confirmed on-chain sats yet")
     # best-connected node with a clearnet address that is not the faucet's (so payments cross a hop)
-    get = lambda u: json.load(urllib.request.urlopen(u, timeout=20))
+    get = lambda u: json.load(urllib.request.urlopen(urllib.request.Request(u, headers=UA), timeout=20))
     for n in get("https://mutinynet.com/api/v1/lightning/nodes/rankings/connectivity"):
         if n["publicKey"] == FAUCET_NODE:
             continue
@@ -65,7 +68,7 @@ def open_channel(local=50000):
 def invoice(sats):
     req = urllib.request.Request("https://faucet.mutinynet.com/api/bolt11",
                                  data=json.dumps({"amount_sats": sats}).encode(),
-                                 headers={"content-type": "application/json"})
+                                 headers={"content-type": "application/json", **UA})
     return json.load(urllib.request.urlopen(req, timeout=20))["bolt11"]
 
 
@@ -83,16 +86,16 @@ def pay(n=20, sats=21):
             print("invoice failed:", e); time.sleep(20); continue
         out = lncli("payinvoice", f"--pay_req={bolt11}", "--force", "--json", "--fee_limit=10",
                     "--timeout=40s", check=False)
-        try:
-            p = json.loads(out.strip().splitlines()[-1]) if out.strip() else {}
+        try:  # lncli prints one pretty-printed JSON object (sometimes after progress lines)
+            p = json.JSONDecoder().raw_decode(out[out.index("{"):])[0]
         except Exception:
-            p = {}
+            p = {"failure_reason": out.strip()[:120] or "no output"}
         ok = p.get("status") == "SUCCEEDED"
         fee_msat = int(p.get("fee_msat", 0)) if ok else 0
         hops = len(p["htlcs"][0]["route"]["hops"]) if ok and p.get("htlcs") else 0
         rows.append({"ok": ok, "fee_msat": fee_msat, "hops": hops, "reason": p.get("failure_reason")})
         spent += sats + fee_msat // 1000
-        print(f"{i+1:>2}: {'ok ' if ok else 'FAIL'} fee {fee_msat/1000:.3f} sat, {hops} hops {p.get('failure_reason') or ''}")
+        print(f"{i+1:>2}: {'ok ' if ok else 'FAIL'} fee {fee_msat/1000:.3f} sat, {hops} hops {'' if p.get('failure_reason') in (None, 'FAILURE_REASON_NONE') else p.get('failure_reason')}")
         time.sleep(4)
     good = [r for r in rows if r["ok"]]
     if good:

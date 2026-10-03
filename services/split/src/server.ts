@@ -42,6 +42,13 @@ const walletFor = async (m: string) => {
   return w;
 };
 const pool = new RelayPool();
+// Payouts below this are carried to the next pass. A Lightning payment costs about 2 sats whatever its size
+// (measured on Mutinynet: 9.5% of 21 sats, 1% of 210, 0.2% of 1000), so raise it when paying over Lightning.
+const dustMsats = process.env.SPLIT_DUST_SATS
+  ? Number(process.env.SPLIT_DUST_SATS) * 1000
+  : undefined;
+if (dustMsats !== undefined && !(dustMsats >= 0))
+  throw new Error("SPLIT_DUST_SATS must be a number of sats");
 
 async function pass() {
   try {
@@ -54,6 +61,7 @@ async function pass() {
       mints,
       walletFor,
       ln,
+      dustMsats,
     });
     const paid = r.batches.reduce((n, b) => n + b.paid.length, 0);
     console.log(

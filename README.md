@@ -230,7 +230,7 @@ Each requirement is graded by how it was checked in [`docs/STATUS.md`](docs/STAT
 **Verified against real systems:** a real Cashu mint (Nutshell), real Postgres 17, real containers, real Chrome, real LND nodes on a private regtest chain (invoices, payments, failures, pay-to-unlock, payouts).
 
 **Not verified:**
-- Mainnet Lightning, phoenixd, and real fees on micropayments
+- Mainnet Lightning and phoenixd. Real routing on the Mutinynet signet is tested (fee ~2 sats flat: 9.5% of a 21-sat payment, 0.2% of 1000)
 - A live video model (adapters for Wan 2.2 and Gemini Veo exist; the demo footage is generated placeholders)
 - Real NIP-07 extensions and NIP-46 bunkers (stand-ins built from the spec were used)
 - Safari, iPhone, the native mobile builds, and real mobile networks
