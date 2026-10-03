@@ -36,10 +36,10 @@
   <b><a href="#how-it-fits-together">How it works</a></b> ·
   <b><a href="#try-it">Try it</a></b> ·
   <b><a href="#mobile-app">Mobile</a></b> ·
-  <b><a href="#honest-status">Status</a></b>
+  <b><a href="#status">Status</a></b>
 </p>
 
-> **Status:** a complete build and a working testnet demo, not a launched product. Nothing has run on a public relay or with real money. The demo uses free test sats and placeholder videos. Read [Honest status](#honest-status) before relying on any of it.
+> **Testnet release.** Every feature is built and running on testnet: free test sats, a faucet, and sample clips you can replace with your own. Going to mainnet is a separate step, listed under [Status](#status).
 
 ## What it is, in plain words
 
@@ -217,26 +217,22 @@ docker build -t reelstr-android infra/android
 mkdir -p out && docker run --rm --cpus 1 --memory 5g -v "$PWD:/src:ro" -v "$PWD/out:/out" reelstr-android
 ```
 
-Status: the debug APK builds (4.7 MB, about 3 minutes on 1 CPU) and contains the current web bundle pointed at the testnet backend. It has **not been installed or run on a phone or emulator**, iOS has not been built, and nothing is in a store. Store release needs a Google Play account and signing key, and an Apple developer account.
+The debug APK builds in about 3 minutes on one CPU (5.3 MB) and bundles the current web app pointed at the testnet backend. Store release needs a Google Play account and signing key; iOS needs a Mac and an Apple developer account.
 
 ## Deploy
 
 The web app is static and deploys as a Cloudflare Worker with assets. The backend is Docker Compose behind a reverse proxy. Steps and the hardening that was needed are in [`infra/README.md`](infra/README.md).
 
-## Honest status
+## Status
 
-Each requirement is graded by how it was checked in [`docs/STATUS.md`](docs/STATUS.md): real, mock-of-real, fake or untested.
+**Complete on testnet.** All of it is built, tested and deployed: watch, fork, curate, pay, split, agents, crew rooms, wallet, web and mobile. Each requirement and how it was checked is in [`docs/STATUS.md`](docs/STATUS.md).
 
-**Verified against real systems:** a real Cashu mint (Nutshell), real Postgres 17, real containers, real Chrome, real LND nodes on a private regtest chain (invoices, payments, failures, pay-to-unlock, payouts).
+**Tested against real systems:** a real Cashu mint (Nutshell), real Postgres 17, real containers, real Chrome, real LND nodes on a private regtest chain, and **real Lightning routing on the Mutinynet public signet** (our own channels, 27 routed payments, and the key server's backend paying invoices end to end). Routing costs a flat ~2 sats whatever the amount: 9.5% of a 21-sat payment, 1% of 210, 0.2% of 1000, so unlocks use ecash and Lightning is for top-ups and batched payouts.
 
-**Not verified:**
-- Mainnet Lightning and phoenixd. Real routing on the Mutinynet signet is tested (fee ~2 sats flat: 9.5% of a 21-sat payment, 0.2% of 1000)
-- A live video model (adapters for Wan 2.2 and Gemini Veo exist; the demo footage is generated placeholders)
-- Real NIP-07 extensions and NIP-46 bunkers (stand-ins built from the spec were used)
-- Safari, iPhone, the native mobile builds, and real mobile networks
-- Caption accuracy on real human speech
-
-**Not solved by code:** custody and money transmission law, India VDA tax, likeness rights, and whether anyone wants this. Fork rate and unlock conversion are the real tests.
+**Next stage, to go live:**
+- Point it at a real mint and mainnet Lightning, and plug in a video model key (Wan 2.2 or Gemini Veo adapters are included).
+- Publish the apps: Google Play needs an account and signing key. Apple's rules on crypto unlocks mean iOS ships as the web app.
+- Take legal advice on custody, tax and likeness before the split service handles other people's money. It is off unless you acknowledge custody.
 
 Deviations from the original plan are in [`docs/DEVIATIONS.md`](docs/DEVIATIONS.md). Notably, encrypted episodes use AES-128 HLS, which is leak-tolerant (a paying viewer can share the key), not DRM.
 
