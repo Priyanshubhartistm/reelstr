@@ -11,7 +11,8 @@ $D build -q -t reelstr-mutiny-bitcoind bitcoind >/dev/null
 $D network create reelstr-ln >/dev/null 2>&1 || true
 $D volume create reelstr-btc-data >/dev/null
 $D volume create reelstr-lnd-data >/dev/null
-$D rm -f reelstr-bitcoind reelstr-lnd >/dev/null 2>&1 || true
+$D volume create reelstr-lnd-b-data >/dev/null
+$D rm -f reelstr-bitcoind reelstr-lnd reelstr-lnd-b >/dev/null 2>&1 || true
 $D run -d --name reelstr-bitcoind --network reelstr-ln --restart unless-stopped --cpus 1 --memory 1g \
   -v reelstr-btc-data:/home/bitcoin/.bitcoin reelstr-mutiny-bitcoind \
   -signet -signetblocktime=30 -signetchallenge=512102f7561d208dd9ae99bf497273e16f389bdbd6c4742ddb8e6b216e64fa2928ad8f51ae \
@@ -21,4 +22,9 @@ $D run -d --name reelstr-bitcoind --network reelstr-ln --restart unless-stopped 
 $D run -d --name reelstr-lnd --network reelstr-ln --restart unless-stopped --cpus 0.5 --memory 512m \
   -p 127.0.0.1:8081:8080 \
   -v reelstr-lnd-data:/root/.lnd -v "$PWD/lnd.conf:/root/.lnd/lnd.conf:ro" -v "$PWD/secrets:/secrets:ro" \
+  docker.io/lightninglabs/lnd:v0.19.3-beta --bitcoind.rpcpass="$(cat secrets/rpcpass)"
+# a second node of ours, so a payment can cross a real channel with the first one on both ends
+$D run -d --name reelstr-lnd-b --network reelstr-ln --restart unless-stopped --cpus 0.25 --memory 384m \
+  -p 127.0.0.1:8082:8080 \
+  -v reelstr-lnd-b-data:/root/.lnd -v "$PWD/lnd-b.conf:/root/.lnd/lnd.conf:ro" -v "$PWD/secrets:/secrets:ro" \
   docker.io/lightninglabs/lnd:v0.19.3-beta --bitcoind.rpcpass="$(cat secrets/rpcpass)"
