@@ -7,5 +7,8 @@
   "dependencies": {
     "nostr-tools": "2.25.2",
     "@noble/hashes": "latest"
-  }
+  },
+  "sideEffects": [
+    "*.css"
+  ]
 }

@@ -15,5 +15,8 @@
     "@reelstr/media-service": "workspace:*",
     "@reelstr/indexer": "workspace:*",
     "@reelstr/media": "workspace:*"
-  }
+  },
+  "sideEffects": [
+    "*.css"
+  ]
 }

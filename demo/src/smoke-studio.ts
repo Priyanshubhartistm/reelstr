@@ -11,6 +11,11 @@ const out = process.argv[2] ?? ".";
 const keys = demoKeys();
 const nsec = (n: string) => new LocalSigner(hexToBytes(keys[n] as string)).backup();
 const web = process.env.WEB_URL ?? "http://127.0.0.1:5173";
+// This script publishes forks, agent scenes and cuts. On a shared or public demo that is the clutter people see.
+if (!/^https?:\/\/(127\.0\.0\.1|localhost)[:/]/.test(web) && !process.env.ALLOW_LIVE_WRITES)
+  throw new Error(
+    `smoke-studio writes to ${web}; set ALLOW_LIVE_WRITES=1 if that is really what you want`,
+  );
 const dir = tempDir("reelstr-demo-smoke-");
 const browser = await chromium.launch({
   executablePath: process.env.CHROME_PATH ?? "/usr/bin/google-chrome",

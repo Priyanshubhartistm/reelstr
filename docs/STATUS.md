@@ -83,9 +83,10 @@ Run: `bun run check` (lint, types, 203 tests) and `bun run test:e2e` (19 headles
 - **Real Lightning is only tested on regtest** (see above): settlement, failures and the L402 and payout flows work against real LND; mainnet routing, a real LNURL server and whether small payments are worth their fees are untested. The real mint charged 1 sat (reserve 2) on a 21 sat melt, which is roughly 5% on a micropayment.
 - **No real video model has run.** A Wan 2.2 generation through fal is the first thing to try; the adapter is checked only against a mock.
 - **Mobile app (Capacitor, `apps/mobile`): debug APK builds, never run.** `infra/android` produced a 4.7 MB debug APK in a container (about 3 min on 1 CPU) and its bundle was checked to hold the current web build and live endpoints. No phone was connected and no emulator was run, so install, launch, video playback in the WebView and the Android back button are untested. iOS needs a Mac. Nothing is in a store.
+- **Store policy is a release blocker for iOS, not a code gap.** Per `docs/research.md`, Apple guideline 3.1.1 bans unlocking content with crypto inside native apps, so an App Store build with the sats paywall would likely be rejected (web/PWA is the iOS route). Android and Google Play policy for this has not been checked.
 - **Real iPhone Safari untested** (WebKit-on-Linux passes), and the 4G/3G timings are simulated throttling, not a real network.
 - **Legal is not solved by code.** Custody, money transmission, India VDA tax, and likeness rules need a lawyer before the split service touches other people's money. The split service refuses to start without an explicit acknowledgement.
 - **Encrypted episodes use MPEG-TS**, because ffmpeg cannot encrypt fMP4. Any paying viewer can share the key.
 - **Blossom image runs Node 22**: on Node 24 it segfaulted intermittently. Multi-stage build, 411 MB (was 808); upload and fetch-by-hash checked on the built image.
-- **Fiat top-up** is only a demo partner button (`VITE_FIAT_DEMO`), no real on-ramp. **Not built:** native apps (out of scope).
+- **Fiat top-up** is only a demo partner button (`VITE_FIAT_DEMO`), no real on-ramp. Native apps: see the Mobile bullet above.
 - **Not exercised:** the `mint` profile in compose (it is a dev-only FakeWallet mint; the real Nutshell is tested natively instead).
