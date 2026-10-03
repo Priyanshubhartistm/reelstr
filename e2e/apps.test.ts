@@ -305,8 +305,12 @@ describe("Studio and Cinema in a real browser", () => {
 
     // --- Cinema: a viewer opens the series and watches it
     const dan = await newUser(cinemaUrl);
+    // the home screen puts a one-click Watch button above everything else
+    const watchNow = dan.page.getByTestId("watch-now");
+    await watchNow.waitFor({ timeout: T });
+    expect(await watchNow.getAttribute("href")).toMatch(/^#\/watch\//);
     await dan.page
-      .getByRole("link", { name: new RegExp(`E2E Heist ${RUN}`) })
+      .locator("a.cover", { hasText: new RegExp(`E2E Heist ${RUN}`) })
       .click({ timeout: T });
     await dan.page.getByText(/Ep 1/).first().waitFor({ timeout: T });
     await dan.page.getByText("Credits and split").waitFor({ timeout: T });
@@ -439,7 +443,7 @@ describe("Studio and Cinema in a real browser", () => {
     await viewer.page.getByText("100 sats", { exact: true }).waitFor({ timeout: T });
 
     await viewer.page.getByRole("link", { name: "Watch" }).click();
-    await viewer.page.getByRole("link", { name: /Paid Series/ }).click({ timeout: T });
+    await viewer.page.locator("a.cover", { hasText: /Paid Series/ }).click({ timeout: T });
     await viewer.page.getByRole("link", { name: /Ep 2/ }).click({ timeout: T });
     await viewer.page.getByTestId("paywall").waitFor({ timeout: T });
     expect(await viewer.page.locator("video.player").count()).toBe(0); // no player behind the paywall
@@ -1984,7 +1988,7 @@ describe("Studio and Cinema in a real browser", () => {
     await ctx.close();
   }, 120_000);
 
-  test("in-page links (How it works, Browse series) scroll and never change the screen", async () => {
+  test("in-page links (How it works, All series) scroll and never change the screen", async () => {
     const fresh = await browser.newContext({ viewport: { width: 1000, height: 800 } });
     const p = await fresh.newPage();
     await p.goto(`${studioUrl}/`);
@@ -2007,7 +2011,7 @@ describe("Studio and Cinema in a real browser", () => {
     await fresh.close();
 
     const u = await newUser(studioUrl); // signed in, on the Watch home page
-    await u.page.getByRole("link", { name: "Browse series" }).click();
+    await u.page.getByRole("link", { name: "All series" }).click();
     await u.page.waitForFunction(() => location.hash === "#series");
     await u.page.getByRole("heading", { name: /Stories anyone can fork/ }).waitFor();
     // and a real navigation afterwards still works

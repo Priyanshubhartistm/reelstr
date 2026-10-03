@@ -48,21 +48,16 @@ export function Home() {
     .sort((a, b) => b[1].at - a[1].at)
     .slice(0, 6);
   const n = series.data?.length ?? 0;
+  // the first episode of the first series with a free one: the button that puts a video on screen
+  const lead = series.data?.find((x) => x.free > 0) ?? series.data?.[0];
+  const leadEps = useAsync(
+    async () =>
+      lead ? await api<CutRow[]>(`/series/${encodeURIComponent(lead.coord)}/episodes`) : [],
+    [lead?.coord],
+  );
+  const first = [...(leadEps.data ?? [])].sort((x, y) => x.episode - y.episode)[0];
   return (
     <>
-      <TestnetGuide />
-      <Explain
-        title="What is Reelstr?"
-        steps={[
-          "People post short video scenes that continue one shared story. Anyone can add a scene or branch off one.",
-          "A curator picks scenes and cuts them into an episode.",
-          "Watch the first episodes free. Then pay a few sats to keep going.",
-          "Every payment is split between everyone whose scene is in the episode, and the split is public.",
-        ]}
-      >
-        Think of a serial show that anyone can write for, where the writers get paid directly. No
-        company sits in the middle. The videos in this demo are placeholders, not real AI output.
-      </Explain>
       <section className="hero">
         <FilmArt />
         <div className="label">Reelstr Cinema</div>
@@ -72,8 +67,22 @@ export function Home() {
           episodes are free; after that you pay in sats, and the split is public.
         </p>
         <div className="row tight" style={{ marginTop: "1.25rem" }}>
-          <a className="btn btn-primary" href="#series" style={{ color: "var(--primary-fg)" }}>
-            Browse series
+          {first && lead ? (
+            <a
+              className="btn btn-primary"
+              href={`#/watch/${encodeURIComponent(first.coord)}`}
+              style={{ color: "var(--primary-fg)" }}
+              data-testid="watch-now"
+            >
+              ▶ Watch {lead.title}, episode {first.episode}
+            </a>
+          ) : (
+            <a className="btn btn-primary" href="#series" style={{ color: "var(--primary-fg)" }}>
+              Browse series
+            </a>
+          )}
+          <a className="btn btn-plain" href="#series">
+            All series
           </a>
           <a className="btn btn-plain" href="#/wallet">
             Get sats
@@ -115,7 +124,7 @@ export function Home() {
       )}
 
       <div id="series" className="label" style={{ margin: "1.5rem 0 0.6rem" }}>
-        Series
+        Pick a series to watch
       </div>
       {series.error && <p className="error">{series.error}</p>}
       {!series.data && !series.error && (
@@ -151,6 +160,20 @@ export function Home() {
           Curators publish them from the Curator desk.
         </div>
       )}
+
+      <TestnetGuide />
+      <Explain
+        title="What is Reelstr?"
+        steps={[
+          "People post short video scenes that continue one shared story. Anyone can add a scene or branch off one.",
+          "A curator picks scenes and cuts them into an episode.",
+          "Watch the first episodes free. Then pay a few sats to keep going.",
+          "Every payment is split between everyone whose scene is in the episode, and the split is public.",
+        ]}
+      >
+        Think of a serial show that anyone can write for, where the writers get paid directly. No
+        company sits in the middle. The videos in this demo are placeholders, not real AI output.
+      </Explain>
     </>
   );
 }
