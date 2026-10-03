@@ -20,3 +20,6 @@ apps/mobile/android/build
 apps/mobile/android/.gradle
 apps/mobile/android/app/build
 apps/mobile/ios/App/Pods
+
+infra/mutinynet/secrets/
+infra/mutinynet/fee-test-result.json
