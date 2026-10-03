@@ -143,3 +143,29 @@ export async function checkNormalized(path: string, lufsToleranceLU = 1): Promis
   if (l.tp > TARGET.truePeak + 0.3) bad.push(`true peak ${l.tp} dBTP`);
   return bad;
 }
+
+/**
+ * A JPEG poster frame (540 px wide) from a clip. NIP-71 readers show it before play, and some relays
+ * (Divine's) refuse a video event that has none. Taken half a second in, or the middle of a shorter clip.
+ */
+export async function posterFrame(input: string, output: string): Promise<void> {
+  const { durationSec } = await probe(input);
+  const at = Math.min(0.5, durationSec / 2);
+  await run("ffmpeg", [
+    "-y",
+    "-hide_banner",
+    "-loglevel",
+    "error",
+    "-ss",
+    String(at),
+    "-i",
+    input,
+    "-frames:v",
+    "1",
+    "-vf",
+    "scale=540:-2",
+    "-q:v",
+    "4",
+    output,
+  ]);
+}

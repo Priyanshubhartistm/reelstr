@@ -1,7 +1,28 @@
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { checkNormalized, hashFile, measureLoudness, normalizeScene, probe } from "../src";
+import {
+  checkNormalized,
+  hashFile,
+  measureLoudness,
+  normalizeScene,
+  posterFrame,
+  probe,
+} from "../src";
 import { makeClip, tmp } from "./helpers";
+
+describe("posterFrame", () => {
+  test("makes a JPEG 540 wide, also from a clip shorter than a second", async () => {
+    const d = tmp();
+    const src = await makeClip(join(d, "in.mp4"), { sec: 0.4, size: "320x568", fps: 10 });
+    const out = join(d, "poster.jpg");
+    await posterFrame(src, out);
+    const b = readFileSync(out);
+    expect([b[0], b[1]]).toEqual([0xff, 0xd8]); // JPEG magic
+    expect(b.length).toBeGreaterThan(500);
+    expect((await probe(out)).video?.width).toBe(540);
+  }, 30_000);
+});
 
 describe("normalizeScene (BE-1)", () => {
   test("landscape 24 fps quiet clip -> 1080x1920 30 fps CFR -14 LUFS (crop)", async () => {

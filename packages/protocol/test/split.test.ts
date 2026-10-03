@@ -374,7 +374,13 @@ describe("agent jobs (NP-5, NP-6)", () => {
   });
 });
 
-import { buildCut as buildCutC, buildScene as buildSceneC, secs, validateCut } from "../src";
+import {
+  buildCut as buildCutC,
+  buildScene as buildSceneC,
+  secs,
+  validateCut,
+  validateScene as validateSceneC,
+} from "../src";
 
 describe("canonical seconds", () => {
   test("secs() removes float noise and rounds to milliseconds", () => {
@@ -430,6 +436,21 @@ describe("canonical seconds", () => {
       story: { pubkey: A, d: "s" },
     });
     expect(tpl.tags.find((t) => t[0] === "imeta")?.includes("duration 12")).toBe(true);
+  });
+  test("a scene can carry a poster frame in its imeta, and stays valid", () => {
+    const tpl = buildSceneC({
+      title: "t",
+      content: "c",
+      video: {
+        url: "https://x/v.mp4",
+        sha256: "a".repeat(64),
+        duration: 12,
+        thumbnail: "https://x/p.jpg",
+      },
+      story: { pubkey: A, d: "s" },
+    });
+    expect(tpl.tags.find((t) => t[0] === "imeta")?.includes("image https://x/p.jpg")).toBe(true);
+    expect(validateSceneC({ ...tpl, pubkey: A, id: "0".repeat(64) }).errors).toEqual([]);
   });
 });
 

@@ -20,6 +20,8 @@ export interface SceneParams {
     duration: number;
     dim?: string;
     fallback?: string[];
+    /** poster frame (JPEG/PNG url). Some relays (Divine) refuse a video event without one. */
+    thumbnail?: string;
   };
   audio?: { url: string; sha256: string; duration?: number; lang?: string };
   /** un-normalized upload kept by BE-1 */
@@ -48,6 +50,7 @@ export function buildScene(p: SceneParams): EventTemplate {
       dim: p.video.dim ?? "1080x1920",
       duration: secs(p.video.duration),
       fallback: p.video.fallback?.join(" "),
+      image: p.video.thumbnail,
     }),
   ];
   if (p.audio)

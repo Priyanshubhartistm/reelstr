@@ -59,6 +59,7 @@ export interface SceneInput {
 export interface IngestOut {
   original: BlobDescriptor;
   normalized: BlobDescriptor;
+  thumbnail?: BlobDescriptor;
   probe: { durationSec: number };
 }
 
@@ -187,6 +188,7 @@ export class ReelstrClient {
         sha256: r.normalized.sha256,
         duration: Math.round(r.probe.durationSec * 1000) / 1000,
         fallback: (this.cfg.mirrors ?? []).map((m) => `${m}/${r.normalized.sha256}`),
+        thumbnail: r.thumbnail?.url,
       },
       original: { url: r.original.url, sha256: r.original.sha256 },
       story: o.story,

@@ -46,6 +46,9 @@ describe("media service pipeline (BE-1, BE-2, BE-8)", () => {
       expect(r.original.sha256).toBe(src.sha256);
       expect(r.normalized.sha256).not.toBe(src.sha256);
       expect(r.probe.video?.width).toBe(1080);
+      // a JPEG poster frame is stored with the scene (Divine's relay refuses a video event without one)
+      const poster = await fetchVerified([r.thumbnail.url], r.thumbnail.sha256);
+      expect([poster.bytes[0], poster.bytes[1]]).toEqual([0xff, 0xd8]);
       const got = await fetchVerified([r.normalized.url], r.normalized.sha256);
       const p = join(dir, `norm${i}.mp4`);
       await Bun.write(p, got.bytes);

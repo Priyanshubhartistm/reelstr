@@ -7,6 +7,7 @@ import {
   type NormalizeOptions,
   normalizeScene,
   type Probe,
+  posterFrame,
   type Rung,
   renderEpisode,
   toVtt,
@@ -37,6 +38,8 @@ async function put(h: Hosts, bytes: Uint8Array, type: string) {
 export interface IngestResult {
   original: BlobDescriptor;
   normalized: BlobDescriptor;
+  /** poster frame (JPEG) for NIP-71 readers */
+  thumbnail: BlobDescriptor;
   probe: Probe;
   mirrorFailures: { server: string; reason: string }[];
 }
@@ -58,11 +61,15 @@ export async function ingestScene(
     const a = await put(hosts, norm, "video/mp4");
     // keep the original too; if it was already uploaded under this hash the server just answers with it
     const o = await put(hosts, bytes, "video/mp4");
+    const thumbPath = join(dir, "poster.jpg");
+    await posterFrame(outPath, thumbPath);
+    const t = await put(hosts, new Uint8Array(readFileSync(thumbPath)), "image/jpeg");
     return {
       original: o.primary,
       normalized: a.primary,
+      thumbnail: t.primary,
       probe,
-      mirrorFailures: [...a.failed, ...o.failed],
+      mirrorFailures: [...a.failed, ...o.failed, ...t.failed],
     };
   } finally {
     rmSync(dir, { recursive: true, force: true });
