@@ -11,6 +11,7 @@
 
 <p align="center">
   <a href="https://reelstr.ansht.workers.dev"><img alt="Live demo" src="https://img.shields.io/badge/Live_demo-testnet-17432f?style=for-the-badge&logo=cloudflare&logoColor=white"></a>
+  <a href="https://github.com/Priyanshubhartistm/reelstr/releases/tag/v0.1.0-testnet"><img alt="Download the Android APK" src="https://img.shields.io/badge/Android-download_APK-3ddc84?style=for-the-badge&logo=android&logoColor=white"></a>
   <a href="docs/ARCHITECTURE.md"><img alt="Architecture" src="https://img.shields.io/badge/Architecture-docs-9b7be0?style=for-the-badge&logo=mermaid&logoColor=white"></a>
   <a href="docs/nip/reelstr.md"><img alt="Protocol" src="https://img.shields.io/badge/Protocol-NIP_draft-8e44ad?style=for-the-badge&logo=nostr&logoColor=white"></a>
   <a href="docs/STATUS.md"><img alt="Status" src="https://img.shields.io/badge/Status-honest_report-f08a3c?style=for-the-badge&logo=checkmarx&logoColor=white"></a>
@@ -206,6 +207,7 @@ cd apps/mobile
 bun run sync        # builds the web app against the testnet backend, then cap sync
 bun run android     # opens Android Studio
 bun run apk         # debug APK: apps/mobile/android/app/build/outputs/apk/debug/
+# or download the built one: https://github.com/Priyanshubhartistm/reelstr/releases/tag/v0.1.0-testnet
 ```
 
 Point it at your own backend with `B=https://your-host/reelstr bun run sync`. iOS: open `apps/mobile/ios/App` in Xcode on a Mac.
