@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Mutinynet (a public Lightning signet: valueless coins, real routing between real nodes):
-# a pruned bitcoind (the Mutinynet fork, built by bitcoind/Dockerfile) plus LND, capped (1 + 0.75 CPU, about 3 GB, 2 GB of chain), loopback-only. Run from this directory.
+# a pruned bitcoind (the Mutinynet fork, built by bitcoind/Dockerfile) plus LND, capped (1 + 0.75 CPU, about 5 GB, 2 GB of chain), loopback-only. Run from this directory.
 set -euo pipefail
 D="sudo docker"
 mkdir -p secrets
@@ -13,7 +13,7 @@ $D volume create reelstr-btc-data >/dev/null
 $D volume create reelstr-lnd-data >/dev/null
 $D volume create reelstr-lnd-b-data >/dev/null
 $D rm -f reelstr-bitcoind reelstr-lnd reelstr-lnd-b >/dev/null 2>&1 || true
-$D run -d --name reelstr-bitcoind --network reelstr-ln --restart unless-stopped --cpus 1 --memory 2g --memory-swap 2g \
+$D run -d --name reelstr-bitcoind --network reelstr-ln --restart unless-stopped --cpus 1 --memory 4g --memory-swap 4g \
   -v reelstr-btc-data:/home/bitcoin/.bitcoin reelstr-mutiny-bitcoind \
   -signet -signetblocktime=30 -signetchallenge=512102f7561d208dd9ae99bf497273e16f389bdbd6c4742ddb8e6b216e64fa2928ad8f51ae \
   -addnode=45.79.52.207:38333 -dnsseed=0 -listen=0 -prune=2000 -dbcache=256 -server=1 \

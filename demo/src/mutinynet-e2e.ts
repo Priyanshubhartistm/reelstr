@@ -5,12 +5,19 @@ import { LndBackend } from "../../services/keys/src/ln";
  * The key server's real Lightning backend (LndBackend) against two real LND nodes of ours on Mutinynet:
  * A creates invoices, B pays them over a real channel, A sees them settle.
  *   Needs ssh tunnels to the VM (see infra/mutinynet/README.md): 18081 -> A, 18082 -> B, plus
- *   A_MAC / B_MAC (admin macaroon, hex) and LND_CA (tls.cert path). Valueless signet coins.
+ *   A_MAC / B_MAC (admin macaroon, hex) and A_CA / B_CA (each node has its own tls.cert). Valueless signet coins.
  *   bun demo/src/mutinynet-e2e.ts [payments=5] [sats=21]
  */
-const ca = readFileSync(process.env.LND_CA ?? "tls.cert", "utf8");
-const A = { url: "https://localhost:18081", mac: process.env.A_MAC ?? "" };
-const B = { url: "https://localhost:18082", mac: process.env.B_MAC ?? "" };
+const A = {
+  url: "https://localhost:18081",
+  mac: process.env.A_MAC ?? "",
+  ca: readFileSync(process.env.A_CA ?? "A.cert", "utf8"),
+};
+const B = {
+  url: "https://localhost:18082",
+  mac: process.env.B_MAC ?? "",
+  ca: readFileSync(process.env.B_CA ?? "B.cert", "utf8"),
+};
 if (!A.mac || !B.mac) throw new Error("set A_MAC and B_MAC (hex macaroons)");
 const n = Number(process.argv[2] ?? 5);
 const sats = Number(process.argv[3] ?? 21);
@@ -23,7 +30,7 @@ const call = async (node: typeof A, path: string, body?: unknown) => {
     method: body === undefined ? "GET" : "POST",
     headers: { "Grpc-Metadata-macaroon": node.mac, "Content-Type": "application/json" },
     body: body === undefined ? undefined : JSON.stringify(body),
-    tls: { ca },
+    tls: { ca: node.ca },
   } as RequestInit);
   const t = await r.text();
   if (!r.ok) throw new Error(`${path}: ${r.status} ${t.slice(0, 160)}`);
@@ -74,8 +81,8 @@ if (!(await open())) {
 }
 
 // 2. the product's backend, both ends: A invoices, B pays, A sees it settle
-const a = new LndBackend(A.url, A.mac, ca);
-const b = new LndBackend(B.url, B.mac, ca);
+const a = new LndBackend(A.url, A.mac, A.ca);
+const b = new LndBackend(B.url, B.mac, B.ca);
 const times: number[] = [];
 for (let i = 1; i <= n; i++) {
   const inv = await a.createInvoice({ sats, description: `reelstr e2e ${i}` });

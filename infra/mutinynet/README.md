@@ -1,7 +1,7 @@
 # Mutinynet node (real Lightning routing, valueless coins)
 
 A pruned bitcoind (the Mutinynet fork) plus LND, to test Reelstr's Lightning paths over a real public network
-without real money. Capped at about 1.75 CPU, 3 GB (bitcoind needs 2: the header index of 3.5 M blocks got it OOM-killed at 1 GB) and about 2 GB of chain; no public ports.
+without real money. Capped at about 1.75 CPU, 5 GB (bitcoind needs 4: it was OOM-killed at 1 GB and again at 2 GB, and each kill rewinds an unflushed sync to a few thousand blocks) and about 2 GB of chain; no public ports.
 
 ```sh
 cd infra/mutinynet && ./run.sh                    # builds the fork image, starts both containers
