@@ -21,7 +21,7 @@ USER root
 RUN apt-get update && apt-get install -y --no-install-recommends python3 python3-venv \
     && rm -rf /var/lib/apt/lists/* \
     && python3 -m venv /opt/asr \
-    && /opt/asr/bin/pip install --no-cache-dir -r /app/requirements-asr.txt
+    && /opt/asr/bin/pip install --no-cache-dir -r /app/infra/python/requirements-asr.txt
 ENV ASR_PYTHON=/opt/asr/bin/python HF_HOME=/state/hf
 USER bun
 

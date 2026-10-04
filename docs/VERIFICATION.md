@@ -43,7 +43,7 @@ Run it yourself: `bun run check` (lint, types, 215 unit tests) and `bun run test
 | Agents page | Real browser, demo model, real mint | Commission, review, accept, nutzap |
 | US-K6 edit a published episode | Real browser | The Desk loads an episode, replaces scenes and publishes a new version. Progress and ratings are keyed by episode coordinate so they survive versions; reports and content-warning opt-ins stay per version |
 | Source Verified | Real relay, demo model | The `Verifier` follows the relay, re-renders eligible scenes and publishes a signed NIP-32 label (one label, correct verifier and verdict; a doctored seed gives a mismatch via `verifyScene`). The app shows the badge only for verifiers the viewer trusts (`reelstr.verifiers` in localStorage or `VITE_VERIFIERS`). Checked end to end on the live site |
-| Captions | Real browser, local speech-to-text | WebVTT upload and generation: the media service transcribes each trimmed scene locally (faster-whisper `small`, CPU, no data leaves the machine), times the cues against the episode, and the Desk shows an editable draft before it is attached. Needs `.venv-asr` (`requirements-asr.txt`). Tested end to end with synthesized speech (espeak-ng) |
+| Captions | Real browser, local speech-to-text | WebVTT upload and generation: the media service transcribes each trimmed scene locally (faster-whisper `small`, CPU, no data leaves the machine), times the cues against the episode, and the Desk shows an editable draft before it is attached. Needs `.venv-asr` (`infra/python/requirements-asr.txt`). Tested end to end with synthesized speech (espeak-ng) |
 
 ## Backend and media
 

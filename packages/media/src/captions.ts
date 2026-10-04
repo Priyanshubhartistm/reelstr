@@ -13,7 +13,7 @@ const ROOT = join(import.meta.dir, "..", "..", "..");
 const python = () => process.env.ASR_PYTHON ?? join(ROOT, ".venv-asr", "bin", "python");
 const script = join(import.meta.dir, "..", "asr", "transcribe.py");
 
-/** True when the local speech-to-text environment is installed (see requirements-asr.txt). */
+/** True when the local speech-to-text environment is installed (see infra/python/requirements-asr.txt). */
 export const asrAvailable = () => Bun.file(python()).exists();
 
 const ts = (s: number) => {
@@ -35,7 +35,9 @@ export async function captionScenes(
   o: { model?: string } = {},
 ): Promise<{ cues: Cue[]; language: string }> {
   if (!(await asrAvailable()))
-    throw new Error("speech-to-text is not installed (uv pip install -r requirements-asr.txt)");
+    throw new Error(
+      "speech-to-text is not installed (uv pip install -r infra/python/requirements-asr.txt)",
+    );
   const dir = mkdtempSync(join(tmpdir(), "reelstr-asr-"));
   try {
     const cues: Cue[] = [];

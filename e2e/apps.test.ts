@@ -91,7 +91,7 @@ beforeAll(async () => {
     () => ix.close(),
   );
   const ln = new FakeLightning();
-  // the real Nutshell mint when installed (requirements-mint.txt), else our test double
+  // the real Nutshell mint when installed (infra/python/requirements-mint.txt), else our test double
   const nut = await startNutshell();
   const fakeMint = nut ?? (await startFakeMint({ lightning: ln }));
   stops.push(() => fakeMint.stop());

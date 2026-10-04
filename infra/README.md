@@ -5,7 +5,7 @@
 | Relay (kind allowlist, PoW floor, timestamp window) | `cd services/relay && go build -o bin/relay . && ./bin/relay` | `relay` |
 | Blossom | `PORT=3100 infra/blossom/run.sh` (needs `npm install` in `infra/blossom`, then `npm install-scripts approve better-sqlite3` and `npm rebuild better-sqlite3`) | `blossom` |
 | Postgres | PGlite (embedded) | `postgres` (the indexer is tested against it: `TEST_DATABASE_URL=postgres://reelstr:reelstr-dev@127.0.0.1:5432/reelstr bun test services/indexer`) |
-| Cashu mint | the real Nutshell in `.venv-mint` (see `requirements-mint.txt`) | `mint` profile (test mint: free test sats) |
+| Cashu mint | the real Nutshell in `.venv-mint` (see `infra/python/requirements-mint.txt`) | `mint` profile (test mint: free test sats) |
 
 ## Containers: the whole stack
 
@@ -35,7 +35,7 @@ Operating notes:
 - Rootless podman accepts TCP connections before the app inside is listening: wait on the app's log line, not just an open port.
 
 ## Caption generation
-The media service transcribes speech locally for the Desk's "Generate captions (draft)". Install once: `uv venv --python 3.12 .venv-asr && uv pip install --python .venv-asr/bin/python -r requirements-asr.txt` (the `small` model, about 460 MB, downloads on first use). In containers use the `services-asr` target (see above).
+The media service transcribes speech locally for the Desk's "Generate captions (draft)". Install once: `uv venv --python 3.12 .venv-asr && uv pip install --python .venv-asr/bin/python -r infra/python/requirements-asr.txt` (the `small` model, about 460 MB, downloads on first use). In containers use the `services-asr` target (see above).
 
 ## Real Lightning on regtest
 `services/keys/test/lnd.test.ts` and the last test in `services/split/test/split.test.ts` run two real LND nodes on a private Bitcoin regtest chain (podman, no real money). They skip themselves if the images are missing:

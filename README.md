@@ -181,7 +181,7 @@ Specs touched: NIP-01, 07, 11, 13, 29, 32, 42, 44, 46, 47, 56, 57, 60, 61, 71, 9
 
 ## Try it
 
-You need [bun](https://bun.sh), Go, ffmpeg, Python 3 and Chrome. For the real mint and captions see `requirements-mint.txt` and `requirements-asr.txt`.
+You need [bun](https://bun.sh), Go, ffmpeg, Python 3 and Chrome. For the real mint and captions see `infra/python/requirements-mint.txt` and `infra/python/requirements-asr.txt`.
 
 ```sh
 bun install
