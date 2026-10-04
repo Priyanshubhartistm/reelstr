@@ -181,6 +181,7 @@ Issues and forks are welcome. Good places to help: connect a live video model, b
 ## Team
 
 - **Priyanshu Bharti**
+  - Email: [bhartipriyanshustm@gmail.com](mailto:bhartipriyanshustm@gmail.com)
   - GitHub: [@Priyanshubhartistm](https://github.com/Priyanshubhartistm)
   - LinkedIn: [Priyanshu Bharti](https://www.linkedin.com/in/priyanshu-bharti-441823229/)
 - **Ansh Tyagi**
