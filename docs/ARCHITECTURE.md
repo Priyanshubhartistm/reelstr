@@ -50,4 +50,4 @@ The event kinds, watch-and-pay flow, create-and-fork flow and bot-commission flo
 - The indexer is a cache. `events` is the only source of truth, and `rebuild()` regenerates everything else.
 - The split service holds funds between an unlock and the payout, so it is off by default and refuses to start without `acknowledgeCustody`. Check local money-transmission rules before enabling it, and run the key server and split service small and self-hosted.
 
-What was tested, and against what, is in the [verification report](STATUS.md).
+What was tested, and against what, is in the [verification report](VERIFICATION.md).

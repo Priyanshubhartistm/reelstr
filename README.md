@@ -14,7 +14,7 @@
   <a href="https://github.com/Priyanshubhartistm/reelstr/releases/tag/v0.1.0-testnet"><img alt="Download the Android APK" src="https://img.shields.io/badge/Android-download_APK-3ddc84?style=for-the-badge&logo=android&logoColor=white"></a>
   <a href="docs/ARCHITECTURE.md"><img alt="Architecture" src="https://img.shields.io/badge/Architecture-docs-9b7be0?style=for-the-badge&logo=mermaid&logoColor=white"></a>
   <a href="docs/nip/reelstr.md"><img alt="Protocol" src="https://img.shields.io/badge/Protocol-NIP_draft-8e44ad?style=for-the-badge&logo=nostr&logoColor=white"></a>
-  <a href="docs/STATUS.md"><img alt="Verification report" src="https://img.shields.io/badge/Verification-report-2b7a5b?style=for-the-badge&logo=checkmarx&logoColor=white"></a>
+  <a href="docs/VERIFICATION.md"><img alt="Verification report" src="https://img.shields.io/badge/Verification-report-2b7a5b?style=for-the-badge&logo=checkmarx&logoColor=white"></a>
 </p>
 
 <p align="center">
@@ -29,7 +29,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/ui/showcase.png" alt="Reelstr on desktop and phone" width="900">
+  <img src="docs/screenshots/showcase.png" alt="Reelstr on desktop and phone" width="900">
 </p>
 
 <p align="center">
@@ -227,7 +227,7 @@ The web app is static and deploys as a Cloudflare Worker with assets. The backen
 
 ## Testnet release
 
-Everything is built and running on testnet: watch, fork, curate, pay, split, agents, crew rooms, wallet, web and Android. What was tested, and how, is in the [verification report](docs/STATUS.md).
+Everything is built and running on testnet: watch, fork, curate, pay, split, agents, crew rooms, wallet, web and Android. What was tested, and how, is in the [verification report](docs/VERIFICATION.md).
 
 **Tested against real systems:** a Cashu mint (Nutshell), Postgres 17, containers, Chrome and WebKit, LND nodes on a private regtest chain, and **Lightning routing on the Mutinynet public signet**: our own channels, 27 routed payments, and the key server's backend paying invoices end to end. Routing costs a flat ~2 sats whatever the amount (9.5% of a 21-sat payment, 1% of 210, 0.2% of 1,000), so unlocks use ecash and Lightning handles top-ups and batched payouts.
 
@@ -252,7 +252,7 @@ infra/       compose files, Blossom image, deploy notes
 docs/        architecture, verification report, design decisions, protocol draft, design system
 ```
 
-Design system: [`docs/DESIGN.md`](docs/DESIGN.md). Design decisions: [`docs/DESIGN-DECISIONS.md`](docs/DESIGN-DECISIONS.md).
+Design system: [`docs/DESIGN-SYSTEM.md`](docs/DESIGN-SYSTEM.md). Design decisions: [`docs/DESIGN-DECISIONS.md`](docs/DESIGN-DECISIONS.md).
 
 ## Contributing
 

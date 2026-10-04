@@ -5,10 +5,10 @@ import { demoKeys } from "./stack";
 
 /**
  * The README picture: the app in a desktop window next to three phone screens.
- *   WEB_URL=... INDEXER_URL=... bun demo/src/hero-image.ts docs/ui
+ *   WEB_URL=... INDEXER_URL=... bun demo/src/hero-image.ts docs/screenshots
  * Defaults to the live testnet demo.
  */
-const out = process.argv[2] ?? "docs/ui";
+const out = process.argv[2] ?? "docs/screenshots";
 const web = process.env.WEB_URL ?? "https://reelstr.ansht.workers.dev";
 const api = process.env.INDEXER_URL ?? "https://4-194-209-138.sslip.io/reelstr/api";
 const e = encodeURIComponent;

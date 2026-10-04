@@ -241,7 +241,7 @@ export function Landing() {
             are written down.
           </p>
           <div className="row tight">
-            <a className="btn btn-plain" href={`${REPO}/blob/master/docs/STATUS.md`}>
+            <a className="btn btn-plain" href={`${REPO}/blob/master/docs/VERIFICATION.md`}>
               What is verified
             </a>
             <a className="btn btn-plain" href={`${REPO}/blob/master/docs/nip/reelstr.md`}>

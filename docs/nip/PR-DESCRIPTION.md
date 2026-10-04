@@ -22,4 +22,4 @@ What it specifies:
 - A Payout receipt lists what was paid to whom with a proof (nutzap event id or Lightning preimage).
 - Optional generation manifests (model, seed, references) make open-weight scenes re-renderable, and a NIP-32 label records a verifier's verdict.
 
-Implementation: a reference relay, indexer, media pipeline, wallet and web client are in https://github.com/Priyanshubhartistm/reelstr. An independent Python reader recomputes splits from raw events, and Reelstr scenes are accepted and served by public relays (Damus, nos.lol, Primal). The verification report is in `docs/STATUS.md` in that repository.
+Implementation: a reference relay, indexer, media pipeline, wallet and web client are in https://github.com/Priyanshubhartistm/reelstr. An independent Python reader recomputes splits from raw events, and Reelstr scenes are accepted and served by public relays (Damus, nos.lol, Primal). The verification report is in `docs/VERIFICATION.md` in that repository.

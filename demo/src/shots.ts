@@ -4,7 +4,7 @@ import { chromium } from "playwright-core";
 import { demoKeys } from "./stack";
 
 /**
- * Screenshot every screen of both apps, desktop and phone width, against the running seeded demo.
+ * Screenshot every screen of the app, desktop and phone width, against the running seeded demo.
  *   bun demo/src/shots.ts <outdir> [filter]
  */
 const out = process.argv[2] ?? ".";
@@ -39,27 +39,27 @@ type Shot = {
 };
 const shots: Shot[] = [
   { name: "landing", app: web, hash: "" },
-  { name: "gate", app: web, hash: "#/signin" },
-  { name: "c-home", app: web, hash: "#/", who: "mara", wait: ".cover" },
-  { name: "c-series", app: web, hash: `#/series/${e(sc)}`, who: "mara", wait: ".ep" },
+  { name: "sign-in", app: web, hash: "#/signin" },
+  { name: "watch-home", app: web, hash: "#/", who: "mara", wait: ".cover" },
+  { name: "series", app: web, hash: `#/series/${e(sc)}`, who: "mara", wait: ".ep" },
   {
-    name: "c-watch-free",
+    name: "watch-free",
     app: web,
     hash: `#/watch/${e(eps[0]?.coord ?? "")}`,
     who: "mara",
     wait: "video.player",
   },
   {
-    name: "c-watch-paid",
+    name: "paywall",
     app: web,
     hash: `#/watch/${e(eps[1]?.coord ?? "")}`,
     who: "mara",
     wait: "[data-testid=paywall]",
   },
-  { name: "c-wallet", app: web, hash: "#/wallet", who: "mara", wait: "[data-testid=balance]" },
-  { name: "c-desk", app: web, hash: "#/desk", who: "ila", wait: "#d-story" },
+  { name: "wallet", app: web, hash: "#/wallet", who: "mara", wait: "[data-testid=balance]" },
+  { name: "curator-desk-empty", app: web, hash: "#/desk", who: "ila", wait: "#d-story" },
   {
-    name: "c-desk-filled",
+    name: "curator-desk",
     app: web,
     hash: "#/desk",
     who: "ila",
@@ -73,10 +73,10 @@ const shots: Shot[] = [
       await p.waitForTimeout(1200);
     },
   },
-  { name: "c-settings", app: web, hash: "#/settings", who: "mara", wait: "#v-add" },
-  { name: "s-stories", app: web, hash: "#/stories", who: "mara", wait: ".cover, .card" },
+  { name: "settings", app: web, hash: "#/settings", who: "mara", wait: "#v-add" },
+  { name: "stories", app: web, hash: "#/stories", who: "mara", wait: ".cover, .card" },
   {
-    name: "s-story",
+    name: "story-tree",
     app: web,
     hash: `#/story/${e(st)}`,
     who: "mara",
@@ -86,11 +86,10 @@ const shots: Shot[] = [
       await p.waitForTimeout(800);
     },
   },
-  { name: "s-compose", app: web, hash: `#/compose/${e(st)}`, who: "mara", wait: "#c-file" },
-  { name: "s-agents", app: web, hash: "#/agents", who: "mara", wait: "#ag-agent" },
-  { name: "s-crew", app: web, hash: "#/crew", who: "mara" },
-  { name: "s-earnings", app: web, hash: "#/earnings", who: "mara" },
-  { name: "s-wallet", app: web, hash: "#/wallet", who: "mara", wait: "[data-testid=balance]" },
+  { name: "composer", app: web, hash: `#/compose/${e(st)}`, who: "mara", wait: "#c-file" },
+  { name: "agents", app: web, hash: "#/agents", who: "mara", wait: "#ag-agent" },
+  { name: "crew", app: web, hash: "#/crew", who: "mara" },
+  { name: "earnings", app: web, hash: "#/earnings", who: "mara" },
 ];
 
 for (const [label, w, h] of [
@@ -114,11 +113,16 @@ for (const [label, w, h] of [
       if (s.wait) await page.locator(s.wait).first().waitFor({ timeout: 30_000 });
       await page.waitForTimeout(1200);
       await s.act?.(page);
-      await page.screenshot({ path: `${out}/${s.name}-${label}.png`, fullPage: true });
+      await page.screenshot({
+        path: `${out}/${label === "d" ? "desktop" : "mobile"}-${s.name}.png`,
+        fullPage: true,
+      });
       console.log("ok", s.name, label);
     } catch (err) {
       console.log("FAIL", s.name, label, (err as Error).message.split("\n")[0]);
-      await page.screenshot({ path: `${out}/${s.name}-${label}-FAIL.png` }).catch(() => {});
+      await page
+        .screenshot({ path: `${out}/${label === "d" ? "desktop" : "mobile"}-${s.name}-FAIL.png` })
+        .catch(() => {});
     }
     await ctx.close();
   }
