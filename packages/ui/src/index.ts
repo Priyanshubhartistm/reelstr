@@ -1,4 +1,6 @@
+export * from "./brand";
 export * from "./config";
+export * from "./explain";
 export * from "./hooks";
 export * from "./payments";
 export * from "./player";
@@ -9,5 +11,6 @@ export * from "./shell";
 export * from "./split";
 export * from "./testnet";
 export * from "./tree";
+export * from "./update-notice";
 export * from "./verified";
-export * from "./Wallet";
+export * from "./wallet";

@@ -1,4 +1,4 @@
 export * from "./adapters";
 export * from "./agent";
-export * from "./verifier";
-export * from "./verify";
+export * from "./verifier/verifier";
+export * from "./verifier/verify";

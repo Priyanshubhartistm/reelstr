@@ -5,7 +5,7 @@ import {
   parseScene,
   validateEvent,
 } from "@reelstr/protocol";
-import type { AdapterRegistry } from "./adapters";
+import type { AdapterRegistry } from "../adapters";
 import { verificationTemplate, verifyScene } from "./verify";
 
 /**

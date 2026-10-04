@@ -12,7 +12,7 @@ import { cleanup, startBlossom, startRelay, tempDir } from "@reelstr/testkit";
 import { makeClip } from "../../media/test/helpers";
 import { ReelstrClient } from "../src";
 
-// The whole R0 loop against real services: relay, two Blossom servers, media service, indexer.
+// The whole create, fork and curate loop against real services: relay, two Blossom servers, media service, indexer.
 let relay: Awaited<ReturnType<typeof startRelay>>;
 let A: Awaited<ReturnType<typeof startBlossom>>;
 let B: Awaited<ReturnType<typeof startBlossom>>;
@@ -62,7 +62,7 @@ const until = async <T>(f: () => Promise<T | undefined | false>, ms = 15_000): P
   }
 };
 
-describe("R0 end to end", () => {
+describe("Reelstr client end to end", () => {
   test("create story, publish scenes, fork, curate an episode, index it all", async () => {
     const alice = mk(LocalSigner.generate());
     const bob = mk(LocalSigner.generate());

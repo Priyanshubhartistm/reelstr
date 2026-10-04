@@ -156,7 +156,7 @@ services:
 
   verifier:
     <<: *svc
-    command: ["bun", "services/agent/src/verifier-server.ts"]
+    command: ["bun", "services/agent/src/verifier/server.ts"]
     environment:
       <<: *env
       VERIFIER_NSEC: "${VERIFIER_NSEC:-}"

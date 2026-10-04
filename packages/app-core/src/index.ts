@@ -63,7 +63,7 @@ export interface IngestOut {
   probe: { durationSec: number };
 }
 
-/** Everything a Studio or Cinema screen does, with no UI in it. */
+/** Everything a screen does, with no UI in it. */
 export class ReelstrClient {
   readonly pool = new RelayPool();
   readonly blossom: BlossomClient;

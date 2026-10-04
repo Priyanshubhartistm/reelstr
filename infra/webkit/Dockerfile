@@ -1,5 +1,5 @@
 # Real WebKit (Playwright's build) on Debian 12, served over a Playwright websocket so tests running on
-# the host can drive it:  WEBKIT_WS=ws://127.0.0.1:3999/ bun demo/src/smoke.ts
+# the host can drive it:  WEBKIT_WS=ws://127.0.0.1:3999/ node demo/smoke/viewer.ts
 # This is the WebKit ENGINE on Linux. It is not iOS Safari: no ManagedMediaSource on iPhone, different
 # autoplay and power rules. It catches engine-level playback and layout breakage, not iOS-specific ones.
 FROM docker.io/library/node:22-bookworm-slim

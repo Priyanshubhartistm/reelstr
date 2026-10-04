@@ -1,4 +1,5 @@
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useEffect } from "react";
+import { Wordmark } from "./brand";
 import { useRoute } from "./hooks";
 import { usePayments } from "./payments";
 import { useSession } from "./session";
@@ -11,77 +12,6 @@ export interface NavItem {
   route: string;
   /** other first segments that should also light this item up */
   also?: string[];
-}
-
-/** The one way back: a pill that always names where it goes. Same look on every page, light or dark. */
-export function BackLink({ href, children }: { href: string; children: ReactNode }) {
-  return (
-    <a className="back" href={href}>
-      <span aria-hidden="true">←</span>
-      {children}
-    </a>
-  );
-}
-
-/** The mark: the brand icon (a play bubble on a pine tile). */
-export function BrandMark() {
-  return <img className="brand-mark" src="/icon-192.png" width="32" height="32" alt="Reelstr" />;
-}
-
-/**
- * Flat decoration for hero panels: three vertical frames, the same ink strokes as everything else.
- * With `animate`, the middle frame drops in and lands, two more slide out of it (a scene forking), and
- * the play triangle pulses once. Each frame sits in its own <g> so CSS can move it without fighting the
- * rotation that is part of the drawing.
- */
-export function FilmArt({ animate = false }: { animate?: boolean }) {
-  return (
-    <svg
-      className={`film-art${animate ? " animate" : ""}`}
-      viewBox="0 0 220 200"
-      aria-hidden="true"
-    >
-      <g stroke="var(--ink)" strokeWidth="3" strokeLinejoin="round">
-        <g className="fa fa-left">
-          <rect
-            x="10"
-            y="40"
-            width="82"
-            height="146"
-            rx="14"
-            fill="var(--accent)"
-            transform="rotate(-9 51 113)"
-          />
-        </g>
-        <g className="fa fa-right">
-          <rect
-            x="128"
-            y="34"
-            width="82"
-            height="146"
-            rx="14"
-            fill="var(--secondary)"
-            transform="rotate(8 169 107)"
-          />
-        </g>
-        <g className="fa fa-mid">
-          <rect x="66" y="10" width="88" height="160" rx="15" fill="var(--primary)" />
-          <path className="fa fa-play" d="M96 62 128 90 96 118z" fill="var(--card)" />
-        </g>
-      </g>
-    </svg>
-  );
-}
-
-export function Wordmark() {
-  return (
-    <>
-      <BrandMark />
-      <span>
-        reel<b>str</b>
-      </span>
-    </>
-  );
 }
 
 /**
@@ -136,72 +66,5 @@ export function AppShell({ items, children }: { items: NavItem[]; children: Reac
         {children}
       </main>
     </>
-  );
-}
-
-/**
- * A tab that stays open keeps running the code it loaded. When a newer version has been deployed,
- * say so and offer the reload, instead of leaving people on a stale screen that no longer matches.
- * Checked when the tab becomes visible again and every five minutes: the page's fingerprinted script
- * name is compared with the one the server serves now.
- */
-export function UpdateNotice() {
-  const [stale, setStale] = useState(false);
-  useEffect(() => {
-    const mine = Array.from(document.scripts)
-      .map((s) => s.src)
-      .find((src) => /\/assets\/index-[\w-]+\.js/.test(src));
-    if (!mine) return; // dev server: nothing is fingerprinted
-    const check = async () => {
-      try {
-        const html = await (
-          await fetch(`${location.pathname}?v=${Date.now()}`, { cache: "no-store" })
-        ).text();
-        const now = html.match(/\/assets\/index-[\w-]+\.js/)?.[0];
-        if (now && !mine.endsWith(now)) setStale(true);
-      } catch {}
-    };
-    const onVisible = () => document.visibilityState === "visible" && void check();
-    document.addEventListener("visibilitychange", onVisible);
-    const id = setInterval(check, 5 * 60_000);
-    return () => {
-      document.removeEventListener("visibilitychange", onVisible);
-      clearInterval(id);
-    };
-  }, []);
-  if (!stale) return null;
-  return (
-    <div className="update" role="status">
-      A new version of Reelstr is available.
-      <button type="button" className="sm" onClick={() => location.reload()}>
-        Reload
-      </button>
-    </div>
-  );
-}
-
-/** Plain-words box at the top of a page: what this is, what to do here. */
-export function Explain({
-  title,
-  children,
-  steps,
-}: {
-  title: string;
-  children: ReactNode;
-  steps?: ReactNode[];
-}) {
-  return (
-    <aside className="card card-soft explain">
-      <div className="label">{title}</div>
-      <p style={{ margin: "0.3rem 0 0" }}>{children}</p>
-      {steps && (
-        <ol className="guide">
-          {steps.map((s, i) => (
-            // biome-ignore lint/suspicious/noArrayIndexKey: static list
-            <li key={i}>{s}</li>
-          ))}
-        </ol>
-      )}
-    </aside>
   );
 }

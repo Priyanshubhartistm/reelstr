@@ -21,12 +21,11 @@ import {
 import { type Browser, type BrowserContext, chromium, type Page } from "playwright-core";
 import { makeClip } from "../packages/media/test/helpers";
 
-// Real browser (system Chrome, headless: never a window on the desktop) driving the built Studio
-// and Cinema against real relay, Blossom, media service and indexer.
+// Real browser (system Chrome, headless: never a window on the desktop) driving the built web app
+// against real relay, Blossom, media service and indexer.
 const ROOT = join(import.meta.dir, "..");
 let browser: Browser;
-let studioUrl: string;
-let cinemaUrl: string;
+let appUrl: string;
 let endpoints: Record<string, unknown>;
 let keys: Awaited<ReturnType<typeof createKeyServer>>;
 let mintUrl: string;
@@ -115,9 +114,7 @@ beforeAll(async () => {
     indexerUrl: `http://127.0.0.1:${api.port}`,
     powBits: 0,
   };
-  // one app now; the two names stay so each test reads as the role it plays (create vs watch)
-  studioUrl = await serveApp("web");
-  cinemaUrl = studioUrl;
+  appUrl = await serveApp("web");
   browser = await chromium.launch({
     executablePath: process.env.CHROME_PATH ?? "/usr/bin/google-chrome",
     headless: true,
@@ -209,7 +206,7 @@ async function diagnose(u: { page: Page; errors: string[] }, f: () => Promise<un
   }
 }
 
-describe("Studio and Cinema in a real browser", () => {
+describe("Reelstr web app in a real browser", () => {
   test("create story, publish a scene, fork it, curate an episode, watch it", async () => {
     const clipA = await makeClip(join(dir, "a.mp4"), {
       size: "640x360",
@@ -226,8 +223,8 @@ describe("Studio and Cinema in a real browser", () => {
       gainDb: -18,
     });
 
-    // --- Studio: alice starts a story and adds the first scene
-    const alice = await newUser(studioUrl, "#/stories");
+    // --- Create: alice starts a story and adds the first scene
+    const alice = await newUser(appUrl, "#/stories");
     await alice.page.getByLabel("Title").first().fill(`E2E Heist ${RUN}`);
     await alice.page.getByLabel("Logline").fill("A crew, a door, a clock.");
     await alice.page.getByRole("button", { name: "Create story" }).click();
@@ -249,9 +246,9 @@ describe("Studio and Cinema in a real browser", () => {
     await alice.page.getByText("open weights").first().waitFor();
     const storyHash = new URL(alice.page.url()).hash;
 
-    // --- Studio: bob forks it
-    const bob = await newUser(studioUrl, "#/stories");
-    await bob.page.goto(`${studioUrl}/${storyHash}`);
+    // --- Create: bob forks it
+    const bob = await newUser(appUrl, "#/stories");
+    await bob.page.goto(`${appUrl}/${storyHash}`);
     await bob.page.locator(".tree .node").first().click({ timeout: T });
     await bob.page.getByRole("button", { name: "Fork / continue from here" }).click();
     await bob.page.getByText("the original creator is credited automatically").waitFor();
@@ -267,8 +264,8 @@ describe("Studio and Cinema in a real browser", () => {
     );
     expect(await bob.page.locator(".tree .node").count()).toBe(2);
 
-    // --- Cinema: cara curates both scenes into an episode
-    const cara = await newUser(cinemaUrl);
+    // --- Watch: cara curates both scenes into an episode
+    const cara = await newUser(appUrl);
     await cara.page.getByRole("link", { name: "Curator desk" }).click();
     await cara.page.locator("#d-story").selectOption({ label: `E2E Heist ${RUN}` });
     await cara.page.getByText("include scenes already used").click();
@@ -303,8 +300,8 @@ describe("Studio and Cinema in a real browser", () => {
     await cara.page.getByRole("button", { name: "Render and publish episode" }).click();
     await cara.page.getByText("Published episode 1.").waitFor({ timeout: 240_000 });
 
-    // --- Cinema: a viewer opens the series and watches it
-    const dan = await newUser(cinemaUrl);
+    // --- Watch: a viewer opens the series and watches it
+    const dan = await newUser(appUrl);
     // the home screen puts a one-click Watch button above everything else
     const watchNow = dan.page.getByTestId("watch-now");
     await watchNow.waitFor({ timeout: T });
@@ -434,7 +431,7 @@ describe("Studio and Cinema in a real browser", () => {
     expect(keys.ledger.episode(`${pk}/paid-series:ep-002`)?.cut_event_id).toBe(e2.id);
     expect(keys.ledger.episode(`${pk}/paid-series:ep-001`)).toBeNull();
 
-    const viewer = await newUser(cinemaUrl);
+    const viewer = await newUser(appUrl);
     await viewer.page.getByRole("link", { name: "Wallet" }).click();
     await diagnose(viewer, () => viewer.page.getByTestId("balance").waitFor({ timeout: 30_000 }));
     expect(await viewer.page.getByTestId("balance").innerText()).toBe("0 sats");
@@ -470,13 +467,13 @@ describe("Studio and Cinema in a real browser", () => {
       null,
       { timeout: T },
     );
-    await viewer.page.goto(`${cinemaUrl}/#/wallet`);
+    await viewer.page.goto(`${appUrl}/#/wallet`);
     await viewer.page.getByText("70 sats", { exact: true }).waitFor({ timeout: T });
     expect(keys.ledger.receipts(`${pk}/paid-series:ep-002`).length).toBe(1); // reload did not pay again
 
     // a viewer with no money gets the paywall and no video
-    const broke = await newUser(cinemaUrl);
-    await broke.page.goto(`${cinemaUrl}/#/watch/${e2.id}`);
+    const broke = await newUser(appUrl);
+    await broke.page.goto(`${appUrl}/#/watch/${e2.id}`);
     await broke.page.getByTestId("paywall").waitFor({ timeout: T });
     expect(await broke.page.getByRole("button", { name: "Unlock for 30 sats" }).isDisabled()).toBe(
       true,
@@ -488,7 +485,7 @@ describe("Studio and Cinema in a real browser", () => {
     await broke.ctx.close();
   }, 900_000);
 
-  test("crew room in Studio: private draft and chat, invited member sees them, nothing public until release", async () => {
+  test("crew room: private draft and chat, invited member sees them, nothing public until release", async () => {
     const clip = await makeClip(join(dir, "crew.mp4"), {
       size: "360x640",
       fps: 30,
@@ -497,7 +494,7 @@ describe("Studio and Cinema in a real browser", () => {
       gainDb: -20,
     });
     const pool = new (await import("@reelstr/nostr")).RelayPool();
-    const alice = await newUser(studioUrl, "#/stories");
+    const alice = await newUser(appUrl, "#/stories");
     // a story to attach the draft to
     await alice.page.getByLabel("Title").first().fill("Crew Story");
     await alice.page.getByLabel("Logline").fill("Made in private.");
@@ -540,7 +537,7 @@ describe("Studio and Cinema in a real browser", () => {
     expect(alicePk).toHaveLength(64);
 
     // bob joins once alice invites him
-    const bob = await newUser(studioUrl, "#/stories");
+    const bob = await newUser(appUrl, "#/stories");
     await bob.page.locator("header.bar").getByRole("link", { name: "Crew", exact: true }).click();
     const bobPk = await bob.page.evaluate(
       () => document.querySelector("header.bar .who")?.getAttribute("title") ?? "",
@@ -636,7 +633,7 @@ describe("Studio and Cinema in a real browser", () => {
       freeEpisodes: 2,
     });
 
-    const v = await newUser(cinemaUrl);
+    const v = await newUser(appUrl);
     const playing = () =>
       v.page.waitForFunction(
         () => {
@@ -648,7 +645,7 @@ describe("Studio and Cinema in a real browser", () => {
       );
 
     // rate and review episode 1
-    await v.page.goto(`${cinemaUrl}/#/watch/${e1.id}`);
+    await v.page.goto(`${appUrl}/#/watch/${e1.id}`);
     await playing();
     // stop the 8 s clip so auto-next does not navigate away while we rate
     await v.page.evaluate(() =>
@@ -670,11 +667,11 @@ describe("Studio and Cinema in a real browser", () => {
     );
     await v.page.getByText("great cliffhanger").first().waitFor({ timeout: 30_000 });
     // the series page shows the average
-    await v.page.goto(`${cinemaUrl}/#/series/${encodeURIComponent(`31812:${pk}:mod-series`)}`);
+    await v.page.goto(`${appUrl}/#/series/${encodeURIComponent(`31812:${pk}:mod-series`)}`);
     await v.page.getByText("(1)").first().waitFor({ timeout: 30_000 });
 
     // content warning: blurred (no player) until the viewer opts in
-    await v.page.goto(`${cinemaUrl}/#/watch/${e2.id}`);
+    await v.page.goto(`${appUrl}/#/watch/${e2.id}`);
     await v.page.getByTestId("warning").waitFor({ timeout: T });
     expect(await v.page.getByTestId("warning").innerText()).toContain("flashing lights");
     expect(await v.page.locator("video.player").count()).toBe(0);
@@ -697,11 +694,11 @@ describe("Studio and Cinema in a real browser", () => {
     );
     expect(counts).toBeTruthy();
     // the episode no longer shows in this viewer's series list
-    await v.page.goto(`${cinemaUrl}/#/series/${encodeURIComponent(`31812:${pk}:mod-series`)}`);
+    await v.page.goto(`${appUrl}/#/series/${encodeURIComponent(`31812:${pk}:mod-series`)}`);
     await v.page.getByText(/Ep 1/).first().waitFor({ timeout: T });
     expect(await v.page.getByText(/Ep 2/).count()).toBe(0);
     // "show it again" restores it
-    await v.page.goto(`${cinemaUrl}/#/watch/${e2.id}`);
+    await v.page.goto(`${appUrl}/#/watch/${e2.id}`);
     await v.page.getByRole("button", { name: "Show it again" }).click();
     await playing();
 
@@ -750,13 +747,13 @@ describe("Studio and Cinema in a real browser", () => {
     const page = await ctx.newPage();
     const errs: string[] = [];
     page.on("pageerror", (e) => errs.push(e.message));
-    await page.goto(`${studioUrl}/#/signin`);
+    await page.goto(`${appUrl}/#/signin`);
     await page.getByRole("button", { name: "Use NIP-07 extension" }).click();
     await page
       .locator("header.bar")
       .getByText(`${extPk.slice(0, 8)}…`)
       .waitFor({ timeout: 30_000 });
-    await page.goto(`${studioUrl}/#/stories`);
+    await page.goto(`${appUrl}/#/stories`);
 
     await page.getByLabel("Title").first().fill("Signed by an extension");
     await page.getByLabel("Logline").fill("The page never sees the key.");
@@ -784,14 +781,14 @@ describe("Studio and Cinema in a real browser", () => {
     const p2 = await c2.newPage();
     const errs2: string[] = [];
     p2.on("pageerror", (e) => errs2.push(e.message));
-    await p2.goto(`${studioUrl}/#/signin`);
+    await p2.goto(`${appUrl}/#/signin`);
     await p2.getByPlaceholder("bunker://… or name@domain").fill(bunker.uri);
     await p2.getByRole("button", { name: "Connect (NIP-46)" }).click();
     await p2
       .locator("header.bar")
       .getByText(`${bunker.userPubkey.slice(0, 8)}…`)
       .waitFor({ timeout: 60_000 });
-    await p2.goto(`${studioUrl}/#/stories`);
+    await p2.goto(`${appUrl}/#/stories`);
 
     await p2.getByLabel("Title").first().fill("Signed by a bunker");
     await p2.getByLabel("Logline").fill("Remote signing.");
@@ -842,7 +839,7 @@ describe("Studio and Cinema in a real browser", () => {
     });
     await agent.start(5);
 
-    const u = await newUser(studioUrl, "#/stories");
+    const u = await newUser(appUrl, "#/stories");
     await u.page.getByLabel("Title").first().fill(`Agent Story ${RUN}`);
     await u.page.getByLabel("Logline").fill("Made by a bot.");
     await u.page.getByRole("button", { name: "Create story" }).click();
@@ -850,7 +847,7 @@ describe("Studio and Cinema in a real browser", () => {
       .getByRole("link", { name: new RegExp(`Agent Story ${RUN}`) })
       .waitFor({ timeout: T });
 
-    // fund the wallet from Studio (the real mint settles its own quotes)
+    // fund the wallet (the real mint settles its own quotes)
     await u.page.locator("header.bar").getByRole("link", { name: "Wallet", exact: true }).click();
     await u.page.getByTestId("balance").waitFor({ timeout: 30_000 });
     await u.page.locator("#w-amt").fill("300");
@@ -957,7 +954,7 @@ describe("Studio and Cinema in a real browser", () => {
     }
     await Promise.all(evs.map((e) => pool.publish(e, [publicRelay])));
     const _health = await fetch(`${endpoints.indexerUrl}/health`).then((r) => r.json());
-    const reader = await newUser(studioUrl, "#/stories");
+    const reader = await newUser(appUrl, "#/stories");
     // wait until the indexer has all 500 (the API is the source for the tree)
     const probe = new ReelstrClient({
       signer: LS.generate(),
@@ -975,7 +972,7 @@ describe("Studio and Cinema in a real browser", () => {
       throw new Error(`${e.message}: indexer had ${seen}/500 scenes; health ${health}`);
     });
     const t0 = Date.now();
-    await reader.page.goto(`${studioUrl}/#/story/${encodeURIComponent(coord)}`);
+    await reader.page.goto(`${appUrl}/#/story/${encodeURIComponent(coord)}`);
     await reader.page.waitForFunction(
       () => document.querySelectorAll(".tree .node").length === 500,
       null,
@@ -1082,13 +1079,13 @@ describe("Studio and Cinema in a real browser", () => {
     );
 
     // ---- TTFF + frame continuity across joins on the free episode
-    const v = await newUser(cinemaUrl);
-    await v.page.goto(`${cinemaUrl}/#/`);
+    const v = await newUser(appUrl);
+    await v.page.goto(`${appUrl}/#/`);
     await v.page.evaluate(() => {
       (window as unknown as { __frames: number[] }).__frames = [];
     });
     const t1 = Date.now();
-    await v.page.goto(`${cinemaUrl}/#/watch/${freeCut.id}`);
+    await v.page.goto(`${appUrl}/#/watch/${freeCut.id}`);
     await v.page.locator("video.player").waitFor({ timeout: 30_000 });
     await v.page.evaluate(() => {
       const el = document.querySelector("video.player") as HTMLVideoElement;
@@ -1145,13 +1142,13 @@ describe("Studio and Cinema in a real browser", () => {
     await v.ctx.close();
 
     // ---- FE-8: unlock tap -> playback < 3 s on a funded wallet
-    const w = await newUser(cinemaUrl);
+    const w = await newUser(appUrl);
     await w.page.locator("header.bar").getByRole("link", { name: "Wallet", exact: true }).click();
     await w.page.getByTestId("balance").waitFor({ timeout: 30_000 });
     await w.page.locator("#w-amt").fill("100");
     await w.page.getByRole("button", { name: "Get invoice" }).click();
     await w.page.getByText("100 sats", { exact: true }).waitFor({ timeout: 60_000 });
-    await w.page.goto(`${cinemaUrl}/#/watch/${paidCut.id}`);
+    await w.page.goto(`${appUrl}/#/watch/${paidCut.id}`);
     await w.page.getByTestId("paywall").waitFor({ timeout: 30_000 });
     await w.page.getByRole("button", { name: "Unlock for 20 sats" }).waitFor();
     const tap = Date.now();
@@ -1254,8 +1251,8 @@ describe("Studio and Cinema in a real browser", () => {
       20_000,
     );
 
-    const v = await newUser(cinemaUrl);
-    await v.page.goto(`${cinemaUrl}/#/watch/${freeCut.id}`);
+    const v = await newUser(appUrl);
+    await v.page.goto(`${appUrl}/#/watch/${freeCut.id}`);
     await v.page.getByTestId("scene-sequence").waitFor({ timeout: 30_000 });
     await v.page.evaluate(() => {
       const w = window as unknown as { __t: number[] };
@@ -1378,7 +1375,7 @@ describe("Studio and Cinema in a real browser", () => {
     );
 
     // ---- a viewer unlocks, watches a few seconds, and rates it
-    const viewer = await newUser(cinemaUrl);
+    const viewer = await newUser(appUrl);
     await viewer.page
       .locator("header.bar")
       .getByRole("link", { name: "Wallet", exact: true })
@@ -1387,7 +1384,7 @@ describe("Studio and Cinema in a real browser", () => {
     await viewer.page.locator("#w-amt").fill("100");
     await viewer.page.getByRole("button", { name: "Get invoice" }).click();
     await viewer.page.getByText("100 sats", { exact: true }).waitFor({ timeout: 60_000 });
-    await viewer.page.goto(`${cinemaUrl}/#/watch/${encodeURIComponent(coord)}`);
+    await viewer.page.goto(`${appUrl}/#/watch/${encodeURIComponent(coord)}`);
     await viewer.page.getByRole("button", { name: "Unlock for 20 sats" }).click();
     const playing = () =>
       viewer.page.waitForFunction(
@@ -1435,7 +1432,7 @@ describe("Studio and Cinema in a real browser", () => {
       "pageerror",
       (e) => !/relay connection closed by us/.test(e.message) && errs.push(e.message),
     );
-    await page.goto(`${cinemaUrl}/#/desk`);
+    await page.goto(`${appUrl}/#/desk`);
     await page
       .locator("header.bar")
       .getByText(`${cpk.slice(0, 8)}…`)
@@ -1469,8 +1466,8 @@ describe("Studio and Cinema in a real browser", () => {
     expect(scenes.map((x) => x.scene_id)).toEqual([sB.event.id]);
 
     // ---- the viewer: still unlocked, resumes near where they were, rating intact, new version plays
-    await viewer.page.goto(`${cinemaUrl}/#/`);
-    await viewer.page.goto(`${cinemaUrl}/#/watch/${encodeURIComponent(coord)}`);
+    await viewer.page.goto(`${appUrl}/#/`);
+    await viewer.page.goto(`${appUrl}/#/watch/${encodeURIComponent(coord)}`);
     expect(await viewer.page.getByTestId("paywall").count()).toBe(0);
     await playing();
     const src = await viewer.page.evaluate(
@@ -1561,7 +1558,7 @@ describe("Studio and Cinema in a real browser", () => {
       [endpoints, mintUrl, key.backup()] as const,
     );
     const page = await ctx.newPage();
-    await page.goto(`${cinemaUrl}/#/desk`);
+    await page.goto(`${appUrl}/#/desk`);
     await page.locator("#d-story").selectOption({ label: `Spoken ${RUN}` });
     await page.getByRole("button", { name: "Add" }).first().click({ timeout: 30_000 });
     await page.locator("#m-slug").fill("spoken");
@@ -1582,10 +1579,8 @@ describe("Studio and Cinema in a real browser", () => {
     await page.getByText("Published episode 1.").waitFor({ timeout: 240_000 });
     await ctx.close();
 
-    const viewer = await newUser(cinemaUrl);
-    await viewer.page.goto(
-      `${cinemaUrl}/#/watch/${encodeURIComponent(`31811:${pk}:spoken:ep-001`)}`,
-    );
+    const viewer = await newUser(appUrl);
+    await viewer.page.goto(`${appUrl}/#/watch/${encodeURIComponent(`31811:${pk}:spoken:ep-001`)}`);
     await viewer.page.locator("video.player").waitFor({ timeout: T });
     const cues = await viewer.page.evaluate(async () => {
       const v = document.querySelector("video.player") as HTMLVideoElement;
@@ -1652,16 +1647,16 @@ describe("Studio and Cinema in a real browser", () => {
       (await c.api<unknown[]>(`/verifications/${scene.event.id}`)).length === 1 ? true : undefined,
     );
 
-    const u = await newUser(studioUrl, "#/stories");
+    const u = await newUser(appUrl, "#/stories");
     const story = `#/story/${encodeURIComponent(`31810:${apk}:badge`)}`;
     const open = async () => {
-      await u.page.goto(`${studioUrl}/${story}`);
+      await u.page.goto(`${appUrl}/${story}`);
       await u.page.locator(".tree .node").first().click({ timeout: T });
       await u.page.getByText("Badge scene").first().waitFor({ timeout: T });
     };
     await open();
     expect(await u.page.getByText("Source Verified").count()).toBe(0); // a verdict from someone nobody trusts earns nothing
-    await u.page.goto(`${studioUrl}/#/settings`);
+    await u.page.goto(`${appUrl}/#/settings`);
     await u.page.locator("#v-add").fill("not a key");
     await u.page.getByRole("button", { name: "Trust" }).click();
     await u.page.getByText(/not a valid public key/).waitFor();
@@ -1670,7 +1665,7 @@ describe("Studio and Cinema in a real browser", () => {
     await u.page.getByText(`${vpk.slice(0, 12)}…`).waitFor();
     await open();
     await u.page.getByText("Source Verified").first().waitFor({ timeout: T });
-    await u.page.goto(`${studioUrl}/#/settings`);
+    await u.page.goto(`${appUrl}/#/settings`);
     await u.page.getByRole("button", { name: "Remove" }).click();
     await open();
     expect(await u.page.getByText("Source Verified").count()).toBe(0);
@@ -1701,7 +1696,7 @@ describe("Studio and Cinema in a real browser", () => {
     const page = await ctx.newPage();
     const errs: string[] = [];
     page.on("pageerror", (e) => errs.push(e.message));
-    await page.goto(`${studioUrl}/#/signin`);
+    await page.goto(`${appUrl}/#/signin`);
     await page.getByPlaceholder("bunker://… or name@domain").fill(bunker.uri);
     await page.getByRole("button", { name: "Connect (NIP-46)" }).click();
     await page
@@ -1709,7 +1704,7 @@ describe("Studio and Cinema in a real browser", () => {
       .getByText(`${pk.slice(0, 8)}…`)
       .waitFor({ timeout: 60_000 });
     const title = `Signed by nak ${RUN}`;
-    await page.goto(`${studioUrl}/#/stories`);
+    await page.goto(`${appUrl}/#/stories`);
 
     await page.getByLabel("Title").first().fill(title);
     await page.getByLabel("Logline").fill("Remote signing, for real.");
@@ -1779,7 +1774,7 @@ describe("Studio and Cinema in a real browser", () => {
       const page = await ctx.newPage();
       const errs: string[] = [];
       page.on("pageerror", (e) => errs.push(e.message));
-      await page.goto(`${studioUrl}/#/signin`);
+      await page.goto(`${appUrl}/#/signin`);
       await page.getByRole("button", { name: "Use NIP-07 extension" }).click();
       await page
         .locator("header.bar")
@@ -1790,7 +1785,7 @@ describe("Studio and Cinema in a real browser", () => {
         await page.evaluate(() => typeof (window as unknown as { nostr?: unknown }).nostr),
       ).toBe("object");
       const title = `Signed by nos2x ${RUN}`;
-      await page.goto(`${studioUrl}/#/stories`);
+      await page.goto(`${appUrl}/#/stories`);
 
       await page.getByLabel("Title").first().fill(title);
       await page.getByLabel("Logline").fill("Signed in a real extension.");
@@ -1832,12 +1827,12 @@ describe("Studio and Cinema in a real browser", () => {
     // sign-in has a way back to the landing page
     const fresh = await browser.newContext({ viewport: { width: 1000, height: 900 } });
     const gate = await fresh.newPage();
-    await gate.goto(`${studioUrl}/#/signin`);
+    await gate.goto(`${appUrl}/#/signin`);
     await gate.getByRole("link", { name: "Back" }).click();
     await gate
       .getByRole("heading", { name: /Stories anyone can fork/ })
       .waitFor({ timeout: 10_000 });
-    await gate.goto(`${studioUrl}/#/signin`);
+    await gate.goto(`${appUrl}/#/signin`);
     // no extension here: the button is not offered as a working action, and the card says why
     await gate.getByText(/No extension detected in this browser/).waitFor();
     expect(await gate.getByRole("button", { name: "Use NIP-07 extension" }).isDisabled()).toBe(
@@ -1845,7 +1840,7 @@ describe("Studio and Cinema in a real browser", () => {
     );
     await fresh.close();
 
-    const u = await newUser(studioUrl, "#/stories");
+    const u = await newUser(appUrl, "#/stories");
     const count = () => u.page.evaluate(() => (window as unknown as { __vt: number }).__vt ?? 0);
     const nav = () => u.page.evaluate(() => document.documentElement.dataset.nav);
     await u.page.evaluate(() => {
@@ -1907,7 +1902,7 @@ describe("Studio and Cinema in a real browser", () => {
     const nsec = key.backup();
     const ctx = await browser.newContext({ viewport: { width: 1000, height: 900 } });
     const p = await ctx.newPage();
-    await p.goto(`${studioUrl}/#/signin`);
+    await p.goto(`${appUrl}/#/signin`);
     const field = p.getByLabel("Secret key");
     const use = p.getByRole("button", { name: "Use this key" });
     const card = p.locator("section", { hasText: "Existing key" });
@@ -1952,7 +1947,7 @@ describe("Studio and Cinema in a real browser", () => {
       permissions: ["clipboard-read", "clipboard-write"],
     });
     const p = await ctx.newPage();
-    await p.goto(`${studioUrl}/#/signin`);
+    await p.goto(`${appUrl}/#/signin`);
     await p.getByRole("button", { name: "Generate a key" }).click();
     const shown = (await p.locator(".nsec").innerText()).replace(/\s+/g, "");
     expect(shown).toMatch(/^nsec1[a-z0-9]{58}$/);
@@ -1991,7 +1986,7 @@ describe("Studio and Cinema in a real browser", () => {
   test("in-page links (How it works, All series) scroll and never change the screen", async () => {
     const fresh = await browser.newContext({ viewport: { width: 1000, height: 800 } });
     const p = await fresh.newPage();
-    await p.goto(`${studioUrl}/`);
+    await p.goto(`${appUrl}/`);
     const hero = p.getByRole("heading", { name: /Stories anyone can fork/ });
     await hero.waitFor();
     for (const [link, hash] of [
@@ -2010,7 +2005,7 @@ describe("Studio and Cinema in a real browser", () => {
     }
     await fresh.close();
 
-    const u = await newUser(studioUrl); // signed in, on the Watch home page
+    const u = await newUser(appUrl); // signed in, on the Watch home page
     await u.page.getByRole("link", { name: "All series" }).click();
     await u.page.waitForFunction(() => location.hash === "#series");
     await u.page.getByRole("heading", { name: /Stories anyone can fork/ }).waitFor();
@@ -2027,7 +2022,7 @@ describe("Studio and Cinema in a real browser", () => {
     const p = await ctx.newPage();
     const errs: string[] = [];
     p.on("pageerror", (e) => errs.push(e.message));
-    await p.goto(`${studioUrl}/`);
+    await p.goto(`${appUrl}/`);
     const root = p.locator("main.landing");
     expect(await root.evaluate((e) => e.classList.contains("anim"))).toBe(true);
     // the headline is split into words that settle (opacity 1) by about two seconds
@@ -2095,7 +2090,7 @@ describe("Studio and Cinema in a real browser", () => {
       reducedMotion: "reduce",
     });
     const q = await calm.newPage();
-    await q.goto(`${studioUrl}/`);
+    await q.goto(`${appUrl}/`);
     expect(await q.locator("main.landing").evaluate((e) => e.classList.contains("anim"))).toBe(
       false,
     );
@@ -2127,7 +2122,7 @@ describe("Studio and Cinema in a real browser", () => {
     await lp.getByText("Free test sats from a faucet").waitFor();
     await anon.close();
     // the normal build does not
-    const plain = await newUser(studioUrl);
+    const plain = await newUser(appUrl);
     expect(await plain.page.locator(".testnet-badge").count()).toBe(0);
     expect(await plain.page.getByTestId("guide").count()).toBe(0);
     await plain.ctx.close();

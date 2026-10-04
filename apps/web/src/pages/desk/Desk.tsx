@@ -1,7 +1,7 @@
 import { computeWeights, type Weight } from "@reelstr/protocol";
 import { Explain, SceneSequencePlayer, SplitTable, useAsync, useSession } from "@reelstr/ui";
 import { useMemo, useState } from "react";
-import type { CutRow } from "./Home";
+import type { CutRow } from "../watch/types";
 
 interface SceneRow {
   id: string;

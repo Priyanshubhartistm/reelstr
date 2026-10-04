@@ -9,14 +9,16 @@ import {
   Wallet,
 } from "@reelstr/ui";
 import { useEffect } from "react";
-import { Agents } from "./create/Agents";
-import { Composer } from "./create/Composer";
-import { Crew } from "./create/Crew";
-import { Earnings } from "./create/Earnings";
-import { StoriesList, StoryPage } from "./create/Stories";
-import { Desk } from "./watch/Desk";
-import { Home, SeriesPage } from "./watch/Home";
-import { Watch } from "./watch/Watch";
+import { Agents } from "./pages/agents/Agents";
+import { Crew } from "./pages/crew/Crew";
+import { Desk } from "./pages/desk/Desk";
+import { Earnings } from "./pages/earnings/Earnings";
+import { Composer } from "./pages/stories/Composer";
+import { StoriesList } from "./pages/stories/StoriesList";
+import { StoryPage } from "./pages/stories/StoryPage";
+import { Home } from "./pages/watch/Home";
+import { SeriesPage } from "./pages/watch/SeriesPage";
+import { Watch } from "./pages/watch/Watch";
 
 const NAV: NavItem[] = [
   { href: "#/", label: "Watch", route: "", also: ["series", "watch", "signin"] },

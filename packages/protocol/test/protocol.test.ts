@@ -1,5 +1,34 @@
 import { describe, expect, test } from "bun:test";
-import { apportion, computeWeights, payoutSats, planPayout, WEIGHT_TOTAL } from "../src";
+import {
+  apportion,
+  buildAgentProfile,
+  buildCut,
+  buildJobRequest,
+  buildJobResult,
+  buildPayout,
+  buildRating,
+  buildReport,
+  buildScene,
+  buildVerification,
+  computeWeights,
+  KIND,
+  NS_RATING,
+  parseAgentProfile,
+  parseCut,
+  parseJobRequest,
+  parseRating,
+  parseVerification,
+  payoutSats,
+  planPayout,
+  secs,
+  validateEvent as validate,
+  validateCut,
+  validateJobRequest,
+  validateJobResult,
+  validatePayout,
+  validateScene,
+  WEIGHT_TOTAL,
+} from "../src";
 
 const A = "a".repeat(64);
 const B = "b".repeat(64);
@@ -173,8 +202,6 @@ describe("planPayout", () => {
   });
 });
 
-import { buildPayout, KIND, validatePayout } from "../src";
-
 describe("payout receipt with carried balances", () => {
   const w = computeWeights({
     scenes: [{ payee: A, inSec: 0, outSec: 10 }],
@@ -210,16 +237,6 @@ describe("payout receipt with carried balances", () => {
     expect(validatePayout(e).errors.join()).toContain("prior_carry");
   });
 });
-
-import {
-  buildRating,
-  buildReport,
-  buildVerification,
-  NS_RATING,
-  parseRating,
-  parseVerification,
-  validateEvent as validate,
-} from "../src";
 
 describe("labels: ratings, reports, verifications", () => {
   const cutId = "a".repeat(64);
@@ -273,16 +290,6 @@ describe("labels: ratings, reports, verifications", () => {
     expect(validate({ ...v, tags: v.tags.filter((t) => t[0] !== "L") }).ok).toBe(false); // label of an unknown namespace
   });
 });
-
-import {
-  buildAgentProfile,
-  buildJobRequest,
-  buildJobResult,
-  parseAgentProfile,
-  parseJobRequest,
-  validateJobRequest,
-  validateJobResult,
-} from "../src";
 
 describe("agent jobs (NP-5, NP-6)", () => {
   const agent = "a".repeat(64);
@@ -374,14 +381,6 @@ describe("agent jobs (NP-5, NP-6)", () => {
   });
 });
 
-import {
-  buildCut as buildCutC,
-  buildScene as buildSceneC,
-  secs,
-  validateCut,
-  validateScene as validateSceneC,
-} from "../src";
-
 describe("canonical seconds", () => {
   test("secs() removes float noise and rounds to milliseconds", () => {
     expect(secs(6.755999999999999)).toBe("6.756");
@@ -408,7 +407,7 @@ describe("canonical seconds", () => {
         payee: B,
       },
     ];
-    const tpl = buildCutC({
+    const tpl = buildCut({
       curator: CUR,
       seriesSlug: "s",
       episode: 1,
@@ -429,7 +428,7 @@ describe("canonical seconds", () => {
     expect(v.errors).toEqual([]);
   });
   test("a scene's duration is canonical too", () => {
-    const tpl = buildSceneC({
+    const tpl = buildScene({
       title: "t",
       content: "c",
       video: { url: "https://x", sha256: "a".repeat(64), duration: 12.000000000000002 },
@@ -438,7 +437,7 @@ describe("canonical seconds", () => {
     expect(tpl.tags.find((t) => t[0] === "imeta")?.includes("duration 12")).toBe(true);
   });
   test("a scene can carry a poster frame in its imeta, and stays valid", () => {
-    const tpl = buildSceneC({
+    const tpl = buildScene({
       title: "t",
       content: "c",
       video: {
@@ -450,11 +449,9 @@ describe("canonical seconds", () => {
       story: { pubkey: A, d: "s" },
     });
     expect(tpl.tags.find((t) => t[0] === "imeta")?.includes("image https://x/p.jpg")).toBe(true);
-    expect(validateSceneC({ ...tpl, pubkey: A, id: "0".repeat(64) }).errors).toEqual([]);
+    expect(validateScene({ ...tpl, pubkey: A, id: "0".repeat(64) }).errors).toEqual([]);
   });
 });
-
-import { parseCut as parseCutC } from "../src";
 
 describe("caption tags on a Cut", () => {
   const base = {
@@ -470,7 +467,7 @@ describe("caption tags on a Cut", () => {
     host: HOST,
   };
   test("round trips, validates, and rejects bad urls and language tags", () => {
-    const tpl = buildCutC({
+    const tpl = buildCut({
       ...base,
       captions: [
         { url: "https://b.example/c.vtt", lang: "en", sha256: "c".repeat(64) },
@@ -479,7 +476,7 @@ describe("caption tags on a Cut", () => {
     });
     const ev = { ...tpl, pubkey: CUR };
     expect(validateCut(ev).errors).toEqual([]);
-    expect(parseCutC(ev).captions).toEqual([
+    expect(parseCut(ev).captions).toEqual([
       { url: "https://b.example/c.vtt", lang: "en", sha256: "c".repeat(64) },
       { url: "https://b.example/pt.vtt", lang: "pt-BR", sha256: undefined },
     ]);
@@ -488,7 +485,7 @@ describe("caption tags on a Cut", () => {
       [{ url: "https://x/y.vtt", lang: "English" }, "BCP-47"],
       [{ url: "https://x/y.vtt", lang: "en", sha256: "zz" }, "sha256"],
     ] as const) {
-      const e2 = { ...buildCutC({ ...base, captions: [bad] }), pubkey: CUR };
+      const e2 = { ...buildCut({ ...base, captions: [bad] }), pubkey: CUR };
       expect(validateCut(e2).errors.join()).toContain(msg);
     }
   });

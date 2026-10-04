@@ -21,7 +21,7 @@ flowchart LR
   SPLIT --> MINT
 ```
 
-The event kinds, watch-and-pay flow, create-and-fork flow and bot-commission flow are drawn in the [README](../README.md#how-it-fits-together).
+The event kinds and the pay, fork and agent flows are drawn under [Protocol and flows](#protocol-and-flows).
 
 
 | Piece | Path | Role |
@@ -42,6 +42,76 @@ The event kinds, watch-and-pay flow, create-and-fork flow and bot-commission flo
 | Split service | `services/split` | Custodial payouts with carry and signed receipts. Opt-in. |
 | Agent | `services/agent` | Generation agent with adapters, payment on acceptance, Source Verified. |
 | Interop | `interop/reader.py` | Independent reader that recomputes splits from raw events, to validate the spec. |
+
+## Protocol and flows
+
+### Event model
+
+```mermaid
+flowchart TD
+  ST["Story<br/>kind 31810"] --> SC["Scene<br/>kind 34236 (NIP-71)<br/>d = SHA-256 of normalized blob"]
+  SC -->|"parent (fork / continue)"| SC
+  SC --> CUT["Cut (episode)<br/>kind 31811<br/>scenes + trims + split weights"]
+  CUT --> SER["Series<br/>kind 31812"]
+  CUT --> PAY["Payout receipt<br/>kind 9810"]
+  JR["Job request<br/>kind 9811"] --> JRES["Job result<br/>kind 9812"]
+  JRES --> SC
+```
+
+### Watch and pay
+
+```mermaid
+sequenceDiagram
+  actor V as Viewer
+  participant App
+  participant K as Key server
+  participant Mint as Cashu mint
+  participant Relay
+  V->>App: open a paid episode
+  App->>V: paywall (price, public split)
+  V->>App: Unlock
+  App->>Mint: create nutzap proofs
+  App->>K: proofs (NIP-98 signed)
+  K->>Mint: check proofs are unspent
+  K-->>App: AES-128 episode key
+  App->>App: play HLS
+  K->>Relay: payout receipts (if split service on)
+```
+
+### Create and fork
+
+```mermaid
+sequenceDiagram
+  actor C as Creator
+  participant App
+  participant M as Media service
+  participant B as Blossom
+  participant R as Relay
+  participant I as Indexer
+  C->>App: pick a clip and a parent scene
+  App->>M: normalize (1080x1920, 30 fps, loudness)
+  M->>B: upload blob (hash-verified)
+  App->>R: publish Scene event (signed)
+  R-->>I: event
+  I-->>App: story tree and credits update
+```
+
+### Commission a bot
+
+```mermaid
+sequenceDiagram
+  actor U as User
+  participant App
+  participant A as Agent
+  participant R as Relay
+  U->>App: prompt and price in sats
+  App->>R: job request
+  R-->>A: job
+  A->>A: generate clip (open-weight model by default)
+  A->>R: job result with draft scene
+  U->>App: review
+  App->>A: pay on accept, publish scene
+```
 
 ## Security model
 

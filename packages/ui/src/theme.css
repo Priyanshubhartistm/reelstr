@@ -2,6 +2,14 @@
 @import "@fontsource-variable/jetbrains-mono";
 
 /*
+ * Sections, in file order (search for the comment named here):
+ *   palette and tokens (top)      type: .label, .figure        buttons: the press
+ *   cards, covers, phone frame    layout: .cols, steps, chat   sign-in gate
+ *   header, tabs, bottom strip    notices and in-page links    landing motion
+ *   testnet badge and faucet      page width, equal cards, native-shell safe areas (last)
+ */
+
+/*
  * Reelstr, palette "Pine & Cream".
  *
  * Warm, flat and light: no glow, no glass, no blur. The numbers (sats, shares, seconds) carry the

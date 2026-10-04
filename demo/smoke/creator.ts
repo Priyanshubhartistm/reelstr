@@ -14,7 +14,7 @@ const web = process.env.WEB_URL ?? "http://127.0.0.1:5173";
 // This script publishes forks, agent scenes and cuts. On a shared or public demo that is the clutter people see.
 if (!/^https?:\/\/(127\.0\.0\.1|localhost)[:/]/.test(web) && !process.env.ALLOW_LIVE_WRITES)
   throw new Error(
-    `smoke-studio writes to ${web}; set ALLOW_LIVE_WRITES=1 if that is really what you want`,
+    `the creator smoke check writes to ${web}; set ALLOW_LIVE_WRITES=1 if that is really what you want`,
   );
 const dir = tempDir("reelstr-demo-smoke-");
 const browser = await chromium.launch({
@@ -32,7 +32,7 @@ const as = async (who: string) => {
 };
 const step = (s: string) => console.log(`ok: ${s}`);
 
-// 1. Dev forks a scene from the Studio tree
+// 1. Dev forks a scene from the story tree
 const dev = await as("dev");
 await dev.page.goto(`${web}/#/stories`);
 await dev.page.getByRole("link", { name: /The Last Signal/ }).click({ timeout: 60_000 });

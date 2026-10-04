@@ -9,8 +9,8 @@ import {
   useMemo,
   useState,
 } from "react";
+import { BackLink, FilmArt, Wordmark } from "./brand";
 import { type Endpoints, loadEndpoints, saveEndpoints } from "./config";
-import { BackLink, FilmArt, Wordmark } from "./shell";
 
 interface Session {
   client: ReelstrClient | null;

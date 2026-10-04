@@ -11,7 +11,7 @@
 
 <p align="center">
   <a href="https://reelstr.ansht.workers.dev"><img alt="Live demo" src="https://img.shields.io/badge/Live_demo-testnet-17432f?style=for-the-badge&logo=cloudflare&logoColor=white"></a>
-  <a href="https://github.com/Priyanshubhartistm/reelstr/releases/tag/v0.1.0-testnet"><img alt="Download the Android APK" src="https://img.shields.io/badge/Android-download_APK-3ddc84?style=for-the-badge&logo=android&logoColor=white"></a>
+  <a href="https://github.com/Priyanshubhartistm/reelstr/releases/latest"><img alt="Download the Android APK" src="https://img.shields.io/badge/Android-download_APK-3ddc84?style=for-the-badge&logo=android&logoColor=white"></a>
   <a href="docs/ARCHITECTURE.md"><img alt="Architecture" src="https://img.shields.io/badge/Architecture-docs-9b7be0?style=for-the-badge&logo=mermaid&logoColor=white"></a>
   <a href="docs/nip/reelstr.md"><img alt="Protocol" src="https://img.shields.io/badge/Protocol-NIP_draft-8e44ad?style=for-the-badge&logo=nostr&logoColor=white"></a>
   <a href="docs/VERIFICATION.md"><img alt="Verification report" src="https://img.shields.io/badge/Verification-report-2b7a5b?style=for-the-badge&logo=checkmarx&logoColor=white"></a>
@@ -33,14 +33,14 @@
 </p>
 
 <p align="center">
-  <b><a href="#what-it-is-in-plain-words">What it is</a></b> ·
-  <b><a href="#how-it-fits-together">How it works</a></b> ·
-  <b><a href="#try-it">Try it</a></b> ·
-  <b><a href="#mobile-app">Mobile</a></b> ·
-  <b><a href="#status">Status</a></b>
+  <a href="#what-it-is-in-plain-words">📖 What it is</a> &nbsp;·&nbsp;
+  <a href="#how-it-fits-together">⚙️ How it works</a> &nbsp;·&nbsp;
+  <a href="#try-it">🚀 Try it</a> &nbsp;·&nbsp;
+  <a href="https://github.com/Priyanshubhartistm/reelstr/releases/latest">📱 Android app</a> &nbsp;·&nbsp;
+  <a href="#testnet-release">✅ Testnet release</a>
 </p>
 
-> **Testnet release.** Every feature is built and running on testnet: free test sats, a faucet, and sample clips you can replace with your own. Going to mainnet is a separate step, listed under [Status](#status).
+> **Testnet release.** Every feature is built and running on testnet: free test sats, a faucet, and sample clips you can replace with your own. Going to mainnet is the next step, listed in the [Roadmap](#roadmap)).
 
 ## What it is, in plain words
 
@@ -55,129 +55,56 @@ Everything is Nostr events plus content-addressed Blossom blobs, so any relay, a
 ## How it fits together
 
 ```mermaid
-flowchart LR
-  subgraph Clients
-    W[Web app<br/>React + Vite]
-    M[Mobile app<br/>Capacitor shell]
+flowchart TB
+  APP["<b>Reelstr app</b><br/>web and Android"]
+
+  subgraph NOSTR["Nostr"]
+    direction LR
+    RELAY["Public relay<br/>kind allowlist, PoW"]
+    CREW["Crew relay<br/>NIP-29 rooms"]
   end
-  subgraph Nostr
-    R[Public relay<br/>kind allowlist + PoW]
-    C[Crew relay<br/>NIP-29 private rooms]
+
+  subgraph SERVICES["Services"]
+    direction LR
+    IDX["Indexer<br/>Postgres read model"]
+    MEDIA["Media<br/>ffmpeg, HLS"]
+    KEYS["Key server<br/>episode keys"]
+    AGENT["Agent and verifier"]
   end
-  subgraph Services
-    I[Indexer + Postgres<br/>read model]
-    MS[Media service<br/>ffmpeg, HLS, captions]
-    K[Key server<br/>releases episode keys]
-    S[Split service<br/>optional, custodial]
-    A[Generation agent]
-    V[Verifier<br/>Source Verified]
+
+  subgraph STORAGE["Storage and money"]
+    direction LR
+    BLOSSOM[("Blossom<br/>files by SHA-256")]
+    MINT["Cashu mint"]
+    LN["Lightning"]
   end
-  B[(Blossom<br/>content-addressed blobs)]
-  MINT[Cashu mint]
-  LN[Lightning]
 
-  W & M --> R
-  W & M --> C
-  W & M --> I
-  W & M --> K
-  W & M --> B
-  I -. subscribes .-> R
-  MS --> B
-  A --> R
-  A --> MS
-  V --> R
-  K --> MINT
-  K --> LN
-  S --> MINT
-  S --> LN
-  S --> R
+  APP --> NOSTR
+  APP --> SERVICES
+  APP --> BLOSSOM
+  IDX -.->|reads| RELAY
+  AGENT --> RELAY
+  MEDIA --> BLOSSOM
+  KEYS --> MINT
+  KEYS --> LN
 ```
 
-The relay is the source of truth; the indexer is a cache that can be rebuilt from relays alone. More in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
-
-### Event model
-
-```mermaid
-flowchart TD
-  ST["Story<br/>kind 31810"] --> SC["Scene<br/>kind 34236 (NIP-71)<br/>d = SHA-256 of normalized blob"]
-  SC -->|"parent (fork / continue)"| SC
-  SC --> CUT["Cut (episode)<br/>kind 31811<br/>scenes + trims + split weights"]
-  CUT --> SER["Series<br/>kind 31812"]
-  CUT --> PAY["Payout receipt<br/>kind 9810"]
-  JR["Job request<br/>kind 9811"] --> JRES["Job result<br/>kind 9812"]
-  JRES --> SC
-```
-
-### Watch and pay
-
-```mermaid
-sequenceDiagram
-  actor V as Viewer
-  participant App
-  participant K as Key server
-  participant Mint as Cashu mint
-  participant Relay
-  V->>App: open a paid episode
-  App->>V: paywall (price, public split)
-  V->>App: Unlock
-  App->>Mint: create nutzap proofs
-  App->>K: proofs (NIP-98 signed)
-  K->>Mint: check proofs are unspent
-  K-->>App: AES-128 episode key
-  App->>App: play HLS
-  K->>Relay: payout receipts (if split service on)
-```
-
-### Create and fork
-
-```mermaid
-sequenceDiagram
-  actor C as Creator
-  participant App
-  participant M as Media service
-  participant B as Blossom
-  participant R as Relay
-  participant I as Indexer
-  C->>App: pick a clip and a parent scene
-  App->>M: normalize (1080x1920, 30 fps, loudness)
-  M->>B: upload blob (hash-verified)
-  App->>R: publish Scene event (signed)
-  R-->>I: event
-  I-->>App: story tree and credits update
-```
-
-### Commission a bot
-
-```mermaid
-sequenceDiagram
-  actor U as User
-  participant App
-  participant A as Agent
-  participant R as Relay
-  U->>App: prompt and price in sats
-  App->>R: job request
-  R-->>A: job
-  A->>A: generate clip (open-weight model by default)
-  A->>R: job result with draft scene
-  U->>App: review
-  App->>A: pay on accept, publish scene
-```
+The relay is the source of truth; the indexer is a cache that can be rebuilt from relays alone. The event kinds and the pay, fork and agent flows are in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 ## What is in the box
 
-| Piece | What it does |
+| | |
 | --- | --- |
-| **Web app** | One app. Watch: player, series pages, paywall, ratings, reports, captions. Create: stories and scene tree, fork and continue, curator desk with timeline editor, crew rooms, agents, earnings. Shared wallet and settings. Public landing page |
-| **Mobile app** | The same app in a [Capacitor](apps/mobile) shell for Android and iOS, with a bottom tab bar and safe-area handling |
-| **Protocol** | Event kinds, builders, validators and fixtures. Draft spec in [`docs/nip/reelstr.md`](docs/nip/reelstr.md) |
-| **Reference relay** | Go (khatru) with a kind allowlist, proof-of-work floor and timestamp window, advertised in NIP-11 |
-| **Media service** | Normalizes clips, renders hash-stable HLS ladders with optional AES-128, mirrors blobs, drafts captions locally |
-| **Indexer** | Postgres or PGlite read model rebuilt from relays: story trees, credits, earnings, ratings, web-of-trust inbox |
-| **Key server and split service** | Releases episode keys for a nutzap or Lightning payment. The split service pays creators out with signed receipts; it is custodial and off unless you acknowledge that |
-| **Agent and verifier** | An agent with its own key takes paid scene jobs. A verifier re-renders open-weight scenes from their manifest and publishes a "Source Verified" label |
-| **Crew rooms** | Private NIP-29 rooms for drafting before a scene goes public |
+| 🎬 **Web app** | Watch, fork, curate, pay. Player, paywall, story tree, curator desk, crew rooms, agents, wallet |
+| 📱 **Android app** | The same app in a [Capacitor](apps/mobile) shell |
+| 🧩 **Protocol** | Event kinds, builders, validators, fixtures. Draft spec: [`docs/nip/reelstr.md`](docs/nip/reelstr.md) |
+| 📡 **Relays** | A reference relay (kind allowlist, proof-of-work floor) and a NIP-29 crew relay for private drafts |
+| 🎞️ **Media** | Normalizes clips, renders hash-stable HLS (optionally AES-128), drafts captions locally |
+| 🗂️ **Indexer** | Story trees, credits, earnings and ratings, rebuilt from relays |
+| ⚡ **Payments** | A key server that releases episode keys for ecash or Lightning, and an optional split service with signed receipts |
+| 🤖 **Agents** | Bots that take paid scene jobs, and a verifier that signs "Source Verified" |
 
-Specs touched: NIP-01, 07, 11, 13, 29, 32, 42, 44, 46, 47, 56, 57, 60, 61, 71, 98, Blossom (BUD-01/02/04/11) and Cashu.
+Specs: NIP-01, 07, 11, 13, 29, 32, 42, 44, 46, 47, 56, 57, 60, 61, 71, 98, Blossom (BUD-01/02/04/11) and Cashu.
 
 ## Try it
 
@@ -198,28 +125,18 @@ bun run test:e2e    # 19 headless-browser tests
 
 The deployed demo runs as a **testnet**: a badge, a faucet for 500 free test sats, and a four-step guide. Record your own showcase with [`docs/SHOWCASE.md`](docs/SHOWCASE.md).
 
-## Mobile app
+## Android app
 
-`apps/mobile` wraps the web build in Capacitor, so the phone app and the website are one codebase.
+**[Download the APK from the latest release](https://github.com/Priyanshubhartistm/reelstr/releases/latest)**, open it on your phone and sign in. It is the same app as the website, in a Capacitor shell pointed at the testnet backend.
 
-```sh
-cd apps/mobile
-bun run sync        # builds the web app against the testnet backend, then cap sync
-bun run android     # opens Android Studio
-bun run apk         # APK: apps/mobile/android/app/build/outputs/apk/debug/
-# or download the built one: https://github.com/Priyanshubhartistm/reelstr/releases/latest
-```
-
-Point it at your own backend with `B=https://your-host/reelstr bun run sync`. iOS: open `apps/mobile/ios/App` in Xcode on a Mac.
-
-**Build without Android Studio:** `infra/android` builds the APK inside a container, so the host only needs Docker:
+To build it yourself, `infra/android` builds the APK in a container (Docker only):
 
 ```sh
 docker build -t reelstr-android infra/android
 mkdir -p out && docker run --rm --cpus 1 --memory 5g -v "$PWD:/src:ro" -v "$PWD/out:/out" reelstr-android
 ```
 
-The APK builds in about 3 minutes on one CPU (5.3 MB) and bundles the current web app pointed at the testnet backend. Sideload it from the [latest release](https://github.com/Priyanshubhartistm/reelstr/releases/latest).
+or from `apps/mobile` with Android Studio: `bun run sync`, then `bun run android`. Point it at your own backend with `B=https://your-host/reelstr bun run sync`. More in [`apps/mobile/README.md`](apps/mobile/README.md).
 
 ## Deploy
 
@@ -243,20 +160,23 @@ Everything is built and running on testnet: watch, fork, curate, pay, split, age
 ## Repository
 
 ```
-apps/        web (the app), mobile (Capacitor shell)
-packages/    protocol, nostr, blossom, media, wallet, bolt11, app-core, ui, testkit
-services/    relay, crew, media, indexer, keys, split, agent (agent + verifier)
-demo/        one-command seeded demo, smoke scripts, screenshot tools
-e2e/         headless Chrome tests; interop/  an independent Python reader
-infra/       compose files, Blossom image, deploy notes
-docs/        architecture, verification report, design decisions, protocol draft, design system
+apps/
+  web/        the web app (React, Vite)
+  mobile/     Android and iOS shell (Capacitor)
+packages/     protocol, nostr, blossom, bolt11, media, wallet, app-core, ui, testkit
+services/     relay, crew, media, indexer, keys, split, agent (agent and verifier)
+demo/         one-command demo (src), browser checks (smoke), tooling (tools)
+e2e/          headless-browser tests
+interop/      independent Python reader and relay interop check
+infra/        compose files, container images, Mutinynet node, deployment notes
+docs/         architecture, verification, design decisions, design system, protocol draft
 ```
 
-Design system: [`docs/DESIGN-SYSTEM.md`](docs/DESIGN-SYSTEM.md). Design decisions: [`docs/DESIGN-DECISIONS.md`](docs/DESIGN-DECISIONS.md).
+Every folder has its own README. Start with [`docs/README.md`](docs/README.md) and [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## Contributing
 
-Issues and forks welcome. Good places to help: connect a live video model, build another client for the protocol, review the NIP draft, and try it on more devices.
+Issues and forks are welcome. Good places to help: connect a live video model, build another client for the protocol, review the NIP draft, and try the app on more devices. See [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## License
 

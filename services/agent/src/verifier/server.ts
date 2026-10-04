@@ -1,6 +1,6 @@
 import { installUrlRewrite } from "@reelstr/blossom";
 import { LocalSigner, RelayPool } from "@reelstr/nostr";
-import { FalWanAdapter, MockAdapter, registry, Verifier } from "./index";
+import { FalWanAdapter, MockAdapter, registry, Verifier } from "../index";
 
 /**
  * Runs a verifier: re-renders eligible scenes from their manifests and publishes signed verdicts.

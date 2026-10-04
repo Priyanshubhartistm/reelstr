@@ -3,7 +3,7 @@ import { DEFAULT_LICENSE, KIND, REELSTR_TAG } from "./kinds";
 import { Collector, type EventLike, type EventTemplate, type Validation } from "./result";
 import { imetaTag, isHex64, parseImeta, secs, tagsOf, tagValue } from "./tags";
 
-/** Licenses that allow forking in Studio. Anything else can be watched but not forked. */
+/** Licenses that allow forking in the app. Anything else can be watched but not forked. */
 const FORK_FRIENDLY = /^(CC0-1\.0|CC-BY-4\.0|CC-BY-SA-4\.0|MIT|Apache-2\.0)$/;
 export const isForkable = (license: string) => FORK_FRIENDLY.test(license);
 

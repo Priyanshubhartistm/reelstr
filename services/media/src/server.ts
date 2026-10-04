@@ -105,7 +105,7 @@ export function createMediaServer(opts: MediaServerOpts) {
     error: j.error,
   });
 
-  // browsers call this from the Studio/Cinema origin, so it needs CORS (and a preflight answer)
+  // browsers call this from the web app's origin, so it needs CORS (and a preflight answer)
   const CORS = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Headers": "authorization, content-type",

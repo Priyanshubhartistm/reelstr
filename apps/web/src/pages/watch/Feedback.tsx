@@ -1,7 +1,7 @@
 import { buildRating, buildReport, type ReportReason } from "@reelstr/protocol";
 import { useAsync, useSession } from "@reelstr/ui";
 import { useState } from "react";
-import { hide } from "./moderation";
+import { hide } from "../../lib/moderation";
 
 let starGroup = 0;
 

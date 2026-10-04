@@ -19,10 +19,11 @@ import {
   zapSplit,
 } from "@reelstr/wallet";
 import { useRef, useState } from "react";
+import { hiddenIds, isRevealed, reveal, unhide } from "../../lib/moderation";
+import { loadProgress, saveProgress } from "../../lib/progress";
+import { Credits } from "./Credits";
 import { Ratings, ReportButton } from "./Feedback";
-import { Credits, type CutRow, type SeriesRow } from "./Home";
-import { hiddenIds, isRevealed, reveal, unhide } from "./moderation";
-import { loadProgress, saveProgress } from "./progress";
+import type { CutRow, SeriesRow } from "./types";
 
 const tokenKey = (keyUrl: string) => `reelstr.unlock.${keyUrl}`;
 const savedToken = (keyUrl: string): Unlock | null => {

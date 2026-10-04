@@ -1,71 +1,72 @@
-# infra
+# Infrastructure
 
-| Piece | Native (dev) | Container |
-| --- | --- | --- |
-| Relay (kind allowlist, PoW floor, timestamp window) | `cd services/relay && go build -o bin/relay . && ./bin/relay` | `relay` |
-| Blossom | `PORT=3100 infra/blossom/run.sh` (needs `npm install` in `infra/blossom`, then `npm install-scripts approve better-sqlite3` and `npm rebuild better-sqlite3`) | `blossom` |
-| Postgres | PGlite (embedded) | `postgres` (the indexer is tested against it: `TEST_DATABASE_URL=postgres://reelstr:reelstr-dev@127.0.0.1:5432/reelstr bun test services/indexer`) |
-| Cashu mint | the real Nutshell in `.venv-mint` (see `infra/python/requirements-mint.txt`) | `mint` profile (test mint: free test sats) |
+Compose files, container images and deployment notes for running the Reelstr stack.
 
-## Containers: the whole stack
+| Path | Contents |
+| --- | --- |
+| `docker-compose.yml` | The whole stack: relay, crew relay, Blossom, Postgres, media, indexer, keys, web, plus optional `mint`, `agent`, `verifier` and `payouts` profiles |
+| `docker-compose.limits.yml` | Overlay for a shared host: low CPU weight, memory caps, media service capped at one core |
+| `.env.example` | Settings template; `bun demo/tools/envgen.ts` writes a real `.env` with fresh secrets |
+| `blossom/` | Blossom media server image (Node 22) |
+| `android/` | Containerised Android APK build |
+| `webkit/` | Playwright WebKit container for browser tests |
+| `mutinynet/` | Lightning test node on a public signet ([guide](mutinynet/README.md)) |
+| `python/` | Requirements for the local mint and speech-to-text |
+| `extensions/` | Fetch script for the nos2x browser extension (signer tests) |
+| `web/` | nginx config for the web image |
 
-Everything runs from containers with **podman** (rootless) or Docker; the compose file uses fully qualified image names for that reason. Two Dockerfiles: `services/relay`, `services/crew`, `infra/blossom` (each its own), and the repo-root `Dockerfile` which builds the Bun services (media, indexer, keys, split, agent, verifier) as one image plus the two web apps behind nginx.
+## Run it locally
+
+Podman (rootless) or Docker both work; the compose file uses fully qualified image names for that reason.
 
 ```sh
-uv tool install podman-compose          # if you use podman
-bun demo/tools/envgen.ts                  # writes infra/.env with fresh secrets (or: --host <public host or IP>)
+bun demo/tools/envgen.ts                       # writes infra/.env with fresh secrets
 cd infra
-podman-compose -p reelstr up -d                      # relay, crew, blossom, postgres, media, indexer, keys, web
+podman-compose -p reelstr up -d                # relay, crew, blossom, postgres, media, indexer, keys, web
 podman-compose -p reelstr --profile mint --profile agent --profile verifier up -d   # + test mint, agent, verifier
-cd .. && bun demo/tools/seed-remote.ts                      # seed the running stack with the demo story
-bun demo/smoke/viewer.ts shots && bun demo/smoke/creator.ts shots   # drive it in a real browser
+cd .. && bun demo/tools/seed-remote.ts         # seed the running stack with the demo story
+bun demo/smoke/viewer.ts shots                 # drive it in a real browser
 ```
 
-Browsers use `PUBLIC_HOST` (in `infra/.env`) to reach the services; containers use service names. Published events carry the public addresses (blob and mint URLs), so every Bun service maps them back with `URL_REWRITE` (see `.env`/compose); this is what makes `http://localhost:3100/<hash>` fetchable from inside a container.
+Browsers reach services through `PUBLIC_HOST` in `.env`; containers reach each other by service name. Published events carry public addresses (blob and mint URLs), so every Bun service maps them back with `URL_REWRITE`. The Bun services share one image built from the repo-root `Dockerfile`; caption generation needs the `services-asr` target (`MEDIA_TARGET=services-asr`).
 
-For a VM: `bun demo/tools/envgen.ts --host <the VM's DNS name or IP>`, open ports 3100, 3200, 3300, 3334, 3335, 3338 (dev mint only), 3400 and 5173, then the same `up` and `remote.ts --host <host>`. There is no TLS in this file: put a reverse proxy in front (and use `https://`/`wss://` hosts in `PUBLIC_HOST`-derived URLs) before exposing it to the internet. Caption generation needs the `services-asr` image: set `MEDIA_TARGET=services-asr`.
-
-Browser tests against only the relay, Blossom and Postgres containers (the rest in-process): `cd infra && podman-compose -p reelstr up -d relay blossom postgres`, then `E2E_COMPOSE=1 bun test e2e` from the root.
+Other pieces run natively for development: the relay (`cd services/relay && go build -o bin/relay . && ./bin/relay`), Blossom (`PORT=3100 infra/blossom/run.sh`), Postgres (PGlite, embedded) and the Cashu mint (Nutshell in `.venv-mint`, see `python/requirements-mint.txt`).
 
 Operating notes:
-
-- `BLOSSOM_PUBLIC_URL` must be the URL clients actually use. Blob URLs are built from it, and the media service only fetches from the hosts it knows (its SSRF allowlist).
+- `BLOSSOM_PUBLIC_URL` must be the URL clients actually use. Blob URLs are built from it, and the media service fetches only from hosts it knows.
 - The relay default is `POW_BITS=16` for scenes. It advertises this in NIP-11, and the client mines it automatically.
-- The Blossom image is pinned to **Node 22** (LTS).
-- Rootless podman accepts TCP connections before the app inside is listening: wait on the app's log line, not just an open port.
+- Rootless podman accepts TCP connections before the app is listening: wait on the app's log line, not just an open port.
 
-## Caption generation
-The media service transcribes speech locally for the Desk's "Generate captions (draft)". Install once: `uv venv --python 3.12 .venv-asr && uv pip install --python .venv-asr/bin/python -r infra/python/requirements-asr.txt` (the `small` model, about 460 MB, downloads on first use). In containers use the `services-asr` target (see above).
+## Deploy
 
-## Real Lightning on regtest
-`services/keys/test/lnd.test.ts` and the last test in `services/split/test/split.test.ts` run two real LND nodes on a private Bitcoin regtest chain (podman, no real money). They skip themselves if the images are missing:
-`podman pull docker.io/polarlightning/bitcoind:27.0 docker.io/polarlightning/lnd:0.18.3-beta`. The key server reads `LND_URL`, `LND_MACAROON` (hex), `LND_CA`, or `PHOENIXD_URL`, `PHOENIXD_PASSWORD`.
+**Web app (Cloudflare Workers):** the app is static, so it deploys as a Worker with assets.
 
-## WebKit and slow networks
+```sh
+cd apps/web && bun run deploy      # vite build && wrangler deploy
+```
+
+Service addresses are baked in at build time from `VITE_RELAYS`, `VITE_BLOSSOM`, `VITE_MEDIA_URL`, `VITE_INDEXER_URL`, `VITE_KEYS_URL`, `VITE_MINT` and `VITE_VERIFIERS` (defaults are `127.0.0.1`); users can change them in **Settings** without a rebuild. A public https page cannot call plain `http://` or `ws://` services on other hosts, so backends need TLS (`https://`, `wss://`). Set `VITE_MINT` to give the wallet a default mint.
+
+**Backend on a shared VM behind an existing Caddy:** the services are reached at `https://<host>/reelstr/...` through the host's Caddy, so no new certificate or open port is needed.
+1. Build the images locally and ship them, so the VM spends no CPU on builds: `podman-compose -p reelstr build relay crew blossom indexer media`, `podman save -m -o img.tar localhost/reelstr-{relay,crew,blossom,services,media}:latest`, copy, `docker load`.
+2. `bun demo/tools/envgen.ts --host <host> --public-base https://<host>/reelstr` writes `infra/.env` and prints the `VITE_*` values for the web build. Copy it with both compose files to the VM.
+3. `docker compose -p reelstr -f docker-compose.yml -f docker-compose.limits.yml --profile mint --profile agent --profile verifier up -d --no-build relay crew blossom postgres mint media indexer keys agent verifier`. Everything binds to loopback.
+4. Add one `handle_path` per service to the Caddyfile above its catch-all, then `caddy validate` and `systemctl reload caddy`: `/reelstr/relay` to 3334, `/crew` to 3335, `/blossom` to 3100, `/media` to 3200, `/api` to 3300, `/keys` to 3400, `/mint` to 3338. Back the Caddyfile up first.
+5. Seed it with `bun demo/tools/seed-remote.ts --public-base https://<host>/reelstr`, then build and deploy the web app with the printed `VITE_*` values.
+
+**Reverse-proxy notes:** NIP-98 signatures name a URL path, so behind a prefix-stripping proxy the services need `PUBLIC_PATH_PREFIX` (`MEDIA_PATH_PREFIX`, `KEYS_PATH_PREFIX`). Blossom builds blob URLs with `new URL(hash, base)`, which drops the last path segment unless the base ends in `/`; the image normalizes this. The mint in this setup is a test mint that issues free test sats.
+
+## Tests against the containers
+
+Browser tests against only the relay, Blossom and Postgres containers (the rest in-process): `cd infra && podman-compose -p reelstr up -d relay blossom postgres`, then `E2E_COMPOSE=1 bun test e2e` from the repo root. `demo/smoke/viewer.ts` also runs in real WebKit and under network throttling:
+
 ```sh
 podman build -t reelstr-webkit infra/webkit && podman run -d --rm --name pw-webkit --network host reelstr-webkit
-WEBKIT_WS=ws://127.0.0.1:3999/ node demo/smoke/viewer.ts shots    # run the viewer path in real WebKit
-NETWORK=slow-4g node demo/smoke/viewer.ts shots                  # Chrome with throttling: 4g | slow-4g | 3g
+WEBKIT_WS=ws://127.0.0.1:3999/ node demo/smoke/viewer.ts shots     # real WebKit (run with Node, not Bun)
+NETWORK=slow-4g node demo/smoke/viewer.ts shots                    # Chrome throttled: 4g | slow-4g | 3g
 ```
-Run these with **Node**, not Bun: Bun's WebSocket client cannot connect to the Playwright server.
 
-## Frontends on Cloudflare Workers
-The app is static, so it deploys as a Worker with assets (`apps/web/wrangler.jsonc`):
-```sh
-cd apps/web && bun run deploy      # vite build && wrangler deploy  ->  reelstr.<subdomain>.workers.dev
-```
-Service addresses are baked in at build time from `VITE_RELAYS`, `VITE_BLOSSOM`, `VITE_MEDIA_URL`, `VITE_INDEXER_URL`, `VITE_KEYS_URL`, `VITE_MINT`, `VITE_VERIFIERS` (defaults are `127.0.0.1`), and a user can change them in **Settings** without a rebuild.
-- A public **https** page cannot call plain `http://`/`ws://` services on other hosts (mixed content). Backends on a VM need TLS (`https://`, `wss://`).
-- Pointing the deployed page at services on the visitor's own machine works, but Chrome asks the visitor to allow local network access first.
-- Set `VITE_MINT` at build time to give the wallet a default mint; users can also enter one on the Wallet page.
+## Captions and Lightning
 
-## A shared VM behind an existing Caddy (what `4.194.209.138` runs)
-Reelstr runs alongside another production service on one 2-core Ubuntu VM, reached at `https://<host>/reelstr/...` through the host's existing Caddy, so no new certificate or open port is needed.
-1. Build the images locally and ship them (a Docker build on the VM would compete with the other service for CPU): `podman-compose -p reelstr build relay crew blossom indexer media`, `podman save -m -o img.tar localhost/reelstr-{relay,crew,blossom,services,media}:latest`, copy, `docker load`.
-2. `bun demo/tools/envgen.ts --host <host> --public-base https://<host>/reelstr` writes `infra/.env` (it also prints the `VITE_*` values for the frontend). Copy it with `docker-compose.yml` and `docker-compose.limits.yml` to the VM.
-3. `docker compose -p reelstr -f docker-compose.yml -f docker-compose.limits.yml --profile mint --profile agent --profile verifier up -d --no-build relay crew blossom postgres mint media indexer keys agent verifier`. Everything binds to loopback. The limits overlay gives every container a low CPU weight, memory caps, and caps the media service (ffmpeg) at one core.
-4. Add one `handle_path` per service to the host's Caddyfile above its catch-all, then `caddy validate` and `systemctl reload caddy`: `/reelstr/relay` → 3334, `/crew` → 3335, `/blossom` → 3100, `/media` → 3200, `/api` → 3300, `/keys` → 3400, `/mint` → 3338. Back the Caddyfile up first.
-5. Seed it: `bun demo/tools/seed-remote.ts --public-base https://<host>/reelstr`. Build the frontend with the printed `VITE_*` values and `bun run deploy` in `apps/web`.
-
-**Reverse-proxy notes:** NIP-98 signatures name a URL path, so behind a prefix-stripping proxy the services need `PUBLIC_PATH_PREFIX` (`MEDIA_PATH_PREFIX`, `KEYS_PATH_PREFIX`); Blossom builds blob URLs with `new URL(hash, base)`, which drops the base's last path segment unless it ends in `/` (the image now normalizes it); and a Docker build or a Compose plugin may not exist on the VM.
-The mint on that VM is a test mint that issues free test sats.
+- **Captions:** the media service transcribes speech locally for the Desk's "Generate captions (draft)". Install once: `uv venv --python 3.12 .venv-asr && uv pip install --python .venv-asr/bin/python -r infra/python/requirements-asr.txt` (the `small` model, about 460 MB, downloads on first use).
+- **Lightning:** the key server reads `LND_URL`, `LND_MACAROON` (hex) and `LND_CA`, or `PHOENIXD_URL` and `PHOENIXD_PASSWORD`. `services/keys/test/lnd.test.ts` and the last test in `services/split/test/split.test.ts` run two LND nodes on a private regtest chain and skip themselves if the images are missing: `podman pull docker.io/polarlightning/bitcoind:27.0 docker.io/polarlightning/lnd:0.18.3-beta`.

@@ -12,7 +12,7 @@ import {
   tagsOf,
   type Verdict,
 } from "@reelstr/protocol";
-import type { AdapterRegistry } from "./adapters";
+import type { AdapterRegistry } from "../adapters";
 
 export interface VerifyResult {
   verdict: Verdict;

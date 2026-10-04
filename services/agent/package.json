@@ -12,7 +12,7 @@
   "main": "src/index.ts",
   "scripts": {
     "start": "bun src/server.ts",
-    "verifier": "bun src/verifier-server.ts"
+    "verifier": "bun src/verifier/server.ts"
   },
   "dependencies": {
     "@cashu/cashu-ts": "4.11.0",
