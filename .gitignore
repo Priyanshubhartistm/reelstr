@@ -23,3 +23,6 @@ apps/mobile/ios/App/Pods
 
 infra/mutinynet/secrets/
 infra/mutinynet/fee-test-result.json
+
+# generated declaration files never belong in src
+**/src/*.d.ts

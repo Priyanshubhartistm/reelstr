@@ -1,5 +1,11 @@
 {
   "name": "@reelstr/interop",
+  "description": "Independent Python reader and interoperability tests",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Priyanshubhartistm/reelstr.git"
+  },
   "private": true,
   "type": "module",
   "dependencies": {

@@ -1,6 +1,12 @@
 {
   "name": "@reelstr/media-service",
   "version": "0.1.0",
+  "description": "Media service: scene normalization, episode rendering and publishing jobs",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Priyanshubhartistm/reelstr.git"
+  },
   "private": true,
   "type": "module",
   "main": "src/index.ts",

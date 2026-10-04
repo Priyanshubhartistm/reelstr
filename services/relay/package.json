@@ -1,5 +1,11 @@
 {
   "name": "@reelstr/relay",
+  "description": "Reference relay (Go, khatru) with a kind allowlist and proof-of-work floor",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Priyanshubhartistm/reelstr.git"
+  },
   "private": true,
   "scripts": {
     "build": "go build -o bin/relay .",

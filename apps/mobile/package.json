@@ -2,6 +2,12 @@
   "name": "@reelstr/mobile",
   "private": true,
   "version": "0.1.0",
+  "description": "Reelstr Android and iOS shell (Capacitor around the web app)",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Priyanshubhartistm/reelstr.git"
+  },
   "type": "module",
   "scripts": {
     "build:web": "bash build-web.sh",

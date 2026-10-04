@@ -1,6 +1,12 @@
 {
   "name": "@reelstr/indexer",
   "version": "0.1.0",
+  "description": "Read model rebuilt from relays: story trees, credits, earnings, web of trust",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Priyanshubhartistm/reelstr.git"
+  },
   "private": true,
   "type": "module",
   "main": "src/index.ts",

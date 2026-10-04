@@ -1,6 +1,12 @@
 {
   "name": "@reelstr/split",
   "version": "0.1.0",
+  "description": "Split service: payouts with signed receipts (off by default)",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Priyanshubhartistm/reelstr.git"
+  },
   "private": true,
   "type": "module",
   "main": "src/index.ts",

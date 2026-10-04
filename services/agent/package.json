@@ -1,6 +1,12 @@
 {
   "name": "@reelstr/agent",
   "version": "0.1.0",
+  "description": "Generation agent and the Source Verified verifier",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Priyanshubhartistm/reelstr.git"
+  },
   "private": true,
   "type": "module",
   "main": "src/index.ts",

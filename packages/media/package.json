@@ -1,6 +1,12 @@
 {
   "name": "@reelstr/media",
   "version": "0.1.0",
+  "description": "ffmpeg pipeline: scene normalization, hash-stable HLS episode renders, local captions",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Priyanshubhartistm/reelstr.git"
+  },
   "type": "module",
   "main": "src/index.ts",
   "types": "src/index.ts"

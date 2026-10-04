@@ -1,6 +1,12 @@
 {
   "name": "@reelstr/testkit",
   "version": "0.1.0",
+  "description": "Test helpers: relays, Blossom, mints and Lightning nodes for the test suites",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Priyanshubhartistm/reelstr.git"
+  },
   "private": true,
   "type": "module",
   "main": "src/index.ts",

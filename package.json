@@ -1,5 +1,12 @@
 {
   "name": "reelstr",
+  "version": "0.1.0",
+  "description": "Reelstr: open-source serial video on Nostr, with per-episode sats and signed revenue splits",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Priyanshubhartistm/reelstr.git"
+  },
   "private": true,
   "type": "module",
   "workspaces": [

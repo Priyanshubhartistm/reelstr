@@ -2,6 +2,12 @@
   "name": "@reelstr/demo",
   "private": true,
   "version": "0.1.0",
+  "description": "One-command demo stack, seed story, browser checks and tooling",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Priyanshubhartistm/reelstr.git"
+  },
   "type": "module",
   "scripts": {
     "start": "bun src/index.ts",
