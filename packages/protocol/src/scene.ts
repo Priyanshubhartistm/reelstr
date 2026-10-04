@@ -192,7 +192,7 @@ export function parseScene(e: EventLike): Scene {
 
 /**
  * Manifest is eligible for a re-render check: every gen tag names an open-weight model and
- * all refs/LoRAs are hashed. This is eligibility, not proof: see DEVIATIONS.md
+ * all refs/LoRAs are hashed. This is eligibility, not proof: see docs/DESIGN-DECISIONS.md
  * ("Source Verified" = pinned-container same-arch re-render or perceptual match).
  */
 export function manifestEligibleForVerification(e: EventLike): boolean {

@@ -76,7 +76,7 @@ Put the files in one folder, named as above (the number prefix is what matters).
 bun demo/src/index.ts --clips ~/clips --model veo-3.1
 \`\`\`
 
-\`--model\` records what made the clips, honestly, as a **closed-weight** model. Leave it off to record nothing. With your own clips the mock "Source Verified" scene is left out (its coloured fields look wrong beside real footage); add \`--verified-demo\` to keep it.
+\`--model <name>\` records the model that made the clips, as a **closed-weight** model, in each scene's manifest. Leave it off to record nothing. With your own clips the demo "Source Verified" scene is left out; add \`--verified-demo\` to keep it.
 
 **On the live site:** the VM already holds the placeholder story. Ask for a **reset and reseed** with your clips; it is a short job because nothing else lives in that stack.
 

@@ -14,7 +14,7 @@
   <a href="https://github.com/Priyanshubhartistm/reelstr/releases/tag/v0.1.0-testnet"><img alt="Download the Android APK" src="https://img.shields.io/badge/Android-download_APK-3ddc84?style=for-the-badge&logo=android&logoColor=white"></a>
   <a href="docs/ARCHITECTURE.md"><img alt="Architecture" src="https://img.shields.io/badge/Architecture-docs-9b7be0?style=for-the-badge&logo=mermaid&logoColor=white"></a>
   <a href="docs/nip/reelstr.md"><img alt="Protocol" src="https://img.shields.io/badge/Protocol-NIP_draft-8e44ad?style=for-the-badge&logo=nostr&logoColor=white"></a>
-  <a href="docs/STATUS.md"><img alt="Status" src="https://img.shields.io/badge/Status-honest_report-f08a3c?style=for-the-badge&logo=checkmarx&logoColor=white"></a>
+  <a href="docs/STATUS.md"><img alt="Verification report" src="https://img.shields.io/badge/Verification-report-2b7a5b?style=for-the-badge&logo=checkmarx&logoColor=white"></a>
 </p>
 
 <p align="center">
@@ -206,37 +206,39 @@ The deployed demo runs as a **testnet**: a badge, a faucet for 500 free test sat
 cd apps/mobile
 bun run sync        # builds the web app against the testnet backend, then cap sync
 bun run android     # opens Android Studio
-bun run apk         # debug APK: apps/mobile/android/app/build/outputs/apk/debug/
-# or download the built one: https://github.com/Priyanshubhartistm/reelstr/releases/tag/v0.1.0-testnet
+bun run apk         # APK: apps/mobile/android/app/build/outputs/apk/debug/
+# or download the built one: https://github.com/Priyanshubhartistm/reelstr/releases/latest
 ```
 
 Point it at your own backend with `B=https://your-host/reelstr bun run sync`. iOS: open `apps/mobile/ios/App` in Xcode on a Mac.
 
-**Build without Android Studio:** `infra/android` builds the debug APK inside a container, so the host only needs Docker:
+**Build without Android Studio:** `infra/android` builds the APK inside a container, so the host only needs Docker:
 
 ```sh
 docker build -t reelstr-android infra/android
 mkdir -p out && docker run --rm --cpus 1 --memory 5g -v "$PWD:/src:ro" -v "$PWD/out:/out" reelstr-android
 ```
 
-The debug APK builds in about 3 minutes on one CPU (5.3 MB) and bundles the current web app pointed at the testnet backend. Store release needs a Google Play account and signing key; iOS needs a Mac and an Apple developer account.
+The APK builds in about 3 minutes on one CPU (5.3 MB) and bundles the current web app pointed at the testnet backend. Sideload it from the [latest release](https://github.com/Priyanshubhartistm/reelstr/releases/latest).
 
 ## Deploy
 
-The web app is static and deploys as a Cloudflare Worker with assets. The backend is Docker Compose behind a reverse proxy. Steps and the hardening that was needed are in [`infra/README.md`](infra/README.md).
+The web app is static and deploys as a Cloudflare Worker with assets. The backend is Docker Compose behind a reverse proxy. Steps and reverse-proxy notes are in [`infra/README.md`](infra/README.md).
 
-## Status
+## Testnet release
 
-**Complete on testnet.** All of it is built, tested and deployed: watch, fork, curate, pay, split, agents, crew rooms, wallet, web and mobile. Each requirement and how it was checked is in [`docs/STATUS.md`](docs/STATUS.md).
+Everything is built and running on testnet: watch, fork, curate, pay, split, agents, crew rooms, wallet, web and Android. What was tested, and how, is in the [verification report](docs/STATUS.md).
 
-**Tested against real systems:** a real Cashu mint (Nutshell), real Postgres 17, real containers, real Chrome, real LND nodes on a private regtest chain, and **real Lightning routing on the Mutinynet public signet** (our own channels, 27 routed payments, and the key server's backend paying invoices end to end). Routing costs a flat ~2 sats whatever the amount: 9.5% of a 21-sat payment, 1% of 210, 0.2% of 1000, so unlocks use ecash and Lightning is for top-ups and batched payouts.
+**Tested against real systems:** a Cashu mint (Nutshell), Postgres 17, containers, Chrome and WebKit, LND nodes on a private regtest chain, and **Lightning routing on the Mutinynet public signet**: our own channels, 27 routed payments, and the key server's backend paying invoices end to end. Routing costs a flat ~2 sats whatever the amount (9.5% of a 21-sat payment, 1% of 210, 0.2% of 1,000), so unlocks use ecash and Lightning handles top-ups and batched payouts.
 
-**Next stage, to go live:**
-- Point it at a real mint and mainnet Lightning, and plug in a video model key (Wan 2.2 or Gemini Veo adapters are included).
-- Publish the apps: Google Play needs an account and signing key. Apple's rules on crypto unlocks mean iOS ships as the web app.
-- Take legal advice on custody, tax and likeness before the split service handles other people's money. It is off unless you acknowledge custody.
+**Security model:** episode keys are issued per payment (AES-128 HLS), and a DRM provider can be plugged in at the key server. The split service holds funds between unlock and payout, so it is off by default and needs `acknowledgeCustody`; check local money-transmission rules before enabling it. Details in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md#security-model) and [`docs/DESIGN-DECISIONS.md`](docs/DESIGN-DECISIONS.md).
 
-Deviations from the original plan are in [`docs/DEVIATIONS.md`](docs/DEVIATIONS.md). Notably, encrypted episodes use AES-128 HLS, which is leak-tolerant (a paying viewer can share the key), not DRM.
+## Roadmap
+
+- Connect a live video model (Wan 2.2 via fal, or Gemini Veo; both adapters are included).
+- Point the wallet at a mainnet mint and Lightning.
+- Publish the Android app to Google Play. iOS runs as the web app.
+- Submit the protocol draft as a NIP.
 
 ## Repository
 
@@ -247,14 +249,14 @@ services/    relay, crew, media, indexer, keys, split, agent (agent + verifier)
 demo/        one-command seeded demo, smoke scripts, screenshot tools
 e2e/         headless Chrome tests; interop/  an independent Python reader
 infra/       compose files, Blossom image, deploy notes
-docs/        architecture, status, deviations, protocol draft, design, research
+docs/        architecture, verification report, design decisions, protocol draft, design system
 ```
 
-Design system: [`docs/DESIGN.md`](docs/DESIGN.md). Research: [`docs/research.md`](docs/research.md).
+Design system: [`docs/DESIGN.md`](docs/DESIGN.md). Design decisions: [`docs/DESIGN-DECISIONS.md`](docs/DESIGN-DECISIONS.md).
 
 ## Contributing
 
-Issues and forks welcome. Most useful right now: running it against a real video model, testing with real signers and on real phones, a second independent client for the protocol, and review of the NIP draft.
+Issues and forks welcome. Good places to help: connect a live video model, build another client for the protocol, review the NIP draft, and try it on more devices.
 
 ## License
 

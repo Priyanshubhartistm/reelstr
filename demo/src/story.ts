@@ -73,7 +73,7 @@ export const SCENES: SceneDef[] = [
     file: "06-dawn-over-the-tower",
     title: "Dawn Over the Tower",
     caption: "Mist, then a signal",
-    role: "optional: a bird's-eye epilogue (also the scene used to show Source Verified when the mock model is on)",
+    role: "optional: a bird's-eye epilogue (also the scene used to show Source Verified with the demo model)",
     prompt:
       "Aerial drone shot at dawn: the radio tower rising out of thick mist above an empty town, first orange light on the horizon, the red light at the top slowly fading out. Slow push-in.",
     audio: "Quiet wind, the first birdsong, the hum fading to silence.",

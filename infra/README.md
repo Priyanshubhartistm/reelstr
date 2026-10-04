@@ -5,7 +5,7 @@
 | Relay (kind allowlist, PoW floor, timestamp window) | `cd services/relay && go build -o bin/relay . && ./bin/relay` | `relay` |
 | Blossom | `PORT=3100 infra/blossom/run.sh` (needs `npm install` in `infra/blossom`, then `npm install-scripts approve better-sqlite3` and `npm rebuild better-sqlite3`) | `blossom` |
 | Postgres | PGlite (embedded) | `postgres` (the indexer is tested against it: `TEST_DATABASE_URL=postgres://reelstr:reelstr-dev@127.0.0.1:5432/reelstr bun test services/indexer`) |
-| Cashu mint | the real Nutshell in `.venv-mint` (see `requirements-mint.txt`) | `mint` profile (dev only: FakeWallet) |
+| Cashu mint | the real Nutshell in `.venv-mint` (see `requirements-mint.txt`) | `mint` profile (test mint: free test sats) |
 
 ## Containers: the whole stack
 
@@ -16,7 +16,7 @@ uv tool install podman-compose          # if you use podman
 bun demo/src/envgen.ts                  # writes infra/.env with fresh secrets (or: --host <public host or IP>)
 cd infra
 podman-compose -p reelstr up -d                      # relay, crew, blossom, postgres, media, indexer, keys, web
-podman-compose -p reelstr --profile mint --profile agent --profile verifier up -d   # + dev mint (FakeWallet), agent, verifier
+podman-compose -p reelstr --profile mint --profile agent --profile verifier up -d   # + test mint, agent, verifier
 cd .. && bun demo/src/remote.ts                      # seed the running stack with the demo story
 bun demo/src/smoke.ts shots && bun demo/src/smoke-studio.ts shots   # drive it in a real browser
 ```
@@ -27,11 +27,11 @@ For a VM: `bun demo/src/envgen.ts --host <the VM's DNS name or IP>`, open ports 
 
 Browser tests against only the relay, Blossom and Postgres containers (the rest in-process): `cd infra && podman-compose -p reelstr up -d relay blossom postgres`, then `E2E_COMPOSE=1 bun test e2e` from the root.
 
-Notes learned the hard way:
+Operating notes:
 
 - `BLOSSOM_PUBLIC_URL` must be the URL clients actually use. Blob URLs are built from it, and the media service only fetches from the hosts it knows (its SSRF allowlist).
 - The relay default is `POW_BITS=16` for scenes. It advertises this in NIP-11, and the client mines it automatically.
-- The Blossom image runs on **Node 22**. On Node 24 the container segfaulted intermittently with `better-sqlite3` 11.x.
+- The Blossom image is pinned to **Node 22** (LTS).
 - Rootless podman accepts TCP connections before the app inside is listening: wait on the app's log line, not just an open port.
 
 ## Caption generation
@@ -57,7 +57,7 @@ cd apps/web && bun run deploy      # vite build && wrangler deploy  ->  reelstr.
 Service addresses are baked in at build time from `VITE_RELAYS`, `VITE_BLOSSOM`, `VITE_MEDIA_URL`, `VITE_INDEXER_URL`, `VITE_KEYS_URL`, `VITE_MINT`, `VITE_VERIFIERS` (defaults are `127.0.0.1`), and a user can change them in **Settings** without a rebuild.
 - A public **https** page cannot call plain `http://`/`ws://` services on other hosts (mixed content). Backends on a VM need TLS (`https://`, `wss://`).
 - Pointing the deployed page at services on the visitor's own machine works, but Chrome asks the visitor to allow local network access first.
-- The current deployment has no default mint, so the wallet needs a mint URL entered (Wallet page) until a public mint is set with `VITE_MINT` at build time.
+- Set `VITE_MINT` at build time to give the wallet a default mint; users can also enter one on the Wallet page.
 
 ## A shared VM behind an existing Caddy (what `4.194.209.138` runs)
 Reelstr runs alongside another production service on one 2-core Ubuntu VM, reached at `https://<host>/reelstr/...` through the host's existing Caddy, so no new certificate or open port is needed.
@@ -67,5 +67,5 @@ Reelstr runs alongside another production service on one 2-core Ubuntu VM, reach
 4. Add one `handle_path` per service to the host's Caddyfile above its catch-all, then `caddy validate` and `systemctl reload caddy`: `/reelstr/relay` → 3334, `/crew` → 3335, `/blossom` → 3100, `/media` → 3200, `/api` → 3300, `/keys` → 3400, `/mint` → 3338. Back the Caddyfile up first.
 5. Seed it: `bun demo/src/remote.ts --public-base https://<host>/reelstr`. Build the frontend with the printed `VITE_*` values and `bun run deploy` in `apps/web`.
 
-Things this taught us, all fixed in the repo: NIP-98 signatures name a URL path, so behind a prefix-stripping proxy the services need `PUBLIC_PATH_PREFIX` (`MEDIA_PATH_PREFIX`, `KEYS_PATH_PREFIX`); Blossom builds blob URLs with `new URL(hash, base)`, which drops the base's last path segment unless it ends in `/` (the image now normalizes it); and a Docker build or a Compose plugin may not exist on the VM.
-The mint on that VM is the development FakeWallet mint: anyone can mint free test sats there, so it can never hold real value.
+**Reverse-proxy notes:** NIP-98 signatures name a URL path, so behind a prefix-stripping proxy the services need `PUBLIC_PATH_PREFIX` (`MEDIA_PATH_PREFIX`, `KEYS_PATH_PREFIX`); Blossom builds blob URLs with `new URL(hash, base)`, which drops the base's last path segment unless it ends in `/` (the image now normalizes it); and a Docker build or a Compose plugin may not exist on the VM.
+The mint on that VM is a test mint that issues free test sats.

@@ -75,7 +75,7 @@ Vertical 9:16 cinematic mystery. Handheld camera, heavy rain and mist, teal and 
 Sound: A wall of white noise that thins out for a moment into a faint, repeating whisper.
 
 ### 06. Dawn Over the Tower
-*optional: a bird's-eye epilogue (also the scene used to show Source Verified when the mock model is on).* Save as `06-dawn-over-the-tower.mp4`.
+*optional: a bird's-eye epilogue (also the scene used to show Source Verified with the demo model).* Save as `06-dawn-over-the-tower.mp4`.
 
 ```
 Vertical 9:16 cinematic mystery. Handheld camera, heavy rain and mist, teal and amber colour grade, 35mm film grain, shallow depth of field. No text, no subtitles, no logos, no watermark. Aerial drone shot at dawn: the radio tower rising out of thick mist above an empty town, first orange light on the horizon, the red light at the top slowly fading out. Slow push-in.
@@ -110,7 +110,7 @@ Put the files in one folder, named as above (the number prefix is what matters).
 bun demo/src/index.ts --clips ~/clips --model veo-3.1
 ```
 
-`--model` records what made the clips, honestly, as a **closed-weight** model. Leave it off to record nothing. With your own clips the mock "Source Verified" scene is left out (its coloured fields look wrong beside real footage); add `--verified-demo` to keep it.
+`--model <name>` records the model that made the clips, as a **closed-weight** model, in each scene's manifest. Leave it off to record nothing. With your own clips the demo "Source Verified" scene is left out; add `--verified-demo` to keep it.
 
 **On the live site:** the VM already holds the placeholder story. Ask for a **reset and reseed** with your clips; it is a short job because nothing else lives in that stack.
 

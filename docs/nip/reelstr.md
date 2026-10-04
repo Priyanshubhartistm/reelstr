@@ -3,7 +3,7 @@ NIP-XX (draft v0): Reelstr serial video
 
 `draft` `optional`
 
-Serial micro-drama on Nostr: forkable scenes, curator-assembled episodes, declared payment splits. This document is the contract implemented by `@reelstr/protocol`; fixtures live in `packages/protocol/fixtures`. Kind numbers are placeholders until a NIP PR is opened.
+Serial micro-drama on Nostr: forkable scenes, curator-assembled episodes, declared payment splits. This document is the contract implemented by `@reelstr/protocol`; fixtures live in `packages/protocol/fixtures`. Kind numbers are proposed here and are finalized when the NIP is submitted.
 
 | Event | Kind | Replaceable | Signed by |
 | --- | --- | --- | --- |

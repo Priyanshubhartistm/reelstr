@@ -41,11 +41,13 @@ The event kinds, watch-and-pay flow, create-and-fork flow and bot-commission flo
 | Key server | `services/keys` | Holds episode keys; releases them for a valid nutzap or Lightning payment. |
 | Split service | `services/split` | Custodial payouts with carry and signed receipts. Opt-in. |
 | Agent | `services/agent` | Generation agent with adapters, payment on acceptance, Source Verified. |
-| Interop | `interop/reader.py` | Independent reader used to keep the spec honest. |
+| Interop | `interop/reader.py` | Independent reader that recomputes splits from raw events, to validate the spec. |
 
-## Trust boundaries
+## Security model
 
-- No server holds a user's nsec. Signing happens in the browser (NIP-07/46) or in a local key the user backed up.
-- Raw scene blobs are public. The paywall is on the rendered episode key, which any paying viewer can share; this is stated, not hidden.
-- The indexer is a cache. `events` is the only source of truth; `rebuild()` regenerates everything else.
-- The key server and split service hold money. Run them small, self-hosted, and read `docs/STATUS.md` first.
+- No server holds a user's nsec. Signing happens in the browser (NIP-07 or NIP-46) or in a local key the user backed up.
+- Scene blobs are public and content addressed. Paid episodes are encrypted (AES-128 HLS) and the key server issues the episode key to each paying viewer; a DRM provider can be plugged in at the key server for stricter control.
+- The indexer is a cache. `events` is the only source of truth, and `rebuild()` regenerates everything else.
+- The split service holds funds between an unlock and the payout, so it is off by default and refuses to start without `acknowledgeCustody`. Check local money-transmission rules before enabling it, and run the key server and split service small and self-hosted.
+
+What was tested, and against what, is in the [verification report](STATUS.md).

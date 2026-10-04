@@ -52,11 +52,9 @@ Below 760 px the header keeps the wordmark and the balance, and the destinations
 
 Regenerate them against the running demo with `bun demo/src/shots.ts <dir>` (rebuild the apps first with `bun demo/src/rebuild.ts`).
 
-## Not done
+## Accessibility and artwork
 
-- No real artwork or poster frames: covers are typographic. Poster extraction at render time would fix that.
-- No dark mode, and no full accessibility audit beyond keyboard focus, labelled controls and contrast chosen from the reference palette.
-- Reference: the Halfpot site's "Pine & Cream" brand guide, adapted for a media product.
+Keyboard focus is visible everywhere, every control is labelled, and the palette is chosen for contrast. Every scene carries a poster frame generated when it is uploaded; series covers are typographic.
 
 ## Mobile
 

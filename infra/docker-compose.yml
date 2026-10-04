@@ -1,8 +1,8 @@
 # Full stack. Copy .env.example to .env and set PUBLIC_HOST to the address a BROWSER uses to reach this
 # machine (localhost for local use, the VM's DNS name or IP when deployed).
 #   docker compose up -d                      relay, crew, blossom, postgres, media, indexer, keys, web
-#   docker compose --profile mint up -d       + a development Cashu mint (FakeWallet, no real money)
-#   docker compose --profile payouts up -d    + the custodial split service (read docs/STATUS.md first)
+#   docker compose --profile mint up -d       + a test Cashu mint (free test sats)
+#   docker compose --profile payouts up -d    + the custodial split service (see the Security model in docs/ARCHITECTURE.md first)
 #   docker compose --profile agent up -d      + a generation agent;  --profile verifier: + a verifier
 # Containers reach each other by service name; URL_REWRITE maps the public addresses that appear inside
 # published events (blob and mint URLs) to those internal names.

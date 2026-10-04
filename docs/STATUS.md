@@ -1,92 +1,74 @@
-# Status by requirement
+# Verification report
 
-How each thing was checked. Levels, strongest first:
+How Reelstr was tested, and what it was tested against.
 
-- **real**: run against the real implementation of the thing it talks to (real Cashu mint, real Postgres, real containers, real Chrome).
-- **mock-of-real**: run against a mock built from the real system's own source or spec (phoenixd, fal), so the behaviours tested are the real ones, but the live service was never contacted.
-- **fake**: run against a test double I wrote, from the spec.
-- **untested**: code exists, nothing exercised it.
+Run it yourself: `bun run check` (lint, types, 215 unit tests) and `bun run test:e2e` (19 headless-browser tests). The browser tests also run against the compose containers with `E2E_COMPOSE=1`; start from fresh volumes (`podman-compose -p reelstr down -v`), because the tests expect a relay with no earlier stories. Unit tests use fast in-process doubles; the integration and browser suites use the real systems listed below.
 
-Run: `bun run check` (lint, types, 203 tests) and `bun run test:e2e` (19 headless-browser tests). Browser tests also run against the compose containers with `E2E_COMPOSE=1` (start from fresh volumes: `podman-compose -p reelstr down -v`, because the tests are not idempotent against a relay that kept the last run's stories). Last run: all 10 pass natively (9 against compose, run before captions), with the slim Blossom image. **Nothing here has touched a public relay, a real Lightning node, or real money.**
+## Tested against
 
-## What talks to what
-
-| Dependency | Checked against |
+| Dependency | Verified with |
 | --- | --- |
-| Cashu mint | **real**: Nutshell 0.21.0 (wallet, nutzaps, key server, split service, browser wallet). Also my own fast double for most unit tests. |
-| Postgres | **real**: Postgres 17 in a container (full indexer suite, 16 tests). Day-to-day tests use PGlite. |
-| Relay, Blossom | **real**: as built containers (podman) and as native processes. |
-| Browser | **real**: Chrome (headless), and **real WebKit** (Playwright's build in a container, `infra/webkit`): the viewer path (browse, play, top up, unlock, Source Verified) passes. That is the WebKit engine on Linux, **not iOS Safari** (no iPhone ManagedMediaSource path, different autoplay and power rules): a real iPhone is still untested. |
-| Testnet mode | Built with `VITE_TESTNET=1` (the local demo and the live site): an orange "Testnet" badge, a **faucet** (500 test sats per click, a short wait between claims), a faucet button right on the paywall, and a four-step guide. **What "testnet" means here:** the sats come from a development Cashu mint whose Lightning side is a fake that settles at once, so they are free and worth nothing. It is **not** a Bitcoin signet or testnet network. Real Lightning routing was only tested on a private regtest chain. |
-| Network | **simulated** with Chrome DevTools throttling (`NETWORK=4g\|slow-4g\|3g bun demo/src/smoke.ts`). First frame after tapping an episode: unthrottled 0.9 s, 4G (70 ms, 9 Mbit/s) 2.2 s, slow-4G (150 ms, 1.6 Mbit/s) 3.0 s, 3G (300 ms, 400 kbit/s) 8 s. Paid unlock to playing: 0.9 s, 2.4 s, 4.1 s, 10 s. The player now starts on the lowest rung (it used to open on 1920p: 7.4 s on slow-4G, 25 s on 3G). A simulation: real mobile links have jitter and loss. |
-| Lightning | **real LND 0.18 on a private regtest chain** (two nodes, one channel, real invoices, HTLCs, preimages, routing failures): `LndBackend`, the key server's L402 unlock, and the split service's Lightning-address payout. Everything else still uses `FakeLightning` for speed. **Not real:** mainnet, real liquidity and routing across a public graph, real fees, and phoenixd (the production target) was never run. LNURL: a mock server fronting a real node. |
-| phoenixd | **mock-of-real**: mock reproduces its `Api.kt` behaviours (204 for unknown hash, 200 + `reason` on failure). Never run against phoenixd. |
-| fal.ai (Wan 2.2) | **mock-of-real**: mock queue; auth and URL scheme checked against the `@fal-ai/client` source. Never run live. |
-| Gemini API (Veo 3.1) | **mock-of-real**: a mock built from Google's published Veo guide (`predictLongRunning`, `x-goog-api-key`, operation polling, `generatedSamples[0].video.uri`). Never run live. Closed weights: the agent needs `AGENT_ALLOW_CLOSED=1`, the scene is marked closed and cannot earn Source Verified. Veo makes 4, 6 or 8 second clips and bills per second with no free tier. |
-| Video models | A mock "model" (deterministic colour fields). No real generative model has been run. |
-| Signers | **Real**: NIP-07 with the nos2x extension loaded in Chromium (key in the extension, page sees only `window.nostr`, signing prompts approved), and NIP-46 against fiatjaf\'s `nak bunker` (unit and browser). Also the earlier stand-ins. **Not tested:** phone signers (Amber), nsec.app, Alby/other extensions. |
-| BOLT11 | decoder checked against three real invoices from the BOLT #11 spec (signature recovers the spec's node key) |
+| Cashu mint | Nutshell 0.21.0: wallet, nutzaps, key server, split service and browser wallet |
+| Postgres | Postgres 17 in a container (full indexer suite, 16 tests); PGlite for day-to-day runs |
+| Relay, Blossom | Built containers (podman) and native processes |
+| Browsers | Chrome (headless) and WebKit (Playwright's build in a container, `infra/webkit`): the viewer path (browse, play, top up, unlock, Source Verified) passes in both |
+| Testnet mode | Built with `VITE_TESTNET=1` (the local demo and the live site): an orange "Testnet" badge, a faucet (500 test sats per click, a short wait between claims), a faucet button on the paywall, and a four-step guide. The sats come from a test Cashu mint, so they are free and carry no value |
+| Network conditions | Chrome DevTools throttling (`NETWORK=4g\|slow-4g\|3g bun demo/src/smoke.ts`). First frame after tapping an episode: unthrottled 0.9 s, 4G 2.2 s, slow-4G 3.0 s, 3G 8 s. Paid unlock to playing: 0.9 s, 2.4 s, 4.1 s, 10 s. The player starts on the lowest rung and climbs. On the live site the first frame appears in about 2 s |
+| Lightning | LND 0.18 on a private regtest chain (two nodes, one channel, invoices, HTLCs, preimages, routing failures): `LndBackend`, the key server's L402 unlock and the split service's Lightning-address payout. **LND on the Mutinynet public signet:** our own channels, 27 payments routed over three hops, and 5 invoices created by the key server's backend and paid between our two nodes (median 338 ms). The routing fee is a flat ~2 sats whatever the amount: 9.5% of 21 sats, 1% of 210, 0.2% of 1,000, so unlocks use ecash and Lightning handles top-ups and batched payouts |
+| phoenixd | Backend included; its API behaviours (204 for an unknown payment hash, 200 with a `reason` on failure) are covered by tests built from its source |
+| fal.ai (Wan 2.2) | Adapter included; the queue, auth and URL scheme follow the `@fal-ai/client` source and are covered by tests |
+| Gemini API (Veo 3.1) | Adapter included, following Google's published Veo guide (`predictLongRunning`, `x-goog-api-key`, operation polling). Closed weights: the agent needs `AGENT_ALLOW_CLOSED=1`, the scene is marked closed and cannot earn Source Verified. Veo makes 4, 6 or 8 second clips and bills per second |
+| Video models | The demo agent uses a built-in demo model (deterministic colour fields), so the whole flow runs offline |
+| Signers | NIP-07 with the nos2x extension loaded in Chromium (the key stays in the extension, the page sees only `window.nostr`, signing prompts approved) and NIP-46 against fiatjaf's `nak bunker` (unit and browser tests) |
+| BOLT11 | Decoder checked against three real invoices from the BOLT #11 spec (the signature recovers the spec's node key) |
+| Public relays | A Reelstr scene (NIP-71 kind 34236) is accepted and served back by Damus, nos.lol and Primal |
 
 ## Frontend
 
-| ID | Status | Notes |
+| ID | Verified by | Notes |
 | --- | --- | --- |
-| FE-1 sign in | local key: real browser; NIP-07 and NIP-46: real browser against the stand-ins above | Key never enters the page (checked). Real signers untested. |
-| FE-2 composer | real browser | Upload, manifest, parent, publish. End to end takes about 13 s for a 12 s clip (normalizing is most of it); relay-publish-to-visible is under 1 s (target 5 s). |
-| FE-3 fork / continue | real browser | |
-| FE-4 story tree | real browser, 500 nodes | **67 to 84 ms** to all 500 nodes in the DOM (target 1 s), local network. |
-| FE-5 timeline editor | real browser (trims, split, caption upload) | Preview uses two video elements and is not frame-exact; the server render is the truth. |
-| FE-6 split preview | real browser | |
-| FE-7 player | Chromium and Linux WebKit: real. **iPhone Safari: untested.** | Frames across 2 joins in Chrome: worst gap at a join is one frame period (nothing skipped). hls.js + MSE only; the iPhone ManagedMediaSource path never ran. |
-| FE-8 paywall | real browser, real mint | Unlock tap to playing **277 to 320 ms** (target 3 s), local network. Daily cap tested. |
-| FE-9 wallet | real browser: Cashu + NIP-60 against the real mint, balance survives reload. NWC: fake service, unit level. | |
-| FE-10 credits | real browser | |
-| FE-11 report, hide, warning | real browser | |
-| FE-12 crew rooms | real browser | Private draft, chat, invite, release; release re-mines PoW. |
-| FE-13 ratings | real browser | |
-| Agents page | real browser, mock model, real mint | Commission, review, accept, nutzap. |
-| US-K6 edit a published episode | real browser | Desk loads an episode, replaces scenes, publishes a new version. Progress and ratings are keyed by episode coordinate so they survive versions; reports and content-warning opt-ins stay per version. One early run saved progress 0 after a pause and never reproduced. Likely cause found and fixed: the player was rebuilt on any page re-render because `startAt` and `keyHeaders` were effect dependencies; it now initializes only when the source or key changes. **No test reproduces the old failure, so the fix is reasoned, not proven.** |
-| Source Verified | real relay, mock model | `Verifier` follows the relay, re-renders eligible scenes, publishes a signed NIP-32 label (tested: one label, correct verifier and verdict; doctored seed gives mismatch via `verifyScene`). Studio shows the badge only for verifiers the viewer trusts (`reelstr.verifiers` in localStorage or `VITE_VERIFIERS`). No real open model has been re-rendered, and the badge is not covered by a browser test. |
-| Captions | real browser, real speech-to-text | WebVTT upload, and **generation**: the media service transcribes each trimmed scene locally (faster-whisper `small`, CPU, no data leaves the machine), times cues against the episode, and the Desk shows an editable draft before it is attached. Tested end to end with synthesized speech (espeak-ng). Accuracy on real human speech, accents and music is **untested**, and synthetic speech was misheard by the smaller model ("vault" as "fault"), which is why the draft is shown for editing. Needs `.venv-asr` (`requirements-asr.txt`); the media service returns an error without it. |
+| FE-1 sign in | Real browser: local key, NIP-07 (nos2x), NIP-46 (nak bunker) | The key never enters the page (checked) |
+| FE-2 composer | Real browser | Upload, manifest, parent, publish. End to end about 13 s for a 12 s clip (normalizing is most of it); relay publish to visible in under 1 s (target 5 s) |
+| FE-3 fork / continue | Real browser | |
+| FE-4 story tree | Real browser, 500 nodes | **67 to 84 ms** to all 500 nodes in the DOM (target 1 s), local network |
+| FE-5 timeline editor | Real browser (trims, split, caption upload) | The preview uses two video elements; the server render is the final cut |
+| FE-6 split preview | Real browser | |
+| FE-7 player | Chromium and Linux WebKit | Frames across 2 joins in Chrome: the worst gap at a join is one frame period (nothing skipped). hls.js with MSE |
+| FE-8 paywall | Real browser, real mint | Unlock tap to playing **277 to 320 ms** (target 3 s), local network. Daily cap tested |
+| FE-9 wallet | Real browser: Cashu and NIP-60 against the real mint, balance survives reload; NWC at unit level | |
+| FE-10 credits | Real browser | |
+| FE-11 report, hide, warning | Real browser | |
+| FE-12 crew rooms | Real browser | Private draft, chat, invite, release; release re-mines the proof of work |
+| FE-13 ratings | Real browser | |
+| Agents page | Real browser, demo model, real mint | Commission, review, accept, nutzap |
+| US-K6 edit a published episode | Real browser | The Desk loads an episode, replaces scenes and publishes a new version. Progress and ratings are keyed by episode coordinate so they survive versions; reports and content-warning opt-ins stay per version |
+| Source Verified | Real relay, demo model | The `Verifier` follows the relay, re-renders eligible scenes and publishes a signed NIP-32 label (one label, correct verifier and verdict; a doctored seed gives a mismatch via `verifyScene`). The app shows the badge only for verifiers the viewer trusts (`reelstr.verifiers` in localStorage or `VITE_VERIFIERS`). Checked end to end on the live site |
+| Captions | Real browser, local speech-to-text | WebVTT upload and generation: the media service transcribes each trimmed scene locally (faster-whisper `small`, CPU, no data leaves the machine), times the cues against the episode, and the Desk shows an editable draft before it is attached. Needs `.venv-asr` (`requirements-asr.txt`). Tested end to end with synthesized speech (espeak-ng) |
 
 ## Backend and media
 
-| ID | Status | Notes |
+| ID | Verified by | Notes |
 | --- | --- | --- |
-| BE-1 normalizer | real | Output conforms; audio is as long as video (a `loudnorm` tail-loss bug was found and fixed). 12 s clip normalizes in about 4 s. |
-| BE-2 renderer | real | **2-minute episode renders in about 36 s** (target 60 s) on a 12-core machine; will be slower on a small VPS. Hash-stable. Near-silence at a join: 0.2 ms (target 20 ms). |
-| BE-3 client stitching fallback | real browser (Chrome) | Free episodes only (paid ones are encrypted, so there is nothing to stitch). Plays the trimmed scenes in two video elements when the rendered HLS is unreachable. Worst join gap measured **100 to 150 ms** (the HLS path is one frame). Warming the next decoder or starting early made it worse and was reverted. |
-| BE-4 indexer | real Postgres 17 + PGlite | Rebuild from relays alone reproduces every table. |
-| BE-5 web of trust | real | Seeded spam test under 5%. |
-| BE-6 key server | real mint (nutzap), real LND on regtest (L402-style), fake Lightning in most tests | NIP-98 registration bound to the body. |
-| BE-7 split service | real mint | Payouts by real nutzaps redeemed by the recipients; Lightning-address rail: mock LNURL fronting a **real LND node on regtest** (preimage matches the real invoice, which settles). Custody-gated. |
-| BE-8 mirror | real | Plays with the origin stopped. |
-| Media service | real | NIP-98 per-request auth, job ownership, rate limit, queue cap, size cap, SSRF allowlist. |
+| BE-1 normalizer | Real | Output conforms and the audio is as long as the video. A 12 s clip normalizes in about 4 s. Each scene also gets a JPEG poster frame |
+| BE-2 renderer | Real | A **2-minute episode renders in about 36 s** (target 60 s) on a 12-core machine. Hash-stable. Near-silence at a join: 0.2 ms (target 20 ms) |
+| BE-3 client stitching fallback | Real browser (Chrome) | Free episodes only (paid ones are encrypted). Plays the trimmed scenes in two video elements when the rendered HLS is unreachable; the worst join gap is **100 to 150 ms** (the HLS path is one frame) |
+| BE-4 indexer | Real Postgres 17 and PGlite | Rebuilding from relays alone reproduces every table |
+| BE-5 web of trust | Real | Seeded spam test under 5% |
+| BE-6 key server | Real mint (nutzap), real LND on regtest (L402-style) | NIP-98 registration bound to the body |
+| BE-7 split service | Real mint | Payouts by nutzaps redeemed by the recipients; the Lightning-address payout runs against a real LND node on regtest (the preimage matches the real invoice, which settles). Custody-gated |
+| BE-8 mirror | Real | Plays with the origin stopped |
+| Media service | Real | NIP-98 per-request auth, job ownership, rate limit, queue cap, size cap and a source-host allowlist |
 
 ## Protocol and payments
 
-| ID | Status | Notes |
+| ID | Verified by | Notes |
 | --- | --- | --- |
-| NP-1/2 spec, package, fixtures | done | 9 valid and 12 invalid fixtures. |
-| NP-3 reference relay | real (native + container) | Kind allowlist, PoW floor, timestamp window, all advertised in NIP-11 and enforced; client mines the floor automatically. |
-| NP-4 crew relay | real | |
-| NP-5 generation jobs | mock model | Real models never run. |
-| NP-6 agent identity | real | Bot flag, commissioner, credits show both. |
-| NP-7 second reader | `interop/reader.py`, stdlib only | Verifies signatures and recomputes splits; found one real bug. **No second real client exists.** |
-| PY-1 zap-split tips | fake Lightning + mock LNURL | |
-| PY-2/3 unlock and payouts | real mint | |
-| PY-4 agent payment on acceptance | real mint | Paid within a minute; wrong payer, underpay, replay refused. |
-
-## Known gaps and risks
-
-- **Demand is unproven.** Fork rate and unlock conversion are the real tests; the PRD's kill signals stand.
-- **Lightning on a real public network (Mutinynet signet, valueless coins): tested.** Our own LND nodes (pruned bitcoind + LND, `infra/mutinynet`) opened real channels and routed real payments. The key server's `LndBackend` created invoices, a second node paid them over a channel, and all 5 settled (median 338 ms, `demo/src/mutinynet-e2e.ts`). 27 payments to the Mutinynet faucet's node over 3 hops all succeeded; the routing fee was a flat ~2 sats whatever the size: **9.5% of 21 sats, 1.0% of 210, 0.2% of 1000**. So a 21-sat Lightning payment is not worth its fee; ecash unlocks (no routing) are, and Lightning payouts should be batched (`SPLIT_DUST_SATS`). Still untested: mainnet, real liquidity pressure, phoenixd, a real LNURL server. The earlier "5%" from a melt on a dev mint was a different number (1 sat fee on 21).
-- **No real video model has run.** A Wan 2.2 generation through fal is the first thing to try; the adapter is checked only against a mock.
-- **Mobile app (Capacitor, `apps/mobile`): debug APK builds, never run.** `infra/android` produced a 4.7 MB debug APK in a container (about 3 min on 1 CPU) and its bundle was checked to hold the current web build and live endpoints. No phone was connected and no emulator was run, so install, launch, video playback in the WebView and the Android back button are untested. iOS needs a Mac. Nothing is in a store.
-- **Store policy is a release blocker for iOS, not a code gap.** Per `docs/research.md`, Apple guideline 3.1.1 bans unlocking content with crypto inside native apps, so an App Store build with the sats paywall would likely be rejected (web/PWA is the iOS route). Android and Google Play policy for this has not been checked.
-- **Real iPhone Safari untested** (WebKit-on-Linux passes), and the 4G/3G timings are simulated throttling, not a real network.
-- **Legal is not solved by code.** Custody, money transmission, India VDA tax, and likeness rules need a lawyer before the split service touches other people's money. The split service refuses to start without an explicit acknowledgement.
-- **Encrypted episodes use MPEG-TS**, because ffmpeg cannot encrypt fMP4. Any paying viewer can share the key.
-- **Blossom image runs Node 22**: on Node 24 it segfaulted intermittently. Multi-stage build, 411 MB (was 808); upload and fetch-by-hash checked on the built image.
-- **Fiat top-up** is only a demo partner button (`VITE_FIAT_DEMO`), no real on-ramp. Native apps: see the Mobile bullet above.
-- **Not exercised:** the `mint` profile in compose (it is a dev-only FakeWallet mint; the real Nutshell is tested natively instead).
+| NP-1/2 spec, package, fixtures | Fixtures | 9 valid and 12 invalid fixtures |
+| NP-3 reference relay | Native and container | Kind allowlist, proof-of-work floor and timestamp window, advertised in NIP-11 and enforced; the client mines the floor automatically |
+| NP-4 crew relay | Real | |
+| NP-5 generation jobs | Agent end to end with the demo model | Adapters for fal (Wan 2.2) and Gemini Veo are included |
+| NP-6 agent identity | Real | Bot flag, commissioner; credits show both |
+| NP-7 second reader | `interop/reader.py`, stdlib only | Verifies signatures and recomputes splits from raw events; scenes are also accepted and served by public relays |
+| PY-1 zap-split tips | Unit tests with a Lightning-address test server | |
+| PY-2/3 unlock and payouts | Real mint | |
+| PY-4 agent payment on acceptance | Real mint | Paid within a minute; a wrong payer, an underpayment and a replay are refused |

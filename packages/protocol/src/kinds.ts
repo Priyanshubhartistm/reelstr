@@ -1,5 +1,5 @@
 /**
- * Event kinds. Scene reuses NIP-71 addressable short video (34236) - see docs/DEVIATIONS.md.
+ * Event kinds. Scene reuses NIP-71 addressable short video (34236) - see docs/DESIGN-DECISIONS.md.
  * Story/Cut/Series/Payout are unregistered placeholders chosen from ranges free in the NIPs
  * README as of 2026-09-27. Re-check for collisions before opening the NIP PR.
  */
