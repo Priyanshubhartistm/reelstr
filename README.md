@@ -178,6 +178,16 @@ Every folder has its own README. Start with [`docs/README.md`](docs/README.md) a
 
 Issues and forks are welcome. Good places to help: connect a live video model, build another client for the protocol, review the NIP draft, and try the app on more devices. See [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
+## Team
+
+- **Priyanshu Bharti**
+  - GitHub: [@Priyanshubhartistm](https://github.com/Priyanshubhartistm)
+  - LinkedIn: [Priyanshu Bharti](https://www.linkedin.com/in/priyanshu-bharti-441823229/)
+- **Ansh Tyagi**
+  - Email: [anshtyagi7845@gmail.com](mailto:anshtyagi7845@gmail.com)
+  - GitHub: [@Ansh-699](https://github.com/Ansh-699)
+  - LinkedIn: [Ansh Tyagi](https://www.linkedin.com/in/ansh-tyagi7845/)
+
 ## License
 
 MIT, see [`LICENSE`](LICENSE).
