@@ -87,6 +87,9 @@
     "interop": {
       "name": "@reelstr/interop",
       "dependencies": {
+        "@noble/hashes": "latest",
+        "@reelstr/blossom": "workspace:*",
+        "@reelstr/nostr": "workspace:*",
         "@reelstr/protocol": "workspace:*",
         "nostr-tools": "2.25.2",
       },

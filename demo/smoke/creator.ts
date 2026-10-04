@@ -3,8 +3,8 @@ import { hexToBytes } from "@noble/hashes/utils.js";
 import { LocalSigner } from "@reelstr/nostr";
 import { tempDir } from "@reelstr/testkit";
 import { chromium } from "playwright-core";
-import { makeScene } from "./footage";
-import { demoKeys } from "./stack";
+import { makeScene } from "../src/footage";
+import { demoKeys } from "../src/stack";
 
 // The creator side of the walkthrough, against the running seeded demo.
 const out = process.argv[2] ?? ".";

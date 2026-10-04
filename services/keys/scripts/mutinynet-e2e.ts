@@ -1,12 +1,12 @@
 import { readFileSync } from "node:fs";
-import { LndBackend } from "../../services/keys/src/ln";
+import { LndBackend } from "../src/ln";
 
 /**
  * The key server's real Lightning backend (LndBackend) against two real LND nodes of ours on Mutinynet:
  * A creates invoices, B pays them over a real channel, A sees them settle.
  *   Needs ssh tunnels to the VM (see infra/mutinynet/README.md): 18081 -> A, 18082 -> B, plus
  *   A_MAC / B_MAC (admin macaroon, hex) and A_CA / B_CA (each node has its own tls.cert). Valueless signet coins.
- *   bun demo/src/mutinynet-e2e.ts [payments=5] [sats=21]
+ *   bun services/keys/scripts/mutinynet-e2e.ts [payments=5] [sats=21]
  */
 const A = {
   url: "https://localhost:18081",

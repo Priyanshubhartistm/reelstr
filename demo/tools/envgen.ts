@@ -2,12 +2,12 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { bytesToHex, hexToBytes, randomBytes } from "@noble/hashes/utils.js";
 import { LocalSigner } from "@reelstr/nostr";
-import { demoKeys, ROOT } from "./stack";
+import { demoKeys, ROOT } from "../src/stack";
 
 /**
  * Write infra/.env from .env.example with the secrets and the demo identities filled in, so the
  * compose stack, the seed script and the smoke scripts all agree on who the agent and verifier are.
- *   bun demo/src/envgen.ts [--host <PUBLIC_HOST>]      (an existing .env is never overwritten)
+ *   bun demo/tools/envgen.ts [--host <PUBLIC_HOST>]      (an existing .env is never overwritten)
  */
 const out = join(ROOT, "infra", ".env");
 if (existsSync(out)) {

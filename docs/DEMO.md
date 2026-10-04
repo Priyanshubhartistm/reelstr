@@ -3,8 +3,8 @@
 ```
 bun run demo        # about 2 minutes: starts everything, seeds a story, prints URLs and logins
 bun run demo:empty  # same stack, nothing seeded
-bun demo/src/smoke.ts <dir>         # while it runs: a viewer browses, tops up (invoice and demo card), unlocks, sees Source Verified
-bun demo/src/smoke-studio.ts <dir>  # while it runs: Dev forks, commissions the agent and pays it; Ila replaces a scene in episode 1
+bun demo/smoke/viewer.ts <dir>         # while it runs: a viewer browses, tops up (invoice and demo card), unlocks, sees Source Verified
+bun demo/smoke/creator.ts <dir>  # while it runs: Dev forks, commissions the agent and pays it; Ila replaces a scene in episode 1
 ```
 
 Both smoke scripts pass against the seeded demo in headless Chrome. Logins are stable across runs (keys live in `demo/.demo-keys.json`, git-ignored).

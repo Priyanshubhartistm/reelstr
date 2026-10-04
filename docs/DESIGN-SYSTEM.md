@@ -50,7 +50,7 @@ Below 760 px the header keeps the wordmark and the balance, and the destinations
 | ![Story tree](screenshots/desktop-story-tree.png) | ![Wallet](screenshots/desktop-wallet.png) |
 | ![Sign in](screenshots/desktop-sign-in.png) | ![Phone](screenshots/mobile-watch-home.png) |
 
-Regenerate them against the running demo with `bun demo/src/shots.ts <dir>` (rebuild the apps first with `bun demo/src/rebuild.ts`).
+Regenerate them against the running demo with `bun demo/tools/screenshots.ts <dir>` (rebuild the apps first with `bun demo/tools/rebuild-web.ts`).
 
 ## Accessibility and artwork
 

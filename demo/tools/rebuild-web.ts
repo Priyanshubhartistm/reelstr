@@ -1,6 +1,6 @@
 import { hexToBytes } from "@noble/hashes/utils.js";
 import { LocalSigner } from "@reelstr/nostr";
-import { demoKeys, PORTS, ROOT } from "./stack";
+import { demoKeys, PORTS, ROOT } from "../src/stack";
 
 /** Rebuild both apps with the running demo's settings (for UI work: the demo serves dist/ from disk). */
 const env = {

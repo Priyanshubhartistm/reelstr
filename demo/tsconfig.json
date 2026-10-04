@@ -1,18 +1,43 @@
 {
   "extends": "../tsconfig.base.json",
-  "compilerOptions": { "outDir": "dist", "rootDir": ".." },
-  "include": ["src"],
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": ".."
+  },
+  "include": ["src", "smoke", "tools"],
   "references": [
-    { "path": "../packages/testkit" },
-    { "path": "../services/media" },
-    { "path": "../services/indexer" },
-    { "path": "../packages/blossom" },
-    { "path": "../packages/nostr" },
-    { "path": "../packages/app-core" },
-    { "path": "../services/keys" },
-    { "path": "../packages/wallet" },
-    { "path": "../packages/protocol" },
-    { "path": "../services/agent" },
-    { "path": "../packages/media" }
+    {
+      "path": "../packages/testkit"
+    },
+    {
+      "path": "../services/media"
+    },
+    {
+      "path": "../services/indexer"
+    },
+    {
+      "path": "../packages/blossom"
+    },
+    {
+      "path": "../packages/nostr"
+    },
+    {
+      "path": "../packages/app-core"
+    },
+    {
+      "path": "../services/keys"
+    },
+    {
+      "path": "../packages/wallet"
+    },
+    {
+      "path": "../packages/protocol"
+    },
+    {
+      "path": "../services/agent"
+    },
+    {
+      "path": "../packages/media"
+    }
   ]
 }

@@ -11,7 +11,15 @@
   "type": "module",
   "scripts": {
     "start": "bun src/index.ts",
-    "start:empty": "bun src/index.ts --no-seed"
+    "start:empty": "bun src/index.ts --no-seed",
+    "smoke:viewer": "bun smoke/viewer.ts",
+    "smoke:creator": "bun smoke/creator.ts",
+    "screenshots": "bun tools/screenshots.ts",
+    "hero-image": "bun tools/hero-image.ts",
+    "envgen": "bun tools/envgen.ts",
+    "seed:remote": "bun tools/seed-remote.ts",
+    "rebuild:web": "bun tools/rebuild-web.ts",
+    "showcase-doc": "bun tools/showcase-doc.ts"
   },
   "dependencies": {
     "@cashu/cashu-ts": "4.11.0",

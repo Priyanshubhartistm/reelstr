@@ -7,7 +7,7 @@ import { buildScene, parseImeta } from "@reelstr/protocol";
 /**
  * Publish ONE clearly labelled Reelstr scene (a NIP-71 kind 34236 video event) with a throwaway key to
  * public relays, then read it back from each, to see whether other software accepts and serves it.
- *   bun demo/src/interop-publish.ts <relay> [<relay>...]
+ *   bun interop/publish-to-relays.ts <relay> [<relay>...]
  * The video is an existing demo clip on our own Blossom. THUMB=path.jpg uploads a poster frame and adds it. The key is written to ./interop-key.txt.
  */
 const OURS = process.env.OURS ?? "wss://4-194-209-138.sslip.io/reelstr/relay";

@@ -13,17 +13,17 @@ Everything runs from containers with **podman** (rootless) or Docker; the compos
 
 ```sh
 uv tool install podman-compose          # if you use podman
-bun demo/src/envgen.ts                  # writes infra/.env with fresh secrets (or: --host <public host or IP>)
+bun demo/tools/envgen.ts                  # writes infra/.env with fresh secrets (or: --host <public host or IP>)
 cd infra
 podman-compose -p reelstr up -d                      # relay, crew, blossom, postgres, media, indexer, keys, web
 podman-compose -p reelstr --profile mint --profile agent --profile verifier up -d   # + test mint, agent, verifier
-cd .. && bun demo/src/remote.ts                      # seed the running stack with the demo story
-bun demo/src/smoke.ts shots && bun demo/src/smoke-studio.ts shots   # drive it in a real browser
+cd .. && bun demo/tools/seed-remote.ts                      # seed the running stack with the demo story
+bun demo/smoke/viewer.ts shots && bun demo/smoke/creator.ts shots   # drive it in a real browser
 ```
 
 Browsers use `PUBLIC_HOST` (in `infra/.env`) to reach the services; containers use service names. Published events carry the public addresses (blob and mint URLs), so every Bun service maps them back with `URL_REWRITE` (see `.env`/compose); this is what makes `http://localhost:3100/<hash>` fetchable from inside a container.
 
-For a VM: `bun demo/src/envgen.ts --host <the VM's DNS name or IP>`, open ports 3100, 3200, 3300, 3334, 3335, 3338 (dev mint only), 3400 and 5173, then the same `up` and `remote.ts --host <host>`. There is no TLS in this file: put a reverse proxy in front (and use `https://`/`wss://` hosts in `PUBLIC_HOST`-derived URLs) before exposing it to the internet. Caption generation needs the `services-asr` image: set `MEDIA_TARGET=services-asr`.
+For a VM: `bun demo/tools/envgen.ts --host <the VM's DNS name or IP>`, open ports 3100, 3200, 3300, 3334, 3335, 3338 (dev mint only), 3400 and 5173, then the same `up` and `remote.ts --host <host>`. There is no TLS in this file: put a reverse proxy in front (and use `https://`/`wss://` hosts in `PUBLIC_HOST`-derived URLs) before exposing it to the internet. Caption generation needs the `services-asr` image: set `MEDIA_TARGET=services-asr`.
 
 Browser tests against only the relay, Blossom and Postgres containers (the rest in-process): `cd infra && podman-compose -p reelstr up -d relay blossom postgres`, then `E2E_COMPOSE=1 bun test e2e` from the root.
 
@@ -44,8 +44,8 @@ The media service transcribes speech locally for the Desk's "Generate captions (
 ## WebKit and slow networks
 ```sh
 podman build -t reelstr-webkit infra/webkit && podman run -d --rm --name pw-webkit --network host reelstr-webkit
-WEBKIT_WS=ws://127.0.0.1:3999/ node demo/src/smoke.ts shots    # run the viewer path in real WebKit
-NETWORK=slow-4g node demo/src/smoke.ts shots                  # Chrome with throttling: 4g | slow-4g | 3g
+WEBKIT_WS=ws://127.0.0.1:3999/ node demo/smoke/viewer.ts shots    # run the viewer path in real WebKit
+NETWORK=slow-4g node demo/smoke/viewer.ts shots                  # Chrome with throttling: 4g | slow-4g | 3g
 ```
 Run these with **Node**, not Bun: Bun's WebSocket client cannot connect to the Playwright server.
 
@@ -62,10 +62,10 @@ Service addresses are baked in at build time from `VITE_RELAYS`, `VITE_BLOSSOM`,
 ## A shared VM behind an existing Caddy (what `4.194.209.138` runs)
 Reelstr runs alongside another production service on one 2-core Ubuntu VM, reached at `https://<host>/reelstr/...` through the host's existing Caddy, so no new certificate or open port is needed.
 1. Build the images locally and ship them (a Docker build on the VM would compete with the other service for CPU): `podman-compose -p reelstr build relay crew blossom indexer media`, `podman save -m -o img.tar localhost/reelstr-{relay,crew,blossom,services,media}:latest`, copy, `docker load`.
-2. `bun demo/src/envgen.ts --host <host> --public-base https://<host>/reelstr` writes `infra/.env` (it also prints the `VITE_*` values for the frontend). Copy it with `docker-compose.yml` and `docker-compose.limits.yml` to the VM.
+2. `bun demo/tools/envgen.ts --host <host> --public-base https://<host>/reelstr` writes `infra/.env` (it also prints the `VITE_*` values for the frontend). Copy it with `docker-compose.yml` and `docker-compose.limits.yml` to the VM.
 3. `docker compose -p reelstr -f docker-compose.yml -f docker-compose.limits.yml --profile mint --profile agent --profile verifier up -d --no-build relay crew blossom postgres mint media indexer keys agent verifier`. Everything binds to loopback. The limits overlay gives every container a low CPU weight, memory caps, and caps the media service (ffmpeg) at one core.
 4. Add one `handle_path` per service to the host's Caddyfile above its catch-all, then `caddy validate` and `systemctl reload caddy`: `/reelstr/relay` → 3334, `/crew` → 3335, `/blossom` → 3100, `/media` → 3200, `/api` → 3300, `/keys` → 3400, `/mint` → 3338. Back the Caddyfile up first.
-5. Seed it: `bun demo/src/remote.ts --public-base https://<host>/reelstr`. Build the frontend with the printed `VITE_*` values and `bun run deploy` in `apps/web`.
+5. Seed it: `bun demo/tools/seed-remote.ts --public-base https://<host>/reelstr`. Build the frontend with the printed `VITE_*` values and `bun run deploy` in `apps/web`.
 
 **Reverse-proxy notes:** NIP-98 signatures name a URL path, so behind a prefix-stripping proxy the services need `PUBLIC_PATH_PREFIX` (`MEDIA_PATH_PREFIX`, `KEYS_PATH_PREFIX`); Blossom builds blob URLs with `new URL(hash, base)`, which drops the base's last path segment unless it ends in `/` (the image now normalizes it); and a Docker build or a Compose plugin may not exist on the VM.
 The mint on that VM is a test mint that issues free test sats.

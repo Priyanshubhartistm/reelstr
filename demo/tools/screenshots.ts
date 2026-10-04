@@ -1,11 +1,11 @@
 import { hexToBytes } from "@noble/hashes/utils.js";
 import { LocalSigner } from "@reelstr/nostr";
 import { chromium } from "playwright-core";
-import { demoKeys } from "./stack";
+import { demoKeys } from "../src/stack";
 
 /**
  * Screenshot every screen of the app, desktop and phone width, against the running seeded demo.
- *   bun demo/src/shots.ts <outdir> [filter]
+ *   bun demo/tools/screenshots.ts <outdir> [filter]
  */
 const out = process.argv[2] ?? ".";
 const only = process.argv[3];

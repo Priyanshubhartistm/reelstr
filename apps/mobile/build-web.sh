@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Build the web app against the live testnet backend, for the native shell.
-# Override B to point at your own stack (bun demo/src/envgen.ts prints the values).
+# Override B to point at your own stack (bun demo/tools/envgen.ts prints the values).
 set -euo pipefail
 B="${B:-https://4-194-209-138.sslip.io/reelstr}"
 cd "$(dirname "$0")/../web"

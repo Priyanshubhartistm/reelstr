@@ -1,11 +1,11 @@
 import { hexToBytes } from "@noble/hashes/utils.js";
 import { LocalSigner } from "@reelstr/nostr";
 import { chromium } from "playwright-core";
-import { demoKeys } from "./stack";
+import { demoKeys } from "../src/stack";
 
 /**
  * The README picture: the app in a desktop window next to three phone screens.
- *   WEB_URL=... INDEXER_URL=... bun demo/src/hero-image.ts docs/screenshots
+ *   WEB_URL=... INDEXER_URL=... bun demo/tools/hero-image.ts docs/screenshots
  * Defaults to the live testnet demo.
  */
 const out = process.argv[2] ?? "docs/screenshots";

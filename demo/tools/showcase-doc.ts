@@ -1,8 +1,8 @@
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { LIVE_FORKS, SCENES, STYLE, WREN } from "./story";
+import { LIVE_FORKS, SCENES, STYLE, WREN } from "../src/story";
 
-/** Regenerate docs/SHOWCASE.md from the story file:  bun demo/src/showcase-doc.ts */
+/** Regenerate docs/SHOWCASE.md from the story file:  bun demo/tools/showcase-doc.ts */
 const scene = (
   n: number,
   s: (typeof SCENES)[number],

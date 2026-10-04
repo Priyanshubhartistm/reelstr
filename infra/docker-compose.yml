@@ -8,7 +8,7 @@
 # published events (blob and mint URLs) to those internal names.
 # Ports are published on loopback only (BIND=0.0.0.0 to expose them). Behind a reverse proxy that serves
 # the services under one hostname and path prefix, set BLOSSOM_PUBLIC_URL / MINT_URL to the public URLs and
-# MEDIA_PATH_PREFIX / KEYS_PATH_PREFIX to the stripped prefixes (`bun demo/src/envgen.ts --public-base ...`).
+# MEDIA_PATH_PREFIX / KEYS_PATH_PREFIX to the stripped prefixes (`bun demo/tools/envgen.ts --public-base ...`).
 # On a shared machine add:  -f docker-compose.yml -f docker-compose.limits.yml
 name: reelstr
 
